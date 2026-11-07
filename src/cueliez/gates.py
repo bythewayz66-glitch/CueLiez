@@ -284,9 +284,11 @@ def seal_observation_package(
     package["product"] = "CueLiez"
     package["sealed_at"] = time.time()
 
+    if "annotations" in package and package["annotations"] is not None and not isinstance(package["annotations"], dict):
+        raise GateError("annotations_invalid", "annotations must be a dict.")
     annotations = package.get("annotations") or {}
     if not isinstance(annotations, dict):
-        raise GateError("annotations_invalid", "annotations must be a dict.")
+        annotations = {}
     for k in annotations:
         if k.lower() in BANNED_ANNOTATION_KEYS:
             raise GateError(
@@ -294,7 +296,11 @@ def seal_observation_package(
                 f"Annotation '{k}' would store a definitive claim. Observations only.",
             )
 
-    observations = package.get("observations") or package.get("detections") or []
+    if "observations" in package and package["observations"] is not None and not isinstance(package["observations"], list):
+        raise GateError("observations_invalid", "observations must be a list.")
+    if "observations" not in package and "detections" in package and package["detections"] is not None and not isinstance(package["detections"], list):
+        raise GateError("observations_invalid", "observations must be a list.")
+    observations = package.get("observations") if "observations" in package else package.get("detections")
     if observations is None:
         observations = []
     if not isinstance(observations, list):

@@ -125,8 +125,8 @@ class MemoryEngine:
         """
         if not isinstance(package, dict):
             raise SealError("package must be a dict")
-        if package.get("is_definitive_finding") is True:
-            raise ContaminationError("cannot persist definitive findings")
+        if package.get("is_definitive_finding") is not False:
+            raise ContaminationError("sealed package is_definitive_finding must be False")
         if package.get("epistemic_status") != "observed_indicator":
             raise ContaminationError("sealed package epistemic_status must be observed_indicator")
         if package.get("origin") != "grounded":
