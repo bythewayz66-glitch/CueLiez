@@ -16,6 +16,21 @@ from .memory import MemoryEngine
 from .observations import ObservationRunner, default_runner, full_runner
 from .packs import CuePack, get_pack, list_packs
 from .delivery import AudioCueRenderer, CueEvent, OnscreenCueRenderer, cues_from_observations, generate_tone_wav
+from .consent import (
+    ConsentAcknowledgement,
+    ConsentRecord,
+    apply_consent_to_gate_state,
+    general_consent_form,
+    get_consent_bundle,
+    validate_acknowledgement,
+)
+from .compliance import (
+    apply_training_to_gate_state,
+    domain_disclaimer,
+    domain_training,
+    get_disclaimer_bundle,
+    get_training_bundle,
+)
 
 __all__ = [
     "__version__",
@@ -36,6 +51,17 @@ __all__ = [
     "OnscreenCueRenderer",
     "cues_from_observations",
     "generate_tone_wav",
+    "ConsentAcknowledgement",
+    "ConsentRecord",
+    "apply_consent_to_gate_state",
+    "general_consent_form",
+    "get_consent_bundle",
+    "validate_acknowledgement",
+    "apply_training_to_gate_state",
+    "domain_disclaimer",
+    "domain_training",
+    "get_disclaimer_bundle",
+    "get_training_bundle",
 ]
 
 # Language: observation and cues — never lie detection.
