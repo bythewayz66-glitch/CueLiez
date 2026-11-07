@@ -7,6 +7,18 @@ It is **not** a lie detector. It does not detect lies. It observes behavioural a
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Site](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://bythewayz66-glitch.github.io/CueLiez/)
 
+## 10-second pitch
+
+CueLiez cues officers in legal interviews with real-time signal and testimony-consistency observations—never lie verdicts—and seals an auditable record so inquiry is sharper for the guilty and fairer for the innocent.
+
+## GitHub Pages (enable once)
+
+Direct link to flip the switch:
+
+**https://github.com/bythewayz66-glitch/CueLiez/settings/pages**
+
+Set **Source** → **GitHub Actions** → Save. Then the site deploys to https://bythewayz66-glitch.github.io/CueLiez/
+
 ## The system (not a subsystem)
 
 CueLiez is a standalone product system. It incorporates:
