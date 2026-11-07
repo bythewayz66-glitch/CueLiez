@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="CueLiez logo">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f2744"/>
+      <stop offset="100%" stop-color="#1a3a5c"/>
+    </linearGradient>
+  </defs>
+  <!-- Ground: serious legal / interview domain -->
+  <rect width="512" height="512" rx="96" fill="url(#g)"/>
+  <!-- Soft outer ring: observation field -->
+  <circle cx="256" cy="256" r="168" fill="none" stroke="#3d7ab5" stroke-width="10" opacity="0.35"/>
+  <!-- Inner ring -->
+  <circle cx="256" cy="256" r="128" fill="none" stroke="#7eb6e8" stroke-width="6" opacity="0.55"/>
+  <!-- Cue mark: focused listening / prompt -->
+  <path d="M256 140c-52 0-94 40-94 90 0 28 12 52 32 70v42l40-24c7 2 14 3 22 3 52 0 94-40 94-90s-42-90-94-90z" fill="#e8f1fa"/>
+  <!-- Three cue dots (signals, not a verdict stamp) -->
+  <circle cx="228" cy="230" r="12" fill="#1a3a5c"/>
+  <circle cx="256" cy="230" r="12" fill="#1a3a5c"/>
+  <circle cx="284" cy="230" r="12" fill="#1a3a5c"/>
+  <!-- Thin balance accent: fairness for guilty and innocent -->
+  <path d="M200 340h112M256 320v40" stroke="#c5a46a" stroke-width="8" stroke-linecap="round"/>
+  <path d="M220 360h28M264 360h28" stroke="#c5a46a" stroke-width="6" stroke-linecap="round"/>
+</svg>
