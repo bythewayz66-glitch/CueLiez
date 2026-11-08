@@ -11,6 +11,7 @@ from collections import defaultdict
 from typing import Any, Mapping, Sequence
 
 from .base import ObservationResult, clamp01, is_subject_turn, make_observation, text_of
+from .thresholds import CLAIM_MIN_OVERLAP, CLAIM_MIN_SHARED_WORDS, CLAIM_TOPIC_DEDUP_OVERLAP
 
 _NEG = re.compile(r"\b(no|not|never|didn't|did not|wasn't|was not|isn't|is not|don't|do not|can't|cannot)\b", re.I)
 _TIME_RE = re.compile(r"\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b|\b(midnight|noon|morning|afternoon|evening|night)\b", re.I)
@@ -95,7 +96,7 @@ class ClaimConflictObserver:
                     continue
                 overlap = _key_overlap(key_i, key_j)
                 shared = len(set(key_i.split()) & set(key_j.split()))
-                if shared < 2 or overlap < 0.5:
+                if shared < CLAIM_MIN_SHARED_WORDS or overlap < CLAIM_MIN_OVERLAP:
                     continue
                 pair = (min(i, j), max(i, j))
                 pos_i, pos_t = ((i, text_i) if pol_i == 1 else (j, text_j))
@@ -111,7 +112,7 @@ class ClaimConflictObserver:
             if pair in emitted_pairs:
                 continue
             # Reduce double-firing on same underlying issue: skip if very similar topic already reported.
-            if any(_key_overlap(topic, et) >= 0.75 for et in emitted_topics):
+            if any(_key_overlap(topic, et) >= CLAIM_TOPIC_DEDUP_OVERLAP for et in emitted_topics):
                 continue
             emitted_pairs.add(pair)
             emitted_topics.append(topic)

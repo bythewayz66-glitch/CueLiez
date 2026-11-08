@@ -183,7 +183,7 @@ def gov_pack() -> CuePack:
             "Reconcile timeline, location, and numeric details against available records where lawful.",
             _HUMAN_JUDGMENT,
             _NO_VERDICTS,
-            "Dual-control acknowledgement is required for high-priority cues before sealing in government mode.",
+            "Dual-control acknowledgement is required for high-priority cues before sealing in government mode (process expectation; gate/seal enforcement is handled by gates).",
         ),
         domain_notes=(
             "Mode enforces consent, training, and dual-control gates.",

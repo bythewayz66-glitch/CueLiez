@@ -87,12 +87,12 @@ Format per update:
 - Next: Execute LONG SPRINT.
 - Notes left in agent_notes/: `2026-11-08_0651_kilo_to_all_cue-id-priority-contract-v2.md`, `2026-11-08_0651_kilo_to_glyph_cue-field-contract-superseded.md`
 
-### 2026-11-08 LONG SPRINT (started)
-- Done: Read `2026-11-08_2350_orchestrator_to_kilo_LONG_SPRINT.md`. L1 complete (cue_id/priority + contract notes). L2: added `tests/fixtures/transcripts/` corpus (clean_consistent, claim_conflict, hedging_vague, evasion_short, multi_turn_drift) + updated `tests/test_fixtures_golden.py` (runner+leg, contract fields, method families, zero forbidden labels). L3: ClaimConflict overlap-based de-duplication (prior commit). L4: defensive null/invalid turn handling in base/behavioral/modality helpers + `tests/test_observations_insufficient_data.py` (empty, single token, null turns).
-- In progress: L5-L10.
+### 2026-11-08 LONG SPRINT
+- Done: Read `2026-11-08_2350_orchestrator_to_kilo_LONG_SPRINT.md`. L1: deterministic `cue_id`/`priority` + contract v2 notes. L2: `tests/fixtures/transcripts/` (5 fixtures) + golden fixture tests (runner/leg, contract fields, method families, zero forbidden labels, deterministic ids). L3: ClaimConflict overlap-based de-duplication (reduced overlapping weak cues). L4: null/invalid turn robustness + insufficient-data tests. L5: `docs/OBSERVER_INVENTORY.md`. L6: pack review (leg/gov/med/thrp text-only defaults, language-clean; gov dual-control process note clarified). L7: centralized `src/cueliez/observations/thresholds.py` and behavior-preserving wiring for key thresholds. L8: optional test-only Pollinations probe (`tests/test_pollinations_probe_optional.py`, skip-friendly, not in production path). L9: regression coverage via fixtures + observer tests; full suite green.
+- In progress: L10 ongoing — polling notes, responding to contract/renderer notes, keeping cue contract stable.
 - Blocked: None.
-- Next: L5 observer inventory doc, L6 pack review, L7 calibration hooks, L8 test-only Pollinations probe, L9/L10.
-- Notes left in agent_notes/: (none new)
+- Next: Continue polling agent notes for new work; maintain observer quality/tests and integration contracts.
+- Notes left in agent_notes/: (see Sprint 3/L1 notes)
 
 ---
 

@@ -11,6 +11,16 @@ import statistics
 from typing import Any, Mapping, Sequence
 
 from .base import ObservationResult, clamp01, is_subject_turn, make_observation, text_of
+from .thresholds import (
+    BRIEF_RESPONSE_MAX_WORDS,
+    BRIEF_RESPONSE_MEAN_MIN,
+    BRIEF_RESPONSE_MIN_SAMPLES,
+    BRIEF_RESPONSE_Z,
+    INTERRUPTION_OVERLAP_MS,
+    LATENCY_ANOMALY_Z,
+    LATENCY_MIN_MS,
+    LATENCY_MIN_SAMPLES,
+)
 
 _EVASION_PATTERNS = [
     r"\bwhy (?:do|would) you ask\b",
@@ -59,7 +69,7 @@ class ResponseLatencyObserver:
                     lat = lat_s * 1000.0
             if lat is not None and lat >= 0:
                 latencies.append((i, lat))
-        if len(latencies) < 3:
+        if len(latencies) < LATENCY_MIN_SAMPLES:
             result.notes.append("insufficient_latency_data")
             return result
         vals = [v for _, v in latencies]
@@ -67,7 +77,7 @@ class ResponseLatencyObserver:
         mad = statistics.median([abs(v - med) for v in vals]) or 1.0
         for i, v in latencies:
             z = (v - med) / (1.4826 * mad)
-            if abs(z) >= 2.0 and v >= 1500:
+            if abs(z) >= LATENCY_ANOMALY_Z and v >= LATENCY_MIN_MS:
                 score = clamp01(0.4 + min(abs(z), 6.0) * 0.08)
                 direction = "longer" if v > med else "shorter"
                 result.observations.append(make_observation(
@@ -102,15 +112,15 @@ class AnswerLengthVarianceObserver:
                 continue
             wc = len(re.findall(r"[A-Za-z']+", text))
             lens.append((i, wc, text[:160]))
-        if len(lens) < 4:
+        if len(lens) < BRIEF_RESPONSE_MIN_SAMPLES:
             return result
         vals = [w for _, w, _ in lens]
         mean = statistics.mean(vals)
         stdev = statistics.pstdev(vals) or 1.0
         for i, wc, ex in lens:
-            if wc <= 3 and mean >= 12:
+            if wc <= BRIEF_RESPONSE_MAX_WORDS and mean >= BRIEF_RESPONSE_MEAN_MIN:
                 z = (mean - wc) / stdev
-                if z >= 1.5:
+                if z >= BRIEF_RESPONSE_Z:
                     score = clamp01(0.35 + min(z, 5.0) * 0.08)
                     result.observations.append(make_observation(
                         label="notably_brief_response_observed",
@@ -263,7 +273,7 @@ class InterruptionOverlapObserver:
             if not is_subject_turn(turn):
                 continue
             interrupted_flag = turn.get("interrupted") is True if isinstance(turn, Mapping) else False
-            interrupted = interrupted_flag or (_num(turn, "overlap_ms") or 0) > 150
+            interrupted = interrupted_flag or (_num(turn, "overlap_ms") or 0) > INTERRUPTION_OVERLAP_MS
             overlap = _num(turn, "overlap_ms")
             if not interrupted:
                 continue
