@@ -9,9 +9,16 @@ from .gates import (
     DISCLAIMER,
     GateError,
     SessionGateState,
+    assert_not_sealed,
+    check_prohibited_uses,
+    compute_package_hash,
+    export_sealed_package_json,
+    extract_high_priority_cue_ids,
+    is_sealed,
     record_consent,
     seal_observation_package,
 )
+from .session import assert_can_observe, seal, start_session
 from .memory import MemoryEngine
 from .observations import ObservationRunner, default_runner, full_runner
 from .packs import CuePack, get_pack, list_packs
@@ -48,8 +55,17 @@ __all__ = [
     "DISCLAIMER",
     "GateError",
     "SessionGateState",
+    "assert_can_observe",
+    "assert_not_sealed",
+    "check_prohibited_uses",
+    "compute_package_hash",
+    "export_sealed_package_json",
+    "extract_high_priority_cue_ids",
+    "is_sealed",
     "record_consent",
+    "seal",
     "seal_observation_package",
+    "start_session",
     "MemoryEngine",
     "ObservationRunner",
     "default_runner",

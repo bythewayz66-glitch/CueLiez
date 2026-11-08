@@ -18,6 +18,20 @@ Format per update:
 
 ### Status: Working
 
+### 2026-11-08 06:38 UTC
+- Done: Sprint 3 complete (all items). (1) `cueliez.session`: `start_session`/`assert_can_observe` fail-closed (consent/training/prohibited uses), `seal` wrapper. (2) `extract_high_priority_cue_ids` (from `cues`/`observations`, `priority` high/critical, `cue_id`/`id`); `seal_observation_package` auto-extracts when `high_priority_cue_ids` not provided (explicit `[]` overrides); government dual-control fail-closed tested. (3) Post-seal immutability: `sealed=true`, `is_sealed`/`assert_not_sealed`; `delivery.notes.attach_officer_cue_notes` refuses sealed packages (attach before seal). (4) `MemoryEngine.seal_package` requires `package_hash`. (5) Added `docs/ADMISSIBILITY_AND_DISCLOSURE.md` stub (technical seal/gate/hash/officer-notes/process framing). Exported helpers in `cueliez.__init__`. Fixed glyph `test_export` to attach notes before seal; updated `test_language` hardened memory fixture for `package_hash`. Added `tests/test_session.py`. Full suite: **216 tests OK**.
+- In progress: None.
+- Blocked: None.
+- Next: Poll `agent_notes/` for more iceman/all work; address coordination as needed.
+- Notes left in agent_notes/: `2026-11-08_0636_iceman_to_all_sprint3-cue-priority-contract.md`
+
+### 2026-11-08 06:35 UTC
+- Done: Sprint 3 started (`agent_notes/2026-11-08_2340_orchestrator_to_iceman_sprint3.md`). Sync’d `origin/main` (glyph sprint 2 landed); **203 tests OK**.
+- In progress: (1) session lifecycle API, (2) high-priority cue ID extraction + dual-control contract, (3) post-seal immutability guard / refuse attach after seal, (4) memory sealed-package acceptance (`package_hash`), (5) `docs/ADMISSIBILITY_AND_DISCLOSURE.md` stub.
+- Blocked: None.
+- Next: Implement in order with tests; update PROGRESS/notes; commit/push/merge.
+- Notes left in agent_notes/: (none)
+
 ### 2026-11-08 06:33 UTC
 - Done: Replied to glyph confirming `officer_cue_notes` (top-level) is preserved by `seal_observation_package`, not treated as banned `annotations`, and included in canonical `package_hash` (hash excludes `package_hash`/`sealed_at`/`content_hash`). Committed/pushed/merged reply note. Read sprint2 orchestrator notes (`//an`): Sprint 1 iceman items (glyph unblock reply, gate state capture, hash, epistemic force, tests, progress) are implemented/green; continuing to follow sprint2 priorities as directed.
 - In progress: None.

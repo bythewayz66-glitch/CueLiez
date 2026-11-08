@@ -73,11 +73,17 @@ class TestExportSurfaces(unittest.TestCase):
 
     def test_officer_notes_survive_into_export(self):
         cues = cues_from_observations(OBS)
-        pkg = attach_officer_cue_notes(sealed_pkg(), [{
+        pkg = {"observations": OBS, "annotations": {"mode": "interrogation", "cue_pack": "leg"}}
+        pkg = attach_officer_cue_notes(pkg, [{
             "cue_id": cues[0].cue_id, "action": "noted", "note": "Requested clarification on timeline.",
             "priority": cues[0].priority, "officer_id": "off1",
         }])
-        md = render_package_summary_markdown(pkg)
+        s = SessionGateState(mode="interrogation", intended_uses=["interview support"])
+        record_consent(s, attested_by="officer-a")
+        s.training_acknowledged = True
+        s.training_version = "v1"
+        sealed = seal_observation_package(pkg, s)
+        md = render_package_summary_markdown(sealed)
         self.assertIn("Officer Notes (Human)", md)
         self.assertIn("not system findings", md.lower())
         self.assertIn("Requested clarification on timeline", md)

@@ -291,6 +291,59 @@ def compute_package_hash(package: Dict[str, Any]) -> str:
     return hashlib.sha256(_canonical_json_for_hash(package).encode("utf-8")).hexdigest()
 
 
+def is_sealed(package: Any) -> bool:
+    if not isinstance(package, dict):
+        return False
+    return package.get("sealed") is True or (
+        package.get("package_hash") and package.get("sealed_at") and package.get("epistemic_status") == "observed_indicator"
+    )
+
+
+def assert_not_sealed(package: Any, *, action: str = "modify") -> None:
+    if is_sealed(package):
+        raise GateError(
+            "package_sealed",
+            f"Cannot {action} a sealed package. Officer notes and package changes must occur before seal.",
+        )
+
+
+HIGH_PRIORITY_LEVELS = frozenset({"high", "critical"})
+
+
+def extract_high_priority_cue_ids(package: Any) -> List[str]:
+    """Extract cue IDs that require dual-control review in government mode.
+
+    Contract (documented for glyph/kilo/CLI):
+    - `high_priority_cue_ids` may be supplied explicitly to `seal_observation_package`/session seal.
+    - If not supplied, ids are extracted from package `cues` and/or `observations` entries where
+      `priority` is `high` or `critical` (case-insensitive) and a `cue_id`/`id` is present.
+    - Government mode fails closed when dual-control records are missing for extracted/provided ids.
+    """
+    if not isinstance(package, dict):
+        return []
+    ids: List[str] = []
+    seen = set()
+    for collection_key in ("cues", "observations"):
+        items = package.get(collection_key)
+        if not isinstance(items, list):
+            continue
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            priority = str(item.get("priority") or "").strip().lower()
+            if priority not in HIGH_PRIORITY_LEVELS:
+                continue
+            cid = item.get("cue_id") or item.get("id")
+            if cid is None:
+                continue
+            cid_s = str(cid).strip()
+            if not cid_s or cid_s in seen:
+                continue
+            seen.add(cid_s)
+            ids.append(cid_s)
+    return ids
+
+
 def seal_observation_package(
     package: dict,
     state: Optional[SessionGateState] = None,
@@ -317,7 +370,12 @@ def seal_observation_package(
         check_prohibited_uses(state.intended_uses)
         require_consent(state, action="seal")
         require_training(state)
-        require_dual_control_for_seal(state, high_priority_cue_ids or [])
+        resolved_high_priority = (
+            list(high_priority_cue_ids)
+            if high_priority_cue_ids is not None
+            else extract_high_priority_cue_ids(package)
+        )
+        require_dual_control_for_seal(state, resolved_high_priority)
 
     # Refuse any attempt to mark the package as a definitive finding
     if package.get("is_definitive_finding") is True:
@@ -376,6 +434,7 @@ def seal_observation_package(
     if "detections" in package:
         del package["detections"]
 
+    package["sealed"] = True
     package["firewall"] = {
         "contamination_check": "passed",
         "origin": "grounded",

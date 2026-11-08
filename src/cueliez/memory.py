@@ -135,6 +135,8 @@ class MemoryEngine:
             raise SealError("sealed package must carry disclaimer")
         if package.get("firewall", {}).get("contamination_check") != "passed":
             raise SealError("package firewall.contamination_check must be passed")
+        if not (str(package.get("package_hash") or "").strip()):
+            raise SealError("sealed package must carry package_hash")
 
         seal_id = str(uuid.uuid4())
         package = dict(package)

@@ -92,7 +92,16 @@ def attach_officer_cue_notes(
     """Return a package copy with normalized officer cue notes attached.
 
     Glyph-owned helper. Iceman seal/hashing must preserve `officer_cue_notes`.
+    Officer notes must be attached before seal; sealed packages refuse mutation.
     """
+    if isinstance(package, Mapping) and (
+        package.get("sealed") is True
+        or (package.get("package_hash") and package.get("sealed_at") and package.get("epistemic_status") == "observed_indicator")
+    ):
+        raise ValueError(
+            "Cannot attach officer cue notes to a sealed package. "
+            "Officer notes must be attached before seal."
+        )
     out = dict(package)
     new_notes = normalize_officer_cue_notes(notes)
     if replace or OFFICER_CUE_NOTES_KEY not in out or not isinstance(out.get(OFFICER_CUE_NOTES_KEY), list):

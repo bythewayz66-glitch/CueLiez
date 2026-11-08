@@ -100,6 +100,7 @@ class TestVerdictRejectionMemory(unittest.TestCase):
                 "epistemic_status": "observed_indicator", "origin": "grounded",
                 "is_definitive_finding": False, "disclaimer": DISCLAIMER,
                 "firewall": {"contamination_check": "passed"}, "observations": [],
+                "package_hash": "a" * 64,
             }
             sid = m.seal_package(ok)
             self.assertTrue(sid)
