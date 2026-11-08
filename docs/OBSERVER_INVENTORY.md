@@ -22,6 +22,8 @@ This inventory reflects the current implementation in `src/cueliez/observations/
 ## Off by default (consent/policy controlled)
 Prosody, visual, and physiological feature observers are **not** in `default_runner()` and are **off by default** in domain packs (`include_feature_observers=False`). Enable only via explicit, consent-controlled paths/policy support.
 
+ML/LLM-assisted observers (Phase 1 design/prototype, e.g. `observations.assisted`) are **disabled by default** (`ASSISTED_OBSERVERS_ENABLED=False`), not in any runner/pack, and make **no external ML calls** in the production path. See `docs/design/ml_llm_assisted_observers_phase1.md`.
+
 | Method ID | Category | Type | Notes |
 |---|---|---|---|
 | `cueliez.observations.prosody.variability_shift/v1` | prosody | rule/feature | Requires caller-provided acoustic features |

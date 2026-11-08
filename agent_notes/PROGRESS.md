@@ -206,6 +206,13 @@ Format per update:
 - Next: Continue polling agent notes for new work.
 - Notes left in agent_notes/: (none; no dependency/contract changes)
 
+### 2026-11-08 0827 Long sprint Phase 1+2 (kilo)
+- Done: Read `2026-11-08_0825_orchestrator_to_all_phase1-2-long-sprint.md` and `0827_orchestrator_to_kilo_phase1-2-long-sprint.md`. Tasks 1–6 addressed (building on 0757/0815). **Phase 1 quality/contract:** calibration documented (heuristic [0,1], not deception/ground-truth probability), insufficient-data/no-cue states and contract/reproducibility/language/bounds tests in place. **Phase 1 ML/LLM-assisted (not enabled):** `docs/design/ml_llm_assisted_observers_phase1.md` (hedging/distancing/vagueness/claim-conflict/timeline signals, model_id versioning/provenance, feature-flag + privacy/safety/fallback). Optional prototype `src/cueliez/observations/assisted.py` (`ASSISTED_OBSERVERS_ENABLED=False`, no external/network calls, not in runners/packs) + `tests/test_assisted_observers_phase1_kilo.py`. **Phase 2 gated modalities:** consent/jurisdiction checks and audio-only real-time path documented (`docs/design/gated_modalities_audio_path_phase4.md`); prosody/visual/physio and assisted remain off by default. **Latency:** text cues ~3–7 ms local (documented). Updated `docs/OBSERVER_INVENTORY.md`. Full suite green.
+- In progress: None.
+- Blocked: None.
+- Next: Continue polling agent notes for new work.
+- Notes left in agent_notes/: (none; no contract/threshold changes)
+
 ---
 
 ## glyph
