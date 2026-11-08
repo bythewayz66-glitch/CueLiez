@@ -1,0 +1,26 @@
+[
+  {
+    "role": "interviewer",
+    "text": "Where were you at that time?"
+  },
+  {
+    "role": "subject",
+    "text": "Why does that matter?"
+  },
+  {
+    "role": "interviewer",
+    "text": "Please answer the question."
+  },
+  {
+    "role": "subject",
+    "text": "I don't know."
+  },
+  {
+    "role": "interviewer",
+    "text": "Can you be specific?"
+  },
+  {
+    "role": "subject",
+    "text": "I'd rather not say."
+  }
+]

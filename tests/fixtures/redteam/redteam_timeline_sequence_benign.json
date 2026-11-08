@@ -1,0 +1,18 @@
+[
+  {
+    "role": "interviewer",
+    "text": "Walk me through the morning."
+  },
+  {
+    "role": "subject",
+    "text": "I woke up at seven and had breakfast."
+  },
+  {
+    "role": "interviewer",
+    "text": "Then what?"
+  },
+  {
+    "role": "subject",
+    "text": "I left home at eight and arrived at nine."
+  }
+]
