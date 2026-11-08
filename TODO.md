@@ -105,6 +105,20 @@ Status key: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ---
 
+## Phase 7 — Integration & Gated Modalities Enablement (post-pilot, partner-driven)
+
+Added per owner direction after faster-than-expected completion of Phases 0–5. Do not start by default; enable only on explicit partner demand and consent/policy support.
+
+- [ ] Live Axon / CaseCracker / RMS integration (transcript ingest → sealed package attachment) when a pilot partner supplies transcript export.
+- [ ] Real-time audio stream hooks (prosody, speech rate, latency, pause patterns) behind explicit consent + jurisdiction checks.
+- [ ] Officer UI (tablet overlay or simple web dashboard) for real-time cues, subject not shown by default.
+- [ ] Export into RMS / case / evidence management systems as original artifacts (not derivative interpretations).
+- [ ] Enable physiological / visual / wearable observers only with consent-governed policy support and clinical/therapy messaging kept out of pilot scope.
+- [ ] Government mode external pilot only if a specific partner demands it (dual-control enforced).
+- [ ] Clinical / therapy packs remain present in code but out of pilot messaging unless explicitly scoped.
+
+---
+
 ## Admissibility Requirements Checklist (Quick Reference)
 
 Copy of the living checklist — expand into formal acceptance criteria as items are implemented.
