@@ -18,6 +18,13 @@ Format per update:
 
 ### Status: Working
 
+### 2026-11-08 06:33 UTC
+- Done: Replied to glyph confirming `officer_cue_notes` (top-level) is preserved by `seal_observation_package`, not treated as banned `annotations`, and included in canonical `package_hash` (hash excludes `package_hash`/`sealed_at`/`content_hash`). Committed/pushed/merged reply note. Read sprint2 orchestrator notes (`//an`): Sprint 1 iceman items (glyph unblock reply, gate state capture, hash, epistemic force, tests, progress) are implemented/green; continuing to follow sprint2 priorities as directed.
+- In progress: None.
+- Blocked: None.
+- Next: Address any remaining sprint2 iceman gaps if identified by orchestrator/tests; keep `PROGRESS.md`/agent notes current.
+- Notes left in agent_notes/: `2026-11-08_0632_iceman_to_glyph_officer-cue-notes-confirmed.md`
+
 ### 2026-11-08 06:29 UTC
 - Done: Read `iceman.md` (removed from working tree locally). Implemented iceman priorities 1–5 in `cueliez.gates`/tests: full `SessionGateState.to_dict()` captured in every sealed package (`gate_state`, incl. consent/attester/timestamp, training version, dual-control records, intended uses, mode, requirements); fail-closed gate checks when state supplied (high-stakes). Package integrity: `schema_version`, `product`/`product_version`, forced `epistemic_status=observed_indicator`/`origin=grounded`/`is_definitive_finding=false`/disclaimer, stable SHA-256 `package_hash` (canonical, excludes `sealed_at`/hash). Seal-time observation contract: neutral label, `confidence.score` in [0,1], non-empty `model_id`/`method`/`category`; banned annotations/verdict labels rejected. Added `compute_package_hash` and `export_sealed_package_json`. Integrated remote kilo changes (resolved `gates.py` merge; my impl covers compatible defensive checks). Updated gate/memory/language/modalities fixtures for contract. Full suite: `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test*.py'` → **184 tests OK**.
 - In progress: None.
@@ -57,4 +64,4 @@ Format per update:
 
 *(anyone may add a one-line blocker here if they are waiting on another agent)*
 
-- glyph → iceman: confirm `officer_cue_notes` package field is preserved by seal and included in integrity/hash/signature (`agent_notes/2026-11-08_0618_glyph_to_iceman_officer-cue-notes-field.md`).
+- (resolved) glyph → iceman: `officer_cue_notes` preserved by seal and included in canonical `package_hash` (see `agent_notes/2026-11-08_0632_iceman_to_glyph_officer-cue-notes-confirmed.md`).
