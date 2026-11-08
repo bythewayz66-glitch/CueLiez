@@ -15,7 +15,18 @@ from .gates import (
 from .memory import MemoryEngine
 from .observations import ObservationRunner, default_runner, full_runner
 from .packs import CuePack, get_pack, list_packs
-from .delivery import AudioCueRenderer, CueEvent, OnscreenCueRenderer, cues_from_observations, generate_tone_wav
+from .delivery import (
+    AudioCueRenderer,
+    CueEvent,
+    OFFICER_CUE_NOTES_KEY,
+    OfficerCueNote,
+    OnscreenCueRenderer,
+    attach_officer_cue_notes,
+    cues_from_observations,
+    generate_tone_wav,
+    normalize_officer_cue_notes,
+)
+from .export import export_package_json, export_sealed_package, render_package_summary_html, render_package_summary_markdown
 from .consent import (
     ConsentAcknowledgement,
     ConsentRecord,
@@ -48,9 +59,17 @@ __all__ = [
     "list_packs",
     "AudioCueRenderer",
     "CueEvent",
+    "OFFICER_CUE_NOTES_KEY",
+    "OfficerCueNote",
     "OnscreenCueRenderer",
+    "attach_officer_cue_notes",
     "cues_from_observations",
     "generate_tone_wav",
+    "normalize_officer_cue_notes",
+    "export_package_json",
+    "export_sealed_package",
+    "render_package_summary_html",
+    "render_package_summary_markdown",
     "ConsentAcknowledgement",
     "ConsentRecord",
     "apply_consent_to_gate_state",

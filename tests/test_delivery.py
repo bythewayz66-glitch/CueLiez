@@ -4,7 +4,16 @@ import unittest
 import wave
 from pathlib import Path
 
-from cueliez.delivery import AudioCueRenderer, OnscreenCueRenderer, cues_from_observations, generate_tone_wav
+from cueliez.delivery import (
+    AudioCueRenderer,
+    OfficerCueNote,
+    OnscreenCueRenderer,
+    attach_officer_cue_notes,
+    cues_from_observations,
+    generate_tone_wav,
+    normalize_officer_cue_notes,
+)
+from cueliez.gates import SessionGateState, record_consent, seal_observation_package
 from cueliez.observations import default_runner
 
 
@@ -138,3 +147,46 @@ class TestDeliveryIntegration(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestOfficerNotes(unittest.TestCase):
+    def test_normalize_and_attach(self):
+        cues = cues_from_observations(SAMPLE_OBS)
+        notes = normalize_officer_cue_notes([{
+            "cue_id": cues[0].cue_id, "action": "acknowledged", "note": "Asked follow-up.", "officer_id": "o1",
+        }])
+        self.assertEqual(len(notes), 1)
+        self.assertEqual(notes[0]["action"], "acknowledged")
+        pkg = attach_officer_cue_notes({"observations": []}, notes)
+        self.assertIn("officer_cue_notes", pkg)
+        self.assertEqual(pkg["officer_cue_notes"][0]["cue_id"], cues[0].cue_id)
+
+    def test_officer_notes_survive_seal(self):
+        cues = cues_from_observations(SAMPLE_OBS)
+        state = SessionGateState(mode="interrogation")
+        record_consent(state, attested_by="off1")
+        state.training_acknowledged = True
+        state.training_version = "v1"
+        pkg = {"observations": SAMPLE_OBS}
+        pkg = attach_officer_cue_notes(pkg, [{"cue_id": cues[0].cue_id, "action": "noted", "note": "Observed context noted."}])
+        sealed = seal_observation_package(pkg, state)
+        self.assertIn("officer_cue_notes", sealed)
+        self.assertEqual(sealed["officer_cue_notes"][0]["note"], "Observed context noted.")
+
+    def test_panel_includes_officer_actions(self):
+        panel = OnscreenCueRenderer().render_panel(SAMPLE_OBS)
+        self.assertFalse(panel["subject_visible_by_default"])
+        self.assertEqual(panel["surface"], "officer_only")
+        self.assertIn("acknowledged", panel["cues"][0]["officer_actions"])
+
+    def test_officer_html_surface(self):
+        h = OnscreenCueRenderer().render_officer_html(SAMPLE_OBS, title="Officer View")
+        low = h.lower()
+        self.assertIn("not shown to subject by default", low)
+        self.assertIn("not findings", low)
+        self.assertIn("acknowledge", low)
+        self.assertIn("dismiss", low)
+        self.assertIn("officer actions json", low)
+        self.assertIn("cue-t", h)
+        self.assertNotIn("lie detector", low)
+        self.assertNotIn("deception confirmed", low)
