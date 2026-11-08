@@ -11,11 +11,11 @@ Status key: `[ ]` not started · `[~]` in progress · `[x]` done
 ## Phase 0 — Stabilize the Skeleton (Immediate, 2–4 weeks)
 
 - [ ] Add minimal real dependencies to `pyproject.toml` (pydantic for schemas, numpy/scipy or equivalent for basic signal features, keep pytest).
-- [ ] Ensure default and full observation runners produce usable output on sample transcripts.
-- [ ] Make GitHub Pages live; ensure landing page and docs emphasize “Not a lie detector”.
+- [x] Ensure default and full observation runners produce usable output on sample transcripts. (Phase 0 closeout: kilo smoke tests; default/full runners contract-valid on sample + owner transcripts.)
+- [x] Make GitHub Pages live; ensure landing page and docs emphasize “Not a lie detector”. (Phase 0 closeout: glyph Pages workflow/review staging + site/docs language audit + test_site_language.)
 - [x] Create a simple CLI or notebook that accepts transcript JSON → emits sealed package + cue list. (`python -m cueliez` operator entry point; applies gates when configured and exports cues/package.)
 - [x] Confirm language tests and gate tests pass on current main.
-- [ ] Version the canonical disclaimer and reference it from seal path and docs.
+- [x] Version the canonical disclaimer and reference it from seal path and docs. (Phase 0 closeout: iceman `DISCLAIMER_VERSION` embedded in sealed package and referenced in schema/admissibility docs.)
 
 ---
 
