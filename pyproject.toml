@@ -20,6 +20,9 @@ classifiers = [
 ]
 dependencies = []
 
+[project.scripts]
+cueliez = "cueliez.cli:main"
+
 [project.optional-dependencies]
 test = ["pytest>=7"]
 

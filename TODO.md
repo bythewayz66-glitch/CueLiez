@@ -13,8 +13,8 @@ Status key: `[ ]` not started · `[~]` in progress · `[x]` done
 - [ ] Add minimal real dependencies to `pyproject.toml` (pydantic for schemas, numpy/scipy or equivalent for basic signal features, keep pytest).
 - [ ] Ensure default and full observation runners produce usable output on sample transcripts.
 - [ ] Make GitHub Pages live; ensure landing page and docs emphasize “Not a lie detector”.
-- [ ] Create a simple CLI or notebook that accepts transcript JSON → emits sealed package + cue list.
-- [ ] Confirm language tests and gate tests pass on current main.
+- [x] Create a simple CLI or notebook that accepts transcript JSON → emits sealed package + cue list. (`python -m cueliez` operator entry point; applies gates when configured and exports cues/package.)
+- [x] Confirm language tests and gate tests pass on current main.
 - [ ] Version the canonical disclaimer and reference it from seal path and docs.
 
 ---
@@ -35,8 +35,8 @@ Status key: `[ ]` not started · `[~]` in progress · `[x]` done
 - [ ] Keep feature / physiological / visual observers gated; do not enable by default in packs.
 - [ ] Build explicit consent + jurisdiction checks before enabling audio feature extraction or any camera/wearable input.
 - [ ] Prioritize audio-only real-time path first (prosody, speech rate, latency, pause patterns).
-- [ ] Implement officer-facing delivery (onscreen overlay / tablet cues) that the subject does not see by default.
-- [ ] Add optional officer response / note field for high-priority cues; include it in the sealed package.
+- [x] Implement officer-facing delivery (onscreen overlay / tablet cues) that the subject does not see by default. (Minimal low-distraction officer HTML surface + structured officer-only panel with turn-linked/glanceable cues and acknowledge/dismiss/note capture; not a real-time streaming overlay yet.)
+- [~] Add optional officer response / note field for high-priority cues; include it in the sealed package. (Glyph: capture/normalize/attach `officer_cue_notes` and export support implemented; iceman to confirm seal-time preservation/hashing — see `agent_notes/2026-11-08_0618_glyph_to_iceman_officer-cue-notes-field.md`.)
 - [ ] Target end-to-end latency < 1–2 seconds for text cues on local or private-cloud instance.
 
 ---
@@ -55,13 +55,13 @@ Status key: `[ ]` not started · `[~]` in progress · `[x]` done
 - [ ] Add tests that prove packages cannot be sealed without required gates in high-stakes modes.
 
 ### 3.3 Package Integrity & Export
-- [ ] Define and implement a stable sealed-package schema (JSON) that includes observations, cues, gate state, disclaimer, product/version, seal timestamp, session identifiers.
+- [~] Define and implement a stable sealed-package schema (JSON) that includes observations, cues, gate state, disclaimer, product/version, seal timestamp, session identifiers. (Glyph export/read surfaces implemented; schema formalization/hash ownership coordinated with iceman.)
 - [ ] Add cryptographic hash (and later signature) of the package at seal time.
-- [ ] Provide durable export formats: signed/structured JSON + human-readable PDF.
+- [~] Provide durable export formats: signed/structured JSON + human-readable PDF. (Glyph: canonical JSON + human-readable Markdown/HTML summaries preserving disclaimer and observed-indicator framing; HTML is print/PDF-friendly. Signing/hash is iceman scope.)
 - [ ] Prevent post-seal mutation of observations or epistemic fields.
 
 ### 3.4 Human Judgment Preservation
-- [ ] Officer action/note field for high-priority cues is optional but sealed when present.
+- [~] Officer action/note field for high-priority cues is optional but sealed when present. (Glyph capture/attach/export path implemented; seal preservation pending iceman confirmation.)
 - [ ] Package never records automated legal, clinical, or credibility findings.
 - [ ] Clear separation in schema and docs between “system observed/suggested” and “human decided”.
 
