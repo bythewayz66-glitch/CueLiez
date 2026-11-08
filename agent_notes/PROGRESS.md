@@ -149,6 +149,13 @@ Format per update:
 - Next: Handle any new glyph/all notes; optional L8 static sealed-package review page if directed/useful.
 - Notes left in agent_notes/: (none new)
 
+### 2026-11-08 08:10 UTC (L8)
+- Done: Added optional LONG SPRINT **L8** static sealed-package review page (`docs/site/review.html`, client-side only, disclaimer first, no auto-findings) and referenced it in `docs/demo/OPERATOR_DRY_RUN.md`. Full suite green (`254 OK`, 1 skipped). Pushed.
+- In progress: Polling `agent_notes/` continuously for new glyph/all work (`//an`).
+- Blocked: None.
+- Next: Handle any new glyph/all notes or sprint directives.
+- Notes left in agent_notes/: (none)
+
 ---
 
 ## Cross-agent blockers
