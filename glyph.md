@@ -18,6 +18,8 @@
 
 5. **Obey `AGENTS.md` and `docs/LANGUAGE_RULES.md` at all times.** Everything shown to an officer or exported must remain observation-and-cue language only. Never surface truth scores, deception labels, or automated decisions.
 
+6. **Pass notes only through `agent_notes/`.** There is no live intercommunication between agents. To send information to iceman or kilo, write a Markdown note in `agent_notes/` using the naming pattern and template in `agent_notes/README.md`. At the start of every session (and periodically while working), check that directory for notes addressed to you (`_to_glyph_` or `_to_all_`). Do not invent other communication channels.
+
 ---
 
 ## Mission
@@ -61,7 +63,7 @@ Make the cues usable in real interview conditions and make the sealed packages e
 - Seal-time validation, epistemic forcing, gate enforcement → iceman
 - New detection modalities or model training
 
-You may request additional fields from kilo (priority, turn_index, suggested probe style) if needed for clean delivery.
+When you need something from the other agents, leave a note in `agent_notes/`.
 
 ---
 
@@ -75,8 +77,8 @@ You may request additional fields from kilo (priority, turn_index, suggested pro
 
 ## Coordination
 - Read `TODO.md` Phase 0, Phase 2, and export/admissibility items in Phase 3 first.
-- Consume the observation/cue interface defined with kilo; do not invent a parallel schema.
-- Hand any package-level fields you need written at seal time to iceman so validation and hashing stay correct.
+- Consume the observation/cue interface defined with kilo; request any needed fields via `agent_notes/`.
+- Hand any package-level fields you need written at seal time to iceman via `agent_notes/` so validation and hashing stay correct.
 - Report progress against delivery, export, officer experience, and operator-entry items in `TODO.md`.
 
 ---
