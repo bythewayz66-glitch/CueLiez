@@ -262,6 +262,13 @@ Format per update:
 - Next: Continue polling agent notes for new work.
 - Notes left in agent_notes/: (none; no contract changes)
 
+### 2026-11-08 0905 Finish remaining work (kilo scope)
+- Done: Read `0903_orchestrator_to_all_finish-remaining-work.md` and `0905_orchestrator_to_kilo_finish-remaining-work.md`. Verified/completed kilo-scope items: **deps** decision unchanged (no numpy/scipy added; rule-based, none used). **ML/LLM-assisted** real feature-flagged framework in place (registry/provenance/model_id, `CUELIEZ_ASSISTED_OBSERVERS` default off, no external calls, fail-closed) + additive `merge_assisted_observations` opt-in helper; not in runners/packs. **Consent/jurisdiction** checks implemented and aligned to canonical `cueliez.gates` (`observations.modality_gates` adapter + canonical modality consent). **Audio real-time path/hooks:** real derived-metadata observers (prosody/latency/speech-rate/pause) gated by default + consent-governed `observations.audio_path.observe_audio_features` hook (no raw audio). **Gated modalities** remain off by default with consent-governed enablement hooks (Phase 8 enable-by-default only after policy approval). **Red-team** synthetic/de-identified fixtures+tests present. **Latency** measured/documented (<1–2s text path). Added `tests/test_audio_hook_phase7_kilo.py`; updated `docs/OBSERVER_INVENTORY.md`. Full suite green.
+- In progress: None.
+- Blocked: None.
+- Next: Continue polling agent notes for new work.
+- Notes left in agent_notes/: (none; no contract/threshold changes)
+
 ---
 
 ## glyph

@@ -74,8 +74,9 @@ ML/LLM-assisted observers (Phase 1 design/prototype, e.g. `observations.assisted
 ## Phase 2/7 implementation notes (0836/0846, kilo; aligned with iceman 0835/0842)
 - **Canonical gated-modality/session gates (iceman, `cueliez.gates`/`session`):** `record_modality_consent`, `require_gated_modality`, `assert_can_observe(..., modalities=[...])` for `audio_features`/`camera`/`wearable` with explicit consent + jurisdiction + jurisdiction approval. Authoritative for pilot/session flows.
 - **Adapter (kilo, `observations.modality_gates`):** thin convenience adapter mapping `visual_features`→`camera`, `physiological_features`→`wearable`; delegates to canonical checks for `SessionGateState` (fail-closed).
+- **Audio-feature hook (kilo, `observations.audio_path.observe_audio_features`):** consent-governed helper for derived metadata only (no raw audio). Enforces modality consent/jurisdiction (canonical-aligned) before running latency/speech-rate/pause/prosody observers. Real observers, gated by default.
 - Audio-feature real-time path uses real observers (gated by default): prosody `pause_pattern`/`variability`/voice-feature shifts (full runner + metadata) and behavioral `response_latency`/`speech_rate_shift` (metadata). No raw audio processing in observers.
-- `observations.assisted` framework: `CUELIEZ_ASSISTED_OBSERVERS=1` + explicit registry required; default off, no external calls, fail-closed.
+- `observations.assisted` framework: `CUELIEZ_ASSISTED_OBSERVERS=1` + explicit registry required; default off, no external calls, fail-closed. Opt-in merge via `merge_assisted_observations` (additive).
 
 ## Pack summary
 - **gov** (government, 20 core observers): text-only by default; dual-control is a process expectation for high-priority cues before sealing in government mode (enforced by iceman/gates, not by observers).

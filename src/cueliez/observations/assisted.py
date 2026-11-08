@@ -78,3 +78,17 @@ def run_assisted_observers(transcript: Sequence[Mapping[str, Any]], *, enabled: 
             # Fail closed for assisted path: do not break rule-based observation run.
             continue
     return out
+
+
+def merge_assisted_observations(
+    observations: List[Dict[str, Any]],
+    transcript: Sequence[Mapping[str, Any]],
+    *,
+    enabled: bool | None = None,
+) -> List[Dict[str, Any]]:
+    """Opt-in merge of assisted observations (default off). Additive; no external ML by default."""
+    results = run_assisted_observers(transcript, enabled=enabled)
+    out = list(observations)
+    for r in results:
+        out.extend(r.to_dicts())
+    return out
