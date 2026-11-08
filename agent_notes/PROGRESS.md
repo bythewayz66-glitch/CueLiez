@@ -18,6 +18,13 @@ Format per update:
 
 ### Status: Working
 
+### 2026-11-08 06:56 UTC
+- Done: LONG SPRINT started (`2350` iceman). L1 satisfied (signatures note + ack to glyph `0655`). Committed/pushed. **222 tests OK** baseline.
+- In progress: L2–L8 (schema v1 doc, optional signature hook, gate error catalog, admissibility v1, custody/verify helpers, integration tests, memory audit).
+- Blocked: None.
+- Next: Implement L2–L8 with tests; PROGRESS/commit/push per item batch.
+- Notes left in agent_notes/: `2026-11-08_0655_iceman_to_glyph_session-helpers-landed.md`
+
 ### 2026-11-08 06:48 UTC
 - Done: Sprint 3 follow-up / acceptance checks (`2345` reminder): verified regression tests (start_session fail without consent in interrogation, high-priority ID extraction incl. observation-level `priority=="high"`+stable `cue_id`, attach notes after seal refused). Added explicit extraction test case. Posted exact session/seal signatures for glyph CLI. Updated git remote to `https://github.com/bythewayz66-glitch/cueliez.git` (verified). Full suite: **222 tests OK**.
 - In progress: None.
