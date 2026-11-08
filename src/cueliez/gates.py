@@ -30,6 +30,10 @@ CONSENT_REQUIRED_MODES = frozenset({"interrogation", "therapy", "clinical", "gov
 DUAL_CONTROL_MODES = frozenset({"government"})
 TRAINING_REQUIRED_MODES = frozenset({"interrogation", "therapy", "clinical", "government"})
 
+# Gated input modalities (feature extraction / sensors). Off by default; require
+# explicit modality consent + jurisdiction validation before enabling.
+GATED_INPUT_MODALITIES = frozenset({"audio_features", "camera", "wearable"})
+
 PROHIBITED_USES = (
     "automated_detention",
     "automated_charge",
@@ -100,6 +104,9 @@ class SessionGateState:
     intended_uses: List[str] = field(default_factory=list)
     training_acknowledged: bool = False
     training_version: Optional[str] = None
+    # Gated input modalities (audio_features, camera, wearable): explicit consent + jurisdiction.
+    modality_consents: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    jurisdiction_approved: bool = False
 
     def requires_consent(self) -> bool:
         return self.mode in CONSENT_REQUIRED_MODES
@@ -130,6 +137,8 @@ class SessionGateState:
             "intended_uses": list(self.intended_uses or []),
             "training_acknowledged": bool(self.training_acknowledged),
             "training_version": self.training_version,
+            "modality_consents": dict(self.modality_consents or {}),
+            "jurisdiction_approved": bool(self.jurisdiction_approved),
             "requirements": {
                 "consent_required": self.requires_consent(),
                 "training_required": self.requires_training(),
@@ -203,6 +212,73 @@ def require_training(state: SessionGateState) -> None:
         raise GateError(
             "training_version_required",
             "training_version must be recorded when training is acknowledged.",
+        )
+
+
+def record_modality_consent(
+    state: SessionGateState,
+    modality: str,
+    *,
+    attested_by: str,
+    jurisdiction: Optional[str] = None,
+    jurisdiction_approved: bool = True,
+) -> None:
+    """Record explicit consent + jurisdiction approval for a gated input modality."""
+    key = (modality or "").strip().lower().replace("-", "_").replace(" ", "_")
+    if key not in GATED_INPUT_MODALITIES:
+        raise GateError(
+            "unsupported_gated_modality",
+            f"Modality {modality!r} is not a supported gated input modality: {sorted(GATED_INPUT_MODALITIES)}.",
+        )
+    who = (attested_by or "").strip()
+    if not who:
+        raise GateError(
+            "consent_attester_required",
+            "attested_by must be a non-empty identifier for modality consent.",
+        )
+    if jurisdiction is not None:
+        state.jurisdiction = (jurisdiction or "").strip() or state.jurisdiction
+    state.modality_consents[key] = {
+        "consented": True,
+        "attested_by": who,
+        "jurisdiction": state.jurisdiction,
+        "jurisdiction_approved": bool(jurisdiction_approved),
+        "recorded_at": time.time(),
+    }
+    if jurisdiction_approved and (state.jurisdiction or "").strip():
+        state.jurisdiction_approved = True
+
+
+def require_gated_modality(state: SessionGateState, modality: str) -> None:
+    """Fail closed: explicit consent + jurisdiction validation before enabling gated input."""
+    if state is None:
+        raise GateError("gate_state_required", "Session gate state is required for modality checks.")
+    key = (modality or "").strip().lower().replace("-", "_").replace(" ", "_")
+    if key not in GATED_INPUT_MODALITIES:
+        return
+    rec = (state.modality_consents or {}).get(key)
+    if not rec or not rec.get("consented"):
+        raise GateError(
+            "modality_consent_required",
+            f"Explicit consent is required before enabling gated input modality {key!r}.",
+        )
+    att = (rec.get("attested_by") or state.consent_attested_by or "").strip()
+    if not att:
+        raise GateError(
+            "consent_attester_required",
+            f"Non-empty attester is required for gated input modality {key!r}.",
+        )
+    jur = (rec.get("jurisdiction") or state.jurisdiction or "").strip()
+    if not jur:
+        raise GateError(
+            "jurisdiction_required",
+            f"Jurisdiction must be recorded before enabling gated input modality {key!r}.",
+        )
+    approved = bool(rec.get("jurisdiction_approved")) or bool(state.jurisdiction_approved)
+    if not approved:
+        raise GateError(
+            "jurisdiction_approval_required",
+            f"Jurisdiction approval is required before enabling gated input modality {key!r}.",
         )
 
 

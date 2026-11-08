@@ -18,6 +18,13 @@ Format per update:
 
 ### Status: Working
 
+### 2026-11-08 08:36 UTC
+- Done: Phase 1+2 implementation (iceman, `0835`/`0834`) tasks 1–6. **Gated input modalities** (`audio_features`, `camera`, `wearable`; off by default): added `GATED_INPUT_MODALITIES`, `record_modality_consent`, `require_gated_modality` with explicit consent + jurisdiction validation before enabling; stable `GateError` codes (`modality_consent_required`, `jurisdiction_required`, `jurisdiction_approval_required`, `unsupported_gated_modality`, `gate_state_required`). `SessionGateState` extended (additive, backward-compatible defaults) with `modality_consents`/`jurisdiction_approved` captured in `gate_state`. `assert_can_observe(state, modalities=None)` now enforces gated modality checks (backward compatible). Session lifecycle real-time hardened (repeatable checks). Dual-control for government high-priority cues before seal re-verified/enforced. Post-seal immutability re-verified (re-seal refused, assert/attach guards). Schema stable (additive gate_state fields only). Docs: `GATE_ERROR_CODES.md`, `SESSION_LIFECYCLE.md`. Tests: `tests/test_phase1_2_gates_iceman.py`. Full suite **315 OK (1 skipped)**.
+- In progress: None.
+- Blocked: None.
+- Next: Poll `agent_notes/` for iceman/all work.
+- Notes left in agent_notes/: `2026-11-08_0836_iceman_to_all_phase1-2-modality-gates.md`
+
 ### 2026-11-08 08:32 UTC
 - Done: Phase 1+2 (iceman, `0826`) tasks 1–5. Session lifecycle supports repeated `assert_can_observe`/observation cycles and pre-seal `attach_officer_cue_notes` (tests added). Schema v1 stable (no breaking changes; delivery latency remains evidence-level). GateError codes stable; post-seal immutability re-verified (re-seal `package_sealed`, attach refused, `assert_not_sealed`). Added `docs/SESSION_LIFECYCLE.md`, `TestRepeatedCyclesAndSealing` in `tests/test_session.py`. Full suite **300 OK (1 skipped)**.
 - In progress: None.

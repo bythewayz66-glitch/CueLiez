@@ -5,10 +5,10 @@
 ## API (`cueliez.session` / `cueliez.gates`)
 
 1. **`start_session(state: SessionGateState) -> SessionGateState`** — fail-closed checks (prohibited uses, consent, training for mode) before session start.
-2. **`assert_can_observe(state: SessionGateState) -> None`** — same fail-closed checks before observation/runners execute. **Safe to call repeatedly** (e.g., before each observation cycle in real-time/streaming flows) as long as gate state remains satisfied.
+2. **`assert_can_observe(state: SessionGateState, modalities=None) -> None`** — same fail-closed checks before observation/runners execute. **Safe to call repeatedly** (e.g., before each observation cycle in real-time/streaming flows). If `modalities` includes gated inputs (`audio_features`, `camera`, `wearable`), explicit modality consent + jurisdiction validation are required (`modality_consent_required`, `jurisdiction_required`, `jurisdiction_approval_required`). Gated modalities are off by default.
 3. Build observation package(s) from transcripts via runners (`default_runner`/`full_runner`).
 4. **Attach officer notes before seal** if used: `attach_officer_cue_notes(...)` on the **unsealed** package. Sealed packages refuse note attachment.
-5. **`seal(package, state, *, high_priority_cue_ids=None)`** (or `seal_observation_package`) — fail-closed gate rechecks, forces epistemic fields/disclaimer/version, captures `gate_state`, computes `package_hash`, sets `sealed=true`. **Sealed packages cannot be re-sealed or mutated via normal APIs** (`package_sealed` / `attach_officer_cue_notes` refusal).
+5. **`seal(package, state, *, high_priority_cue_ids=None)`** (or `seal_observation_package`) — fail-closed gate rechecks (including government dual-control for high-priority cues), forces epistemic fields/disclaimer/version, captures `gate_state`, computes `package_hash`, sets `sealed=true`. **Sealed packages cannot be re-sealed or mutated via normal APIs** (`package_sealed` / `attach_officer_cue_notes` refusal / re-seal refused).
 
 ## Repeated observation cycles (real-time pattern)
 
