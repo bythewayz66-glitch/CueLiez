@@ -45,6 +45,13 @@ Format per update:
 - Next: Continue workload 2 signal-quality/noise reduction across remaining high-value text observers (hedging/distancing/vagueness/certainty swing; latency/length variance/evasion) with explainable evidence and tests; coordinate schema/cue shape with iceman/glyph via `agent_notes/` if needed.
 - Notes left in agent_notes/: (none)
 
+### 2026-11-08 Sprint 2
+- Done: Read `2026-11-08_2335_orchestrator_to_kilo_sprint2.md` and `2026-11-08_0631_iceman_to_kilo_seal-contract-and-gate-state.md`. Signal-quality pass (precision-over-recall on thin evidence, inspectable evidence keys, neutral cues): Hedging, PronounDistancing, DetailVagueness, CertaintySwing, Minimization, Overjustification; ResponseLatency, AnswerLengthVariance, EvasionMarker. Added/extended tests for empty input, single-turn noise, and positive fixtures for touched observers. Confirmed `leg`/`gov` packs default to text observers only (no feature/physio/visual). Posted glyph cue-field contract note.
+- In progress: Polling agent notes for more work.
+- Blocked: None.
+- Next: Continue kilo workload 2/3 improvements and respond to new notes/blockers as they appear.
+- Notes left in agent_notes/: `2026-11-08_0629_kilo_to_glyph_cue-field-contract.md`
+
 ---
 
 ## glyph

@@ -69,6 +69,18 @@ class TestBehavioral(unittest.TestCase):
                     SpeechRateShiftObserver, FilledPauseMarkerObserver, InterruptionOverlapObserver):
             seal_observation_package({"observations": cls().observe([]).to_dicts()})
 
+    def test_sprint2_single_turn_noise_precision(self):
+        # Insufficient or thin behavioral evidence should emit no cues.
+        self.assertEqual(ResponseLatencyObserver().observe(
+            [{"role": "subject", "text": "ok", "response_latency_ms": 5000}]
+        ).to_dicts(), [])
+        self.assertEqual(AnswerLengthVarianceObserver().observe(
+            [{"role": "subject", "text": "No."}]
+        ).to_dicts(), [])
+        self.assertEqual(EvasionMarkerObserver().observe(
+            [{"role": "subject", "text": "I do not know what happened there."}]
+        ).to_dicts(), [])
+
 
 if __name__ == "__main__":
     unittest.main()

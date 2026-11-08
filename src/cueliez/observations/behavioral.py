@@ -73,7 +73,13 @@ class ResponseLatencyObserver:
                     score=score,
                     method_id=self.method_id,
                     category="behavioral",
-                    evidence={"latency_ms": v, "median_ms": med, "robust_z": round(z, 3), "direction": direction},
+                    evidence={
+                        "latency_ms": round(v, 2),
+                        "baseline_median_ms": round(med, 2),
+                        "robust_z": round(z, 3),
+                        "direction": direction,
+                        "sample_count": len(latencies),
+                    },
                     cue=f"Response latency was notably {direction} than this session's baseline; consider context and question complexity.",
                     turn_index=i,
                 ))
@@ -109,7 +115,14 @@ class AnswerLengthVarianceObserver:
                         score=score,
                         method_id=self.method_id,
                         category="behavioral",
-                        evidence={"word_count": wc, "session_mean_words": round(mean, 2), "z": round(z, 3), "excerpt": ex},
+                        evidence={
+                            "word_count": wc,
+                            "session_mean_words": round(mean, 2),
+                            "session_stdev_words": round(stdev, 2),
+                            "z_score": round(z, 3),
+                            "sample_count": len(lens),
+                            "excerpt": ex,
+                        },
                         cue="Response was markedly brief relative to the session; ask an open follow-up for detail.",
                         turn_index=i,
                     ))
@@ -130,13 +143,17 @@ class EvasionMarkerObserver:
             found = [p for p in _EVASION_PATTERNS if re.search(p, text.lower())]
             if not found:
                 continue
-            score = clamp01(0.45 + 0.1 * min(len(found), 4))
+            score = clamp01(0.42 + 0.09 * min(len(found), 4))
             result.observations.append(make_observation(
                 label="question_deflection_markers_present",
                 score=score,
                 method_id=self.method_id,
                 category="behavioral",
-                evidence={"patterns": found[:8], "excerpt": text[:180]},
+                evidence={
+                    "matched_pattern_count": len(found),
+                    "patterns_matched": found[:8],
+                    "excerpt": text[:180],
+                },
                 cue="Response includes deflection/avoidance phrasing; restate the question and request a direct answer.",
                 turn_index=i,
             ))
