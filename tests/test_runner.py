@@ -102,6 +102,12 @@ class TestRunner(unittest.TestCase):
             for bad in forbidden:
                 self.assertNotIn(bad, cue, f"forbidden phrase {bad!r} in cue: {o.get('cue')}")
 
+    def test_accepts_turns_wrapper_object(self):
+        t = {"turns": [{"role": "subject", "text": "I think maybe perhaps I was sort of around there."}]}
+        pkg = default_runner().build_package(t)
+        seal_observation_package(pkg)
+        self.assertTrue(pkg["observations"])
+
 
 if __name__ == "__main__":
     unittest.main()

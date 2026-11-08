@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping as AbcMapping, Sequence as AbcSequence
 from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 from .base import ObservationResult, Observer
@@ -37,14 +38,28 @@ from .prosody import PausePatternObserver, ProsodicVariabilityObserver, VoiceStr
 from .visual import BlinkRateObserver, GazePatternObserver, MotorActivityObserver
 
 
+def _normalize_transcript(transcript: Any) -> Sequence[Any]:
+    """Accept a turn sequence or a wrapper object with 'turns'/'transcript'."""
+    if isinstance(transcript, AbcMapping):
+        for key in ("turns", "transcript", "messages"):
+            v = transcript.get(key)
+            if isinstance(v, AbcSequence) and not isinstance(v, (str, bytes)):
+                return v
+        return []
+    if transcript is None:
+        return []
+    return transcript
+
+
 class ObservationRunner:
     def __init__(self, observers: Optional[Sequence[Observer]] = None):
         self.observers: List[Observer] = list(observers) if observers is not None else []
 
     def run(self, transcript: Sequence[Mapping[str, Any]]) -> List[Dict[str, Any]]:
+        turns = _normalize_transcript(transcript)
         observations: List[Dict[str, Any]] = []
         for obs in self.observers:
-            res: ObservationResult = obs.observe(transcript)
+            res: ObservationResult = obs.observe(turns)
             observations.extend(res.to_dicts())
         return observations
 
