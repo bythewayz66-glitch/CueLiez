@@ -199,7 +199,12 @@ class NegationDensityObserver:
                 score=score,
                 method_id=self.method_id,
                 category="linguistic",
-                evidence={"count": count, "word_count": len(words), "rate": round(rate, 4), "patterns": found[:8]},
+                evidence={
+                    "marker_count": count,
+                    "word_count": len(words),
+                    "marker_rate": round(rate, 4),
+                    "patterns_matched": found[:8],
+                },
                 cue="Response contains emphatic negation/assurance language; focus on verifiable details rather than assurances.",
                 turn_index=i,
             ))
@@ -360,7 +365,12 @@ class PassiveVoiceProxyObserver:
                 score=score,
                 method_id=self.method_id,
                 category="linguistic",
-                evidence={"count": count, "rate": round(rate, 4), "patterns": found[:6]},
+                evidence={
+                    "construction_count": count,
+                    "word_count": len(words),
+                    "construction_rate": round(rate, 4),
+                    "patterns_matched": found[:6],
+                },
                 cue="Account uses passive/agentless constructions; ask who performed key actions.",
                 turn_index=i,
             ))
@@ -424,7 +434,11 @@ class MemoryQualifierObserver:
                 score=score,
                 method_id=self.method_id,
                 category="linguistic",
-                evidence={"count": count, "patterns": found[:6]},
+                evidence={
+                    "qualifier_count": count,
+                    "word_count": len(words),
+                    "patterns_matched": found[:6],
+                },
                 cue="Response qualifies memory/certainty; distinguish direct recall from reconstruction.",
                 turn_index=i,
             ))
