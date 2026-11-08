@@ -62,6 +62,29 @@ class TestConsistency(unittest.TestCase):
                     LocationReferenceDivergenceObserver, SelfReferenceShiftObserver):
             seal_observation_package({"observations": cls().observe([]).to_dicts()})
 
+    def test_claim_conflict_no_false_positive_same_polarity(self):
+        t = [
+            {"role": "subject", "text": "I entered the store yesterday afternoon."},
+            {"role": "subject", "text": "I entered the store yesterday evening."},
+        ]
+        obs = ClaimConflictObserver().observe(t).to_dicts()
+        self.assertFalse(any(o["label"] == "possible_statement_conflict" for o in obs))
+        seal_observation_package({"observations": obs})
+
+    def test_single_turn_noise_precision(self):
+        self.assertEqual(TimelineInconsistencyObserver().observe(
+            [{"role": "subject", "text": "I arrived at 9:00 pm."}]
+        ).to_dicts(), [])
+        self.assertEqual(DetailDriftObserver().observe(
+            [{"role": "subject", "text": "There were 3 people there."}]
+        ).to_dicts(), [])
+        self.assertEqual(LocationReferenceDivergenceObserver().observe(
+            [{"role": "subject", "text": "I was at Boston."}]
+        ).to_dicts(), [])
+        self.assertEqual(ClaimConflictObserver().observe(
+            [{"role": "subject", "text": "I entered the store."}]
+        ).to_dicts(), [])
+
 
 if __name__ == "__main__":
     unittest.main()
