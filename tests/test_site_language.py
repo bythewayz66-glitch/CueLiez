@@ -15,6 +15,7 @@ SCAN_PATHS = [
     ROOT / "docs/demo/PILOT_PREP.md",
     ROOT / "docs/demo/VALIDATION_NOTES.md",
     ROOT / "docs/ADMISSIBILITY_AND_DISCLOSURE.md",
+    ROOT / "docs/deployment/READINESS.md",
 ]
 
 # Positive verdict/deception claims that must not appear (observation/cue framing only).

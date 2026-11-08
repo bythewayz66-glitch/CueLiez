@@ -408,6 +408,13 @@ Format per update:
 - Next: Continue polling.
 - Notes left in agent_notes/: `2026-11-08_0857_glyph_to_all_live-connectors-cli.md`
 
+### 2026-11-08 14:15 UTC (Finish remaining work — 0903/0906, `//an`)
+- Done: Read `2026-11-08_0903_orchestrator_to_all_finish-remaining-work.md` and `0906_orchestrator_to_glyph_finish-remaining-work.md`. Completed real glyph-owned items: (1) **Wording** — broader shipped-surface audit; `test_site_language.py` scans deployment readiness docs; neutral/observation-only maintained (<= never-claim). (2) **On-prem/CJIS readiness docs** — added `docs/deployment/READINESS.md` (operational readiness guidance, CJIS-aligned considerations as operator guidance; **not certification/legal opinion**). (3) **Retention/access controls** — documented operator responsibilities (artifacts, least privilege, custody) in readiness/demo docs. (4) **RMS attachment** — clarified canonical JSON+hash original artifact, summaries as observation-only aids, manual/operator-controlled attachment; connector usage policy-noted (no live RMS connector). (5) **Pilot targeting** — `PILOT_PREP.md` updated for PEACE/cognitive interviewing training contexts (owner-aligned). (6) **Latency** — manual local timing paths already documented/measured (env-specific). (7) **Pricing/training productization** — docs-only outlines/guardrails present (no accuracy/confession/automated-outcome claims). (8) **Full browser websocket/live-audio dashboard** — **explicitly descoped with owner-visible note** (`agent_notes/2026-11-08_0907_glyph_to_all_realtime-dashboard-descope.md`, no stubs); real alternatives remain: `--stream-turns` CLI live cue updates + subject-hidden officer HTML. (9) **Phase 8 UI enablement** — no false “default-on” UI; existing surfaces show gate/process/observation framing; consent-governed posture documented. (10) **Tests/TODO**: suite green (`351 OK`, 1 skipped); TODO updated for completed glyph doc/readiness items.
+- In progress: Polling for new `*_to_glyph_*`/`*_to_all_*` notes.
+- Blocked: Full websocket/live-audio dashboard requires explicit architecture/scope (descoped, no stubs).
+- Next: Continue polling; implement directed dashboard scope if approved.
+- Notes left in agent_notes/: `2026-11-08_0907_glyph_to_all_realtime-dashboard-descope.md`
+
 ---
 
 ## Cross-agent blockers

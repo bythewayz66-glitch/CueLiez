@@ -5,8 +5,8 @@
 ## Pilot context (owner-aligned)
 
 - **Primary modes:** `generic` + `interrogation` only. Government/clinical/therapy not first-pilot messaging/deployment unless specifically required by an approved partner decision.
-- **User profile:** internal demo → one investigative interviewing training context or a single detective unit that already records interviews.
-- **Deploy posture:** on-prem or private-cloud processing of interview text/transcripts; no public SaaS required in v1.
+- **User profile / targeting:** internal demo → one investigative interviewing training context or a single detective unit that already records interviews and follows structured interviewing standards (e.g., **PEACE** or **cognitive interviewing** practices), subject to agency approval and policy.
+- **Deploy posture:** on-prem or private-cloud processing of interview text/transcripts; no public SaaS required in v1. See `docs/deployment/READINESS.md`.
 - **Success criteria (non-accuracy):** officers find cues useful for follow-up questions; packages seal with gates; the tool is never framed as lie detection. Do not measure or claim truth-detection accuracy or automated outcomes.
 
 ## Interviewing practice framing (PEACE / cognitive interviewing)

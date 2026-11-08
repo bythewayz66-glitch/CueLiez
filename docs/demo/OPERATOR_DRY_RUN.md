@@ -131,11 +131,13 @@ Expected: error indicating consent is required (no observation/seal performed).
 
 ## 7. Deployment posture, custody, and RMS/case attachment (v1 pilot)
 
+See `docs/deployment/READINESS.md` for operational readiness guidance (on-prem/private-cloud posture, CJIS-aligned considerations as operator guidance, retention/access controls, custody). **Not a certification or legal opinion.**
+
 - **Processing posture:** prefer **on-prem or private-cloud** processing of interview text/transcripts for v1. No public SaaS is required. Run the CLI in an operator-controlled environment consistent with local policy.
 - **Sealed packages as original artifacts (RMS/case/evidence):** attach exported **`sealed_package.json`** as the **canonical original artifact**. Preserve `package_hash`, `schema_version`, `product_version`, disclaimer/epistemic fields, and `gate_state` for custodian review. Human-readable summaries (`*.summary.md`/`*.summary.html`, print-to-PDF) may be attached as **observation-only aids** but are not substitutes for the canonical package and not findings. Officer notes (human) remain separate from system-observed cues.
-- **No live integration required:** CueLiez does not provide a live Axon/CaseCracker/RMS connector in this repo. Export files manually/operator-controlled into existing case/evidence workflows per local policy.
-- **Data retention and access controls (operator responsibility):** retain sealed packages, summaries, and any officer-note JSON according to jurisdiction/policy/records schedules. Restrict access to authorized personnel, protect files at rest/in transit per local controls, and avoid storing secrets in package content. CueLiez does not make retention, deletion, or access-control decisions automatically.
-- **Transcript ingest expectations (no live integration required):** provide a JSON array of turns or an object with `transcript`/`turns` (each turn may include `text`/`utterance`/`content`/`transcript` and `role`/`speaker`, plus optional timestamps/metadata). First-pilot path is transcript export/ingest from existing recording workflows; **live Axon/CaseCracker/RMS integrations are post-pilot** unless a partner supplies transcript export only.
+- **No live integration required for attachment:** files can be exported manually/operator-controlled into existing case/evidence workflows per local policy. Connector push/pull commands exist for configured env-based endpoints (mocked/offline-safe in tests); any live vendor connector requires policy approval and approved configuration.
+- **Data retention and access controls (operator responsibility):** retain sealed packages, summaries, and officer-note JSON according to jurisdiction/agency/policy records schedules. Restrict access by authorized role (least privilege), protect artifacts at rest/in transit per local controls, and avoid storing secrets in package content. CueLiez does not make retention, deletion, or access-control decisions automatically.
+- **Transcript ingest expectations:** JSON array of turns or an object with `transcript`/`turns`; turns may include `text`/`utterance`/`content`/`transcript` and `role`/`speaker`. First-pilot path is transcript export/ingest from existing recording workflows.
 
 ## 8. Connector push/pull (env-based, no hardcoded credentials)
 

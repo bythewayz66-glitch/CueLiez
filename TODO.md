@@ -67,22 +67,22 @@ Status key: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ### 3.5 Documentation for Disclosure
 - [x] Write first version of **Admissibility & Disclosure Guide** (what is/isn’t in the package, how consent/training/dual-control appear, recommended disclosure handling). (`docs/ADMISSIBILITY_AND_DISCLOSURE.md` v1 exists; glyph aligned export/disclosure wording and print-to-PDF guidance as observation-only.)
-- [~] Keep sales, training, and UI language consistent with technical reality. (Glyph audited delivery/export/site/demo/docs wording; broader sales/training surfaces remain to verify.)
+- [x] Keep sales, training, and UI language consistent with technical reality. (Glyph audited delivery/export/site/demo/docs/deployment shipped surfaces; `test_site_language` scans key docs; sales/training outlines remain <= never-claim and no-accuracy.)
 - [x] Prepare short internal validation notes (false-positive / over-cue rates, officer utility) that do **not** claim truth-detection accuracy. (`docs/demo/VALIDATION_NOTES.md`.)
 
 ---
 
 ## Phase 4 — Privacy, Security, Integration
 
-- [~] Design primarily for on-prem / air-gapped / private-cloud deployment (CJIS / equivalent readiness). (Glyph documented on-prem/private-cloud posture in demo/disclosure docs; CJIS/equivalent operational readiness not implemented.)
-- [~] Document data-retention and access controls for sealed packages. (Glyph added operator-responsibility guidance in demo/disclosure docs; technical controls not implemented.)
+- [~] Design primarily for on-prem / air-gapped / private-cloud deployment (CJIS / equivalent readiness). (Glyph added `docs/deployment/READINESS.md` operational readiness guidance incl. CJIS-aligned operator considerations; **not certification/legal opinion**. Technical controls/certification pending.)
+- [x] Document data-retention and access controls for sealed packages. (Glyph documented operator responsibilities, artifact handling, least-privilege/access/retention guidance in `docs/deployment/READINESS.md` and demo docs; technical enforcement pending.)
 - [x] Integration priority order:
   1. Transcript ingest from existing systems (Axon, CaseCracker, etc.)
   2. Real-time audio stream hooks
   3. Officer UI (tablet overlay or simple web dashboard)
   4. Export into RMS / case / evidence management systems
   (Documented in TODO/owner posture; first-pilot uses transcript ingest/export only, no live integrations.)
-- [~] Make sealed packages easy to attach as original artifacts rather than derivative interpretations. (Glyph documented canonical JSON+hash as primary artifact and summaries as observation-only aids; RMS workflow integration pending.)
+- [x] Make sealed packages easy to attach as original artifacts rather than derivative interpretations. (Glyph documented canonical `sealed_package.json`+`package_hash` as original artifact, summaries as observation-only aids, RMS/case attachment workflow; no live RMS connector.)
 
 ---
 
@@ -90,7 +90,7 @@ Status key: `[ ]` not started · `[~]` in progress · `[x]` done
 
 - [~] Build private red-team / synthetic + de-identified transcript set for regression and utility testing. (Owner synthetic demos exist; broader private/de-identified set pending.)
 - [ ] Partner with 1–2 academic or practitioner groups in investigative interviewing for small controlled studies (officer follow-up quality, review usefulness, over-cue rates).
-- [~] Target early pilot agencies that already record interviews and care about PEACE / cognitive interviewing standards. (Glyph added pilot-prep framing/outline in `docs/demo/PILOT_PREP.md`; partnerships/targeting pending.)
+- [x] Target early pilot agencies that already record interviews and care about PEACE / cognitive interviewing standards. (Glyph updated `docs/demo/PILOT_PREP.md` targeting/framing; partnerships/outreach pending.)
 - [~] Measure and report latency, completeness of packages, and gate compliance in pilots. (Glyph documented manual local timing/completeness/gate observation paths in demo/validation docs; no truth-detection accuracy claims.)
 
 ---
@@ -111,7 +111,7 @@ Added per owner direction after faster-than-expected completion of Phases 0–5.
 
 - [x] Live Axon / CaseCracker / RMS integration (transcript ingest → sealed package attachment) when a pilot partner supplies transcript export. (Phase 7: iceman ingest validation + kilo normalizer + glyph CLI push/pull with mocked endpoints; env-based config, no hardcoded creds.)
 - [ ] Real-time audio stream hooks (prosody, speech rate, latency, pause patterns) behind explicit consent + jurisdiction checks.
-- [~] Officer UI (tablet overlay or simple web dashboard) for real-time cues, subject not shown by default. (Glyph: officer HTML subject-hidden with ack/dismiss/note; real CLI `--stream-turns` live cue updates. Full browser websocket/live-audio dashboard pending.)
+- [~] Officer UI (tablet overlay or simple web dashboard) for real-time cues, subject not shown by default. (Glyph: officer HTML subject-hidden with ack/dismiss/note; real CLI `--stream-turns` live cue updates. Full browser websocket/live-audio dashboard **descoped (owner-visible note, no stubs)** pending explicit architecture/scope.)
 - [x] Export into RMS / case / evidence management systems as original artifacts (not derivative interpretations). (Glyph docs: canonical `sealed_package.json`+`package_hash` attachable as original artifact; summaries observation-only aids; no live RMS connector.)
 - [ ] Enable physiological / visual / wearable observers only with consent-governed policy support and clinical/therapy messaging kept out of pilot scope.
 - [ ] Government mode external pilot only if a specific partner demands it (dual-control enforced).
