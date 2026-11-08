@@ -25,10 +25,12 @@ jobs:
         run: |
           mkdir -p _site
           cp docs/site/index.html _site/
+          cp docs/site/ops.html _site/
           mkdir -p _site/assets
           cp assets/logo.svg _site/assets/
-          # fix logo path for pages root
+          # fix logo paths for pages root
           sed -i 's|../../assets/logo.svg|assets/logo.svg|g' _site/index.html
+          sed -i 's|href="assets/logo.svg"|href="assets/logo.svg"|g' _site/ops.html
       - uses: actions/configure-pages@v4
         with:
           enablement: true
