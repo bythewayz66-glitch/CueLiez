@@ -12,9 +12,10 @@
 
 ## Access controls and retention
 
-- **Access controls:** restrict access to sealed packages, transcripts, and officer notes to authorized roles; use least privilege, authentication, and audit trails in the hosting/workflow system.
-- **Retention:** define retention periods per jurisdiction/policy/case type; apply legal holds where required. This library does not enforce retention schedules — operators/systems must.
-- **Deletion/export:** when exporting, preserve canonical sealed JSON (`package_hash`, gate state, disclaimer/version) as the original artifact; summaries are aids, not replacements.
+- **Access controls (operational):** restrict access to transcripts, unsealed packages, sealed packages, and officer notes to authorized roles; enforce least privilege, MFA/strong authentication where applicable, and audit logging in the hosting/workflow system. Control who can `start_session`/seal, attach notes (pre-seal), export, and transmit to RMS/case systems.
+- **Retention (operational):** define retention periods per jurisdiction/policy/case type (e.g., investigative, administrative, training/evaluation contexts as applicable); apply legal holds where required; document deletion/archival procedures. This library does not enforce retention schedules or deletion — operators/systems must.
+- **Data handling:** minimize copies; encrypt at rest/in transit per environment policy; avoid exporting sensitive content to unapproved systems.
+- **Deletion/export:** when exporting, preserve canonical sealed JSON (`package_hash`, gate state, disclaimer/version) as the original artifact; summaries are aids, not replacements. For RMS/case attachment, transmit the sealed package as an original artifact and validate integrity on ingest (`validate_sealed_package_ingest`).
 
 ## Sealed-package custody
 
@@ -28,3 +29,13 @@
 - **Current:** transcript ingest accepts JSON sequences/compatible structures used by `ObservationRunner` (turn mappings with role/text and optional metadata). No live Axon/RMS integration required.
 - **Future integrations (expectations):** provide deterministic transcript export (ordered turns, stable IDs/timestamps where available, speaker/role, text). Map to observation inputs without adding verdict fields. Preserve chain-of-custody metadata outside the sealed observation content as appropriate for the evidence system.
 - Packages should remain easy to attach to RMS/case/evidence workflows as canonical JSON artifacts.
+
+## Operational readiness checklist (on-prem / private-cloud)
+
+- [ ] **Environment boundary:** processing and storage confined to authorized on-prem/private-cloud (no public SaaS for production interview content in v1).
+- [ ] **Configuration:** connector/endpoints/credentials supplied via environment/config management (no hardcoded secrets); verify `connector_config_missing`/`connector_auth_failed` handling.
+- [ ] **Gates:** consent/attester/training (and government dual-control for high-priority cues) enforced before seal; gated modalities require explicit consent + jurisdiction validation before enablement.
+- [ ] **Integrity:** verify sealed packages with `verify_package_hash` / `validate_sealed_package_ingest`; preserve `package_hash`, `sealed_at`, `disclaimer_version`, `gate_state`.
+- [ ] **Custody:** attach sealed JSON as original artifact; attach `officer_cue_notes` only before seal; retain audit logs/access records per policy.
+- [ ] **RMS/case/evidence attachment:** use connector ingest validation; store original sealed artifact (not derivative interpretation) with chain-of-custody metadata managed by the receiving system.
+- [ ] **CJIS/equivalent controls (where applicable):** implement agency-required access control, encryption, auditing, personnel/incident processes; this library does not certify compliance.

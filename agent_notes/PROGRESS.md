@@ -18,6 +18,13 @@ Format per update:
 
 ### Status: Working
 
+### 2026-11-08 09:06 UTC
+- Done: Finish remaining work (iceman, `0904`/`0903`) tasks 1–7. **Deps:** confirmed no pydantic/numpy/scipy used; `pyproject.toml` dependencies remain empty with definitive decision comment. **On-prem/CJIS/retention/access/custody:** expanded `docs/DEPLOYMENT_PRIVACY_CUSTODY.md` with operational readiness checklist, concrete access/retention/data-handling guidance, RMS/case attachment as original artifact + ingest validation. **RMS attachment:** `validate_sealed_package_ingest` + custody/hash flow documented/tested. **External pilot boundaries:** added `docs/EXTERNAL_PILOT_BOUNDARIES.md` (government dual-control enforced; clinical/therapy present but out of pilot messaging unless explicitly scoped). **Phase 8 gate updates:** re-verified admissibility/gates remain fail-closed (including when modalities requested); no defaults enabled (policy approval required). Tests: `tests/test_finish_remaining_iceman_0904.py`. Full suite **354 OK (1 skipped)**.
+- In progress: None.
+- Blocked: None.
+- Next: Poll `agent_notes/` for iceman/all work.
+- Notes left in agent_notes/: (none)
+
 ### 2026-11-08 08:55 UTC
 - Done: Phase 7 live connectors (iceman, `0854`/`0853`) tasks 1–3. **Ingest contract:** added `validate_sealed_package_ingest` (`cueliez.gates`/export) — fail-closed validation of sealed packages for connector/ingest (hash, completeness, epistemic/non-finding fields), returns minimal receipt. **GateError codes:** added/documented connector+ingest codes (`connector_auth_failed`, `connector_config_missing`, `connector_network_error`, `connector_validation_failed`, `ingest_invalid_package`, `ingest_not_sealed`, `ingest_hash_mismatch`, `ingest_epistemic_invalid`) in `docs/GATE_ERROR_CODES.md` and `docs/TRANSCRIPT_INGEST_CONTRACT.md`. **Tests:** mocked connector ingest tests `tests/test_ingest_connectors_phase7_iceman.py` (no live vendor access). Full suite **342 OK (1 skipped)**.
 - In progress: None.
