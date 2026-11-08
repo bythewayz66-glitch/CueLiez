@@ -18,6 +18,8 @@
 
 5. **Obey `AGENTS.md` and `docs/LANGUAGE_RULES.md` at all times.** Every observation must be a probabilistic indicator with a neutral label. Never produce verdicts, truth scores, deception claims, guilt findings, or clinical diagnoses.
 
+6. **Pass notes only through `agent_notes/`.** There is no live intercommunication between agents. To send information to iceman or glyph, write a Markdown note in `agent_notes/` using the naming pattern and template in `agent_notes/README.md`. At the start of every session (and periodically while working), check that directory for notes addressed to you (`_to_kilo_` or `_to_all_`). Do not invent other communication channels.
+
 ---
 
 ## Mission
@@ -63,7 +65,7 @@ Improve signal quality and reduce noise. Prefer explainable features and clear e
 - Officer-facing delivery / UI / audio → glyph
 - Marketing or pitch copy
 
-If you need new fields in the package, coordinate with iceman so seal schema and validation stay aligned.
+When you need something from the other agents, leave a note in `agent_notes/`.
 
 ---
 
@@ -77,8 +79,8 @@ If you need new fields in the package, coordinate with iceman so seal schema and
 
 ## Coordination
 - Read `TODO.md` Phase 0 and Phase 1 first.
-- Align observation schema tightly with iceman.
-- Provide glyph with stable cue objects (label, confidence, cue text, turn_index, priority if any).
+- Align observation schema tightly with iceman via `agent_notes/`.
+- Provide glyph with stable cue objects (label, confidence, cue text, turn_index, priority if any) via `agent_notes/`.
 - Report progress against observer, runner, and pack items in `TODO.md`.
 
 ---
