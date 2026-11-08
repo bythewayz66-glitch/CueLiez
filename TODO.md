@@ -111,8 +111,8 @@ Added per owner direction after faster-than-expected completion of Phases 0–5.
 
 - [ ] Live Axon / CaseCracker / RMS integration (transcript ingest → sealed package attachment) when a pilot partner supplies transcript export.
 - [ ] Real-time audio stream hooks (prosody, speech rate, latency, pause patterns) behind explicit consent + jurisdiction checks.
-- [ ] Officer UI (tablet overlay or simple web dashboard) for real-time cues, subject not shown by default.
-- [ ] Export into RMS / case / evidence management systems as original artifacts (not derivative interpretations).
+- [~] Officer UI (tablet overlay or simple web dashboard) for real-time cues, subject not shown by default. (Glyph: officer HTML subject-hidden with ack/dismiss/note; real CLI `--stream-turns` live cue updates. Full browser websocket/live-audio dashboard pending.)
+- [x] Export into RMS / case / evidence management systems as original artifacts (not derivative interpretations). (Glyph docs: canonical `sealed_package.json`+`package_hash` attachable as original artifact; summaries observation-only aids; no live RMS connector.)
 - [ ] Enable physiological / visual / wearable observers only with consent-governed policy support and clinical/therapy messaging kept out of pilot scope.
 - [ ] Government mode external pilot only if a specific partner demands it (dual-control enforced).
 - [ ] Clinical / therapy packs remain present in code but out of pilot messaging unless explicitly scoped.

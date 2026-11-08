@@ -129,10 +129,11 @@ PYTHONPATH=src python -m cueliez docs/examples/sample_transcript.json --mode int
 
 Expected: error indicating consent is required (no observation/seal performed).
 
-## 7. Deployment posture, custody, and integration readiness (v1 pilot)
+## 7. Deployment posture, custody, and RMS/case attachment (v1 pilot)
 
 - **Processing posture:** prefer **on-prem or private-cloud** processing of interview text/transcripts for v1. No public SaaS is required. Run the CLI in an operator-controlled environment consistent with local policy.
-- **Sealed packages as original artifacts:** treat exported `sealed_package.json` (+ `package_hash`, and any signature if later added) as the **canonical original artifact** to attach to a case/evidence workflow. Human-readable summaries (MD/HTML, print-to-PDF) are observation-only aids, not substitutes for the canonical package and not findings.
+- **Sealed packages as original artifacts (RMS/case/evidence):** attach exported **`sealed_package.json`** as the **canonical original artifact**. Preserve `package_hash`, `schema_version`, `product_version`, disclaimer/epistemic fields, and `gate_state` for custodian review. Human-readable summaries (`*.summary.md`/`*.summary.html`, print-to-PDF) may be attached as **observation-only aids** but are not substitutes for the canonical package and not findings. Officer notes (human) remain separate from system-observed cues.
+- **No live integration required:** CueLiez does not provide a live Axon/CaseCracker/RMS connector in this repo. Export files manually/operator-controlled into existing case/evidence workflows per local policy.
 - **Data retention and access controls (operator responsibility):** retain sealed packages, summaries, and any officer-note JSON according to jurisdiction/policy/records schedules. Restrict access to authorized personnel, protect files at rest/in transit per local controls, and avoid storing secrets in package content. CueLiez does not make retention, deletion, or access-control decisions automatically.
 - **Transcript ingest expectations (no live integration required):** provide a JSON array of turns or an object with `transcript`/`turns` (each turn may include `text`/`utterance`/`content`/`transcript` and `role`/`speaker`, plus optional timestamps/metadata). First-pilot path is transcript export/ingest from existing recording workflows; **live Axon/CaseCracker/RMS integrations are post-pilot** unless a partner supplies transcript export only.
 

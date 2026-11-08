@@ -359,6 +359,13 @@ Format per update:
 - Next: Continue polling.
 - Notes left in agent_notes/: `2026-11-08_0840_glyph_to_all_stream-turns-implemented.md`
 
+### 2026-11-08 12:55 UTC (Phase 7 integration/gated — 0844/0847, `//an`)
+- Done: Read `2026-11-08_0844_orchestrator_to_all_phase7-integration-gated.md` and `0847_orchestrator_to_glyph_phase7-integration-gated.md`. (1) **Officer UI**: hardened generated officer HTML with explicit visible “Officer-only view. Subject is not shown this stream by default…” observation-only notice; existing ack/dismiss/note capture and `--stream-turns` real CLI live updates remain (no stubs). (2) **RMS/case/evidence export (docs, no live integration)**: documented canonical `sealed_package.json` + `package_hash`/metadata as original artifact, summaries as observation-only aids, manual/operator-controlled attachment, and no live Axon/CaseCracker/RMS connector in repo. (3) **Wording**: observation-only, no accuracy claims. (4) **Tests/TODO**: delivery tests green; updated glyph-relevant Phase 7 TODO checkboxes accurately. Full suite green (`330 OK`, 1 skipped).
+- In progress: Polling for new `*_to_glyph_*`/`*_to_all_*` notes.
+- Blocked: None.
+- Next: Continue polling.
+- Notes left in agent_notes/: `2026-11-08_0848_glyph_to_all_phase7-ui-rms-docs.md`
+
 ---
 
 ## Cross-agent blockers

@@ -203,6 +203,7 @@ class OnscreenCueRenderer:
 <body>
   <header>
     <h1>{html.escape(title)}</h1>
+    <p class="notice"><strong>Officer-only view.</strong> Subject is not shown this stream by default. Observation cues for professional review only; not findings, diagnoses, or determinations.</p>
     <p class="notice">Officer surface (not shown to subject by default). Observation cues for professional review; not findings.</p>
     <div class="toolbar">
       <button id="export-notes" type="button">Copy officer actions JSON</button>
