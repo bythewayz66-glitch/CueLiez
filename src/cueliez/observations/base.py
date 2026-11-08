@@ -135,6 +135,20 @@ def clamp01(x: float) -> float:
     return float(x)
 
 
+def calibrate_score(value: Any, *, method_id: str | None = None) -> float:
+    """Normalize heuristic observer score to [0,1] (consistent; versionable hook).
+
+    Current behavior: clamp normalization for stability (identity within bounds).
+    Must not be interpreted as probability of deception, credibility, guilt, or any finding.
+    """
+    _ = method_id
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+    return clamp01(v)
+
+
 def make_observation(
     *,
     label: str,
@@ -150,7 +164,7 @@ def make_observation(
 ) -> Observation:
     return Observation(
         label=label,
-        confidence={"score": clamp01(score), "model_id": method_id, "version": version},
+        confidence={"score": calibrate_score(score, method_id=method_id), "model_id": method_id, "version": version},
         category=category,
         method=method_id,
         evidence=evidence or {},

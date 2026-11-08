@@ -24,3 +24,32 @@ class TestAssistedObserversPhase1Kilo(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+from cueliez.observations.assisted import clear_assisted_registry, register_assisted_observer, run_assisted_observers
+from cueliez.observations.base import ObservationResult
+
+
+class TestAssistedFramework(unittest.TestCase):
+    def setUp(self):
+        clear_assisted_registry()
+
+    def tearDown(self):
+        clear_assisted_registry()
+
+    def test_registry_runs_only_when_enabled(self):
+        called = []
+        def adapter(t):
+            called.append(1)
+            return ObservationResult(method="cueliez.observations.assisted.test/v0")
+        register_assisted_observer("test", adapter)
+        self.assertEqual(run_assisted_observers([]), [])
+        self.assertEqual(called, [])
+        res = run_assisted_observers([], enabled=True)
+        self.assertEqual(len(res), 1)
+        self.assertEqual(called, [1])
+
+    def test_fail_closed_on_adapter_error(self):
+        def bad(t):
+            raise RuntimeError("boom")
+        register_assisted_observer("bad", bad)
+        self.assertEqual(run_assisted_observers([], enabled=True), [])

@@ -1,17 +1,18 @@
-"""Feature-flagged ML/LLM-assisted observer interfaces (prototype, DISABLED).
+"""Feature-flagged ML/LLM-assisted observer interfaces (Phase 1 implementation, DISABLED by default).
 
-No external ML calls. Not wired into default_runner/full_runner/packs.
-Production path remains rule/heuristic unless explicitly enabled under approved controls.
+No external ML calls in default/production path. Not wired into default_runner/full_runner/packs.
+Assisted adapters may be registered only for explicitly enabled, approved deployments.
 """
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
-from typing import Any, Mapping, Sequence
+from typing import Any, Callable, List, Mapping, Sequence
 
 from .base import ObservationResult
 
-# Feature flag: must remain False in production/default builds.
-ASSISTED_OBSERVERS_ENABLED = False
+# Feature flag: default OFF. Enable only via explicit deployment config (approved/on-prem controls).
+ASSISTED_OBSERVERS_ENABLED = os.environ.get("CUELIEZ_ASSISTED_OBSERVERS", "").strip() == "1"
 
 
 @dataclass(frozen=True)
@@ -45,3 +46,35 @@ class AssistedObserverPrototype:
             return result
         result.notes.append("assisted_observer_not_implemented")
         return result
+
+
+AssistedAdapter = Callable[[Sequence[Mapping[str, Any]]], ObservationResult]
+_REGISTRY: List[tuple[str, AssistedAdapter, AssistedModelProvenance | None]] = []
+
+
+def register_assisted_observer(name: str, adapter: AssistedAdapter, provenance: AssistedModelProvenance | None = None) -> None:
+    """Register an assisted adapter (deployment-time). No effect unless feature flag is enabled."""
+    if not name or not callable(adapter):
+        raise ValueError("name and callable adapter required")
+    _REGISTRY.append((str(name), adapter, provenance))
+
+
+def clear_assisted_registry() -> None:
+    _REGISTRY.clear()
+
+
+def run_assisted_observers(transcript: Sequence[Mapping[str, Any]], *, enabled: bool | None = None) -> List[ObservationResult]:
+    """Run registered assisted adapters only when explicitly enabled. Default: empty (no external ML)."""
+    on = ASSISTED_OBSERVERS_ENABLED if enabled is None else bool(enabled)
+    if not on or not _REGISTRY:
+        return []
+    out: List[ObservationResult] = []
+    for _name, adapter, _prov in list(_REGISTRY):
+        try:
+            res = adapter(transcript)
+            if isinstance(res, ObservationResult):
+                out.append(res)
+        except Exception:
+            # Fail closed for assisted path: do not break rule-based observation run.
+            continue
+    return out

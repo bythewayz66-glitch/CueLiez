@@ -220,6 +220,13 @@ Format per update:
 - Next: Continue polling agent notes for new work.
 - Notes left in agent_notes/: (none; no contract/threshold changes)
 
+### 2026-11-08 0836 Phase 1+2 implementation (kilo)
+- Done: Read `2026-11-08_0834_orchestrator_to_all_phase1-2-implementation.md` and `0836_orchestrator_to_kilo_phase1-2-implementation.md`. Tasks 1–7 complete. **Calibration:** added `observations.base.calibrate_score` (clamp/identity, versionable hook) wired into `make_observation`; heuristic [0,1], not deception/ground-truth probability. **Insufficient data:** explicit no-cue/no-error behavior verified/covered. **ML/LLM-assisted framework (off by default):** `assisted.py` supports env flag `CUELIEZ_ASSISTED_OBSERVERS=1`, adapter registry, provenance `model_id` versioning, fail-closed execution; no external calls in default path; not in runners/packs. **Gated modalities:** added `observations.modality_gates` (`check_modality_allowed`/`modality_observers_allowed`) enforcing fail-closed consent + jurisdiction before enabling `audio_features`/`visual_features`/`physiological_features`. **Audio-only real-time path (real, gated):** prosody pause/variability/voice-feature observers and behavioral latency/speech-rate observers consume derived metadata (no raw audio); prosody/visual/physio not in `default_runner`. **Latency:** text path remains ~ms scale on sample/owner transcripts (<1–2s). Added tests: `test_modality_gates_phase2_kilo.py`, `test_audio_realtime_path_phase2_kilo.py`, assisted framework tests; updated `docs/OBSERVER_INVENTORY.md`. Full suite green.
+- In progress: None.
+- Blocked: None.
+- Next: Continue polling agent notes for new work.
+- Notes left in agent_notes/: (none; no existing observer contract/threshold behavior changes)
+
 ---
 
 ## glyph

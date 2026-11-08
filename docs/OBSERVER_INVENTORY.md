@@ -66,10 +66,15 @@ ML/LLM-assisted observers (Phase 1 design/prototype, e.g. `observations.assisted
 - **Timeline (`consistency.timeline_inconsistency/v1`)**: recognizes digit clock times and spelled-out hour/minute references in time-context (e.g., "at eight", "eight-thirty"). Emits neutral `multiple_time_references_present` with source quotes. Precision: 2+ distinct digit clock times (legacy) OR 4+ distinct total time refs; avoids over-cueing short sequential accounts. Multiple times may describe a sequence (not a conflict assertion).
 - **Limitation (conflict phrasing)**: semantic contradictions expressed without affirmation/negation key overlap (e.g., "whole time until ten" vs "gone by eight-thirty") may not trigger `claim_conflict`/`detail_drift`; the timeline cue can still surface time references for review. Observers do not assert deception.
 
-## Confidence scores and calibration (Phase 3)
-- `confidence.score` is a heuristic, rule-derived signal strength in `[0.0, 1.0]`, clamped/validated by `make_observation`. Scores are **not** statistically calibrated to ground-truth outcomes and must **not** be interpreted as probability of deception, credibility, guilt, intent, or any finding.
-- `confidence.model_id` identifies the versioned observation method (not an external ML model in the production path).
+## Confidence scores and calibration (Phase 3 / 0836 implementation)
+- `confidence.score` is a heuristic, rule-derived signal strength in `[0.0, 1.0]`, normalized by `observations.base.calibrate_score` (currently clamp/identity, versionable hook) and validated by `make_observation`. Scores are **not** statistically calibrated to ground-truth outcomes and must **not** be interpreted as probability of deception, credibility, guilt, intent, or any finding.
+- `confidence.model_id` identifies the versioned observation method (or assisted provenance when explicitly enabled; assisted off by default).
 - Insufficient/thin data yields no observations (not low-confidence noise). Same input + same method versions produce deterministic `cue_id` and stable observation content.
+
+## Phase 2 implementation notes (0836, kilo)
+- `observations.modality_gates.check_modality_allowed(state, modality)` enforces fail-closed consent + jurisdiction checks before enabling sensitive modalities (`audio_features`, `visual_features`, `physiological_features`). Text path unaffected.
+- Audio-feature real-time path uses real observers (gated by default): prosody `pause_pattern`/`variability`/voice-feature shifts (full runner + metadata) and behavioral `response_latency`/`speech_rate_shift` (metadata). No raw audio processing in observers.
+- `observations.assisted` framework: `CUELIEZ_ASSISTED_OBSERVERS=1` + explicit registry required; default off, no external calls, fail-closed.
 
 ## Pack summary
 - **gov** (government, 20 core observers): text-only by default; dual-control is a process expectation for high-priority cues before sealing in government mode (enforced by iceman/gates, not by observers).
