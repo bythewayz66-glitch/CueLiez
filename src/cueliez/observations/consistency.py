@@ -20,13 +20,27 @@ from .base import (
     text_of,
     truncate_source,
 )
-from .thresholds import CLAIM_MIN_OVERLAP, CLAIM_MIN_SHARED_WORDS, CLAIM_TOPIC_DEDUP_OVERLAP
+from .thresholds import (CLAIM_MIN_OVERLAP, CLAIM_MIN_SHARED_WORDS, CLAIM_TOPIC_DEDUP_OVERLAP,
+                         TIMELINE_MIN_DISTINCT_CLOCK_TIMES, TIMELINE_MIN_DISTINCT_SPELLED_TIMES)
 
 _NEG = re.compile(r"\b(no|not|never|didn't|did not|wasn't|was not|isn't|is not|don't|do not|can't|cannot)\b", re.I)
 _TIME_RE = re.compile(r"\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b|\b(midnight|noon|morning|afternoon|evening|night)\b", re.I)
 _DATEISH_RE = re.compile(r"\b(\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?|monday|tuesday|wednesday|thursday|friday|saturday|sunday|yesterday|today|tomorrow|last\s+\w+|next\s+\w+)\b", re.I)
 _NUMBER_RE = re.compile(r"\b\d+(?:\.\d+)?\b")
 _LOCATION_RE = re.compile(r"\b(?:at|in|to|from|near|inside|outside)\s+([A-Z][A-Za-z0-9'.-]*(?:\s+[A-Z][A-Za-z0-9'.-]*){0,3})")
+
+_HOUR_WORD = (
+    r"(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve"
+    r"|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty)"
+)
+_MINUTE_WORD = r"(?:o['’]?clock|thirty|fifteen|forty[- ]five|ten|twenty|five|oh\s+(?:one|two|three|four|five|six|seven|eight|nine))"
+# Spelled-out time references common in transcripts (neutral review cue). Context/preposition
+# reduces false positives on non-time uses like "eight people".
+_SPELLED_TIME_RE = re.compile(
+    rf"\b(?:(?:at|by|around|about|until|till|before|after|since|from|near)\s+)?({_HOUR_WORD})(?:[\s-]+{_MINUTE_WORD})\b"
+    rf"|\b(?:at|by|around|about|until|till|before|after|since|from|near)\s+({_HOUR_WORD})\b",
+    re.I,
+)
 
 
 _NEG_TOKENS = {
@@ -158,46 +172,57 @@ class ClaimConflictObserver:
         return result
 
 
+def _norm_spelled_time(s: str) -> str:
+    s = re.sub(r"\s+", " ", s.lower().strip())
+    s = s.replace("o'clock", "oclock").replace("o’clock", "oclock")
+    s = re.sub(r"^(?:at|by|around|about|until|till|before|after|since|from|near)\s+", "", s)
+    return s
+
+
 class TimelineInconsistencyObserver:
     method_id = "cueliez.observations.consistency.timeline_inconsistency/v1"
 
     def observe(self, transcript: Sequence[Mapping[str, Any]]) -> ObservationResult:
         result = ObservationResult(method=self.method_id)
-        mentions: list[tuple[int, list[str], Any]] = []
+        # (normalized_ref, turn_index, turn, raw_display)
+        clock_refs: list[tuple[str, int, Any, str]] = []
         for i, t in enumerate(transcript):
             if not is_subject_turn(t):
                 continue
             text = text_of(t).strip()
             if not text:
                 continue
-            times = [m.group(0).lower() for m in _TIME_RE.finditer(text)]
-            dates = [m.group(0).lower() for m in _DATEISH_RE.finditer(text)]
-            refs = times + dates
-            if refs:
-                mentions.append((i, refs, t))
-        if len(mentions) < 2:
+            # Digit clock times (existing behavior)
+            for m in _TIME_RE.finditer(text):
+                raw = m.group(0).lower()
+                if re.search(r"\d", raw) and (":" in raw or re.search(r"\b(am|pm)\b", raw)):
+                    clock_refs.append((re.sub(r"\s+", " ", raw).strip(), i, t, raw))
+            # Spelled-out hour/minute references (e.g., "at eight", "eight-thirty")
+            for m in _SPELLED_TIME_RE.finditer(text):
+                raw = m.group(0).strip()
+                norm = _norm_spelled_time(raw)
+                if norm:
+                    clock_refs.append((norm, i, t, raw.lower()))
+        if len(clock_refs) < 2:
             return result
-        clock_times = []
-        for i, refs, turn in mentions:
-            for r in refs:
-                if re.search(r"\d", r) and (":" in r or re.search(r"\b(am|pm)\b", r)):
-                    clock_times.append((i, r, turn))
-        uniq = {}
-        for i, r, turn in clock_times:
-            uniq.setdefault(r, []).append((i, turn))
-        if len(uniq) >= 2:
+        uniq: dict[str, list[tuple[int, Any, str]]] = {}
+        for norm, i, turn, raw in clock_refs:
+            uniq.setdefault(norm, []).append((i, turn, raw))
+        has_digit_ref = any(re.search(r"\d", raw) for _, _, _, raw in clock_refs)
+        min_distinct = TIMELINE_MIN_DISTINCT_CLOCK_TIMES if has_digit_ref else TIMELINE_MIN_DISTINCT_SPELLED_TIMES
+        if len(uniq) >= min_distinct:
             refs = list(uniq.keys())
             # A single event can legitimately involve multiple times (sequence); emit as a review cue, not inconsistency.
             score = clamp01(0.36 + 0.07 * min(len(refs), 6))
             source_texts = []
             seen_ti = set()
             for k, items in list(uniq.items())[:8]:
-                for ti, turn in items[:1]:
+                for ti, turn, raw in items[:1]:
                     if ti in seen_ti:
                         continue
                     seen_ti.add(ti)
                     sp = source_span(turn, ti)
-                    sp["time_ref"] = k
+                    sp["time_ref"] = raw
                     source_texts.append(sp)
             result.observations.append(make_observation(
                 label="multiple_time_references_present",

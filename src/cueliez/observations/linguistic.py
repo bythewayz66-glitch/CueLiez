@@ -10,6 +10,7 @@ import re
 from typing import Any, Mapping, Sequence
 
 from .base import ObservationResult, clamp01, is_subject_turn, make_observation, source_span, text_of
+from .thresholds import HEDGING_EMIT_SCORE, HEDGING_MIN_COUNT_OR_LONG, HEDGING_MIN_WORDS
 
 _WORD_RE = re.compile(r"[A-Za-z']+")
 
@@ -39,6 +40,44 @@ HEDGE_PATTERNS = [
     r"\bnot sure\b", r"\bif i recall\b", r"\bas far as i know\b",
     r"\bto the best of my\b", r"\bi might be wrong\b",
 ]
+
+# Approximation tokens that are often ordinary time approximations (not hedging evasiveness)
+# when immediately followed by a time expression. Exclude only those contextual occurrences.
+_TIME_APPROX_HEDGE_PATTERNS = (r"\babout\b", r"\baround\b", r"\broughly\b", r"\bapproximately\b")
+_TIME_EXPR_AFTER_APPROX = re.compile(
+    r"\s+(?:\d{1,2}(?::\d{2})?\s*(?:am|pm)?"
+    r"|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve"
+    r"|noon|midnight)"
+    r"(?:[\s-]*(?:o['’]?clock|thirty|fifteen|forty[- ]five|ten|twenty|oh\s*\d))?\b",
+    re.I,
+)
+
+
+def _hedge_count_adjusted(text: str) -> tuple[int, list[str]]:
+    """Count hedge patterns, excluding time-approximation tokens used as clock-time approximations."""
+    low = text.lower()
+    count, found = _count_patterns(text, HEDGE_PATTERNS)
+    if not count:
+        return 0, []
+    # Remove contextual time-approximation matches (e.g., "around nine-thirty") from hedging evidence.
+    approx_removed = 0
+    remaining_found = list(found)
+    for pat in _TIME_APPROX_HEDGE_PATTERNS:
+        if pat not in remaining_found:
+            continue
+        removed_for_pat = 0
+        for m in re.finditer(pat, low):
+            tail = low[m.end() :]
+            if _TIME_EXPR_AFTER_APPROX.match(tail):
+                removed_for_pat += 1
+        if removed_for_pat:
+            n = len(re.findall(pat, low))
+            approx_removed += removed_for_pat
+            if removed_for_pat >= n and pat in remaining_found:
+                remaining_found.remove(pat)
+    adjusted = max(0, count - approx_removed)
+    return adjusted, remaining_found
+
 
 DISTANCING_PATTERNS = [
     r"\bthat (?:guy|man|woman|person|individual)\b",
@@ -104,17 +143,17 @@ class HedgingObserver:
                 continue
             text = text_of(turn)
             words = _words(text)
-            if len(words) < 4:
+            if len(words) < HEDGING_MIN_WORDS:
                 continue
-            count, found = _count_patterns(text, HEDGE_PATTERNS)
+            count, found = _hedge_count_adjusted(text)
             if not count:
                 continue
             # Precision: a single weak hedge in short/normal text is common; require stronger evidence.
-            if count < 2 and len(words) < 10:
+            if count < 2 and len(words) < HEDGING_MIN_COUNT_OR_LONG:
                 continue
             rate = count / max(1, len(words))
             score = clamp01(0.30 + min(rate, 0.35) * 2.2 + min(count, 6) * 0.06)
-            if score < 0.36:
+            if score < HEDGING_EMIT_SCORE:
                 continue
             ev = {
                 "hedge_count": count,

@@ -10,7 +10,11 @@ From the repository root:
 export PYTHONPATH=src
 ```
 
-Fixture transcript: `docs/examples/sample_transcript.json`
+Fixture transcript (minimal smoke): `docs/examples/sample_transcript.json`
+Preferred owner demo transcripts (see `docs/OWNER_DECISIONS.md` §4):
+- `docs/examples/owner_clean_interview.json`
+- `docs/examples/owner_conflict_interview.json`
+- `docs/examples/owner_hedging_interview.json`
 
 ## 1. Dry demo (no seal)
 
@@ -72,6 +76,23 @@ PYTHONPATH=src python -m cueliez docs/examples/sample_transcript.json \
 ```
 
 Officer notes are human-authored context, not system findings. They must be attached before seal.
+
+## 4b. Owner demo transcripts (hardening pass)
+
+Run each preferred owner transcript in generic mode:
+
+```bash
+PYTHONPATH=src python -m cueliez docs/examples/owner_clean_interview.json --mode generic --show-cues
+PYTHONPATH=src python -m cueliez docs/examples/owner_conflict_interview.json --mode generic --show-cues
+PYTHONPATH=src python -m cueliez docs/examples/owner_hedging_interview.json --mode generic --show-cues
+```
+
+Expected after hardening:
+- `owner_clean_interview.json`: **0 cues** (no false positives), seals cleanly.
+- `owner_conflict_interview.json`: **2 cues** (vague language + multiple time references), with source quotes; seals cleanly.
+- `owner_hedging_interview.json`: **8 cues** (hedging/vagueness), neutral wording; seals cleanly.
+
+All three must seal with `epistemic_status=observed_indicator`, `is_definitive_finding=false`, disclaimer, `gate_state`, and `package_hash`.
 
 ## 5. Static sealed-package review (optional)
 

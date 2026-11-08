@@ -55,6 +55,9 @@ CLAIM_MIN_SHARED_WORDS = 2
 CLAIM_MIN_OVERLAP = 0.5
 CLAIM_TOPIC_DEDUP_OVERLAP = 0.75
 
+# Require enough distinct clock-time refs to reduce false positives on ordinary sequential accounts.
 TIMELINE_MIN_DISTINCT_CLOCK_TIMES = 2
+# Spelled-out time references are noisier (common in ordinary accounts); require more distinct refs.
+TIMELINE_MIN_DISTINCT_SPELLED_TIMES = 4
 DETAIL_DRIFT_MIN_TURNS = 2
 LOCATION_MIN_REFERENCES = 2
