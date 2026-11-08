@@ -70,11 +70,27 @@ def _cue_events(
     package: Mapping[str, Any],
     cues: Optional[Sequence[CueEvent | Mapping[str, Any]]],
     observations: Optional[Sequence[Mapping[str, Any]]],
+    transcript: Optional[Sequence[Mapping[str, Any]]] = None,
 ) -> List[Dict[str, Any]]:
     obs = list(observations) if observations is not None else list(package.get("observations") or [])
     if cues is None:
-        return [c.to_dict() for c in cues_from_observations(obs)]
+        return [c.to_dict() for c in cues_from_observations(obs, transcript=transcript)]
     return [c.to_dict() if isinstance(c, CueEvent) else dict(c) for c in cues]
+
+
+def _format_source_quotes(quotes: Any) -> str:
+    if not isinstance(quotes, list) or not quotes:
+        return ""
+    parts = []
+    for q in quotes:
+        if not isinstance(q, Mapping):
+            continue
+        ti = q.get("turn_index")
+        role = f"{q.get('role')} " if q.get("role") else ""
+        where = f"T{ti}" if ti is not None else "source"
+        text = str(q.get("text") or "").replace("|", "\\|").replace("\n", " ")
+        parts.append(f'{where} ({role}transcript): "{text}"')
+    return " / ".join(parts)
 
 
 def _high_priority_cue_ids(cue_events: Sequence[Mapping[str, Any]]) -> List[str]:
@@ -86,11 +102,12 @@ def render_package_summary_markdown(
     *,
     cues: Optional[Sequence[CueEvent | Mapping[str, Any]]] = None,
     observations: Optional[Sequence[Mapping[str, Any]]] = None,
+    transcript: Optional[Sequence[Mapping[str, Any]]] = None,
 ) -> str:
     """Render a human-readable Markdown summary of a package."""
     pkg = dict(package)
     obs = list(observations) if observations is not None else list(pkg.get("observations") or [])
-    cue_events = _cue_events(pkg, cues, observations)
+    cue_events = _cue_events(pkg, cues, observations, transcript=transcript)
     notes = normalize_officer_cue_notes(pkg.get(OFFICER_CUE_NOTES_KEY))
     gates = _gate_summary(pkg)
     hi_ids = _high_priority_cue_ids(cue_events)
@@ -129,12 +146,13 @@ def render_package_summary_markdown(
     if not cue_events:
         lines.append("No observation cues were present at export thresholds.")
     else:
-        lines.append("| Priority | Turn | Cue ID | Label | Score | Message |")
-        lines.append("|---|---:|---|---|---:|---|")
+        lines.append("| Priority | Turn | Cue ID | Label | Score | Message | Source (transcript) |")
+        lines.append("|---|---:|---|---|---:|---|---|")
         for c in cue_events:
             msg = str(c.get("message") or "").replace("|", "\\|").replace("\n", " ")
             turn = c.get("turn_index")
-            lines.append(f"| {c.get('priority','')} | {turn if turn is not None else ''} | {c.get('cue_id','')} | {c.get('label','')} | {float(c.get('score') or 0):.2f} | {msg} |")
+            src = _format_source_quotes(c.get("source_quotes"))
+            lines.append(f"| {c.get('priority','')} | {turn if turn is not None else ''} | {c.get('cue_id','')} | {c.get('label','')} | {float(c.get('score') or 0):.2f} | {msg} | {src} |")
     if notes:
         lines.append("")
         lines.append("## Officer Notes (Human)")
@@ -172,12 +190,13 @@ def render_package_summary_html(
     *,
     cues: Optional[Sequence[CueEvent | Mapping[str, Any]]] = None,
     observations: Optional[Sequence[Mapping[str, Any]]] = None,
+    transcript: Optional[Sequence[Mapping[str, Any]]] = None,
     title: str = "CueLiez Package Summary",
 ) -> str:
     """Render a human-readable HTML summary (print/PDF-friendly)."""
     pkg = dict(package)
     obs = list(observations) if observations is not None else list(pkg.get("observations") or [])
-    cue_events = _cue_events(pkg, cues, observations)
+    cue_events = _cue_events(pkg, cues, observations, transcript=transcript)
     notes = normalize_officer_cue_notes(pkg.get(OFFICER_CUE_NOTES_KEY))
     gates = _gate_summary(pkg)
     hi_ids = _high_priority_cue_ids(cue_events)
@@ -187,6 +206,7 @@ def render_package_summary_html(
     for c in cue_events:
         prio = html.escape(str(c.get('priority','')))
         cls = " class='high-priority'" if c.get('priority') in {'high','critical'} else ""
+        src = html.escape(_format_source_quotes(c.get('source_quotes')))
         rows.append(f"<tr{cls}>"
                     f"<td>{prio}</td>"
                     f"<td>{html.escape(str(c.get('turn_index','')))}</td>"
@@ -194,8 +214,9 @@ def render_package_summary_html(
                     f"<td>{html.escape(str(c.get('label','')))}</td>"
                     f"<td>{float(c.get('score') or 0):.2f}</td>"
                     f"<td>{html.escape(str(c.get('message','')))}</td>"
+                    f"<td>{src}</td>"
                     "</tr>")
-    cue_body = "\n".join(rows) or "<tr><td colspan='6'>No observation cues were present at export thresholds.</td></tr>"
+    cue_body = "\n".join(rows) or "<tr><td colspan='7'>No observation cues were present at export thresholds.</td></tr>"
     notes_section = ""
     if notes:
         note_items = "".join(
@@ -240,7 +261,7 @@ def render_package_summary_html(
   </section>
   <section>
     <h2>System-Observed Cues (for human review)</h2>
-    <table><thead><tr><th>Priority</th><th>Turn</th><th>Cue ID</th><th>Label</th><th>Score</th><th>Message</th></tr></thead><tbody>{cue_body}</tbody></table>
+    <table><thead><tr><th>Priority</th><th>Turn</th><th>Cue ID</th><th>Label</th><th>Score</th><th>Message</th><th>Source (transcript)</th></tr></thead><tbody>{cue_body}</tbody></table>
   </section>
   {notes_section}
   <section>
@@ -268,6 +289,7 @@ def export_sealed_package(
     formats: Sequence[str] = ("json", "md", "html"),
     cues: Optional[Sequence[CueEvent | Mapping[str, Any]]] = None,
     observations: Optional[Sequence[Mapping[str, Any]]] = None,
+    transcript: Optional[Sequence[Mapping[str, Any]]] = None,
 ) -> Dict[str, str]:
     """Export a package to requested formats. Returns paths by format."""
     root = Path(out_dir)
@@ -277,10 +299,10 @@ def export_sealed_package(
         paths["json"] = export_package_json(package, root / f"{basename}.json")
     if "md" in formats or "markdown" in formats:
         p = root / f"{basename}.summary.md"
-        p.write_text(render_package_summary_markdown(package, cues=cues, observations=observations) + "\n", encoding="utf-8")
+        p.write_text(render_package_summary_markdown(package, cues=cues, observations=observations, transcript=transcript) + "\n", encoding="utf-8")
         paths["md"] = str(p)
     if "html" in formats:
         p = root / f"{basename}.summary.html"
-        p.write_text(render_package_summary_html(package, cues=cues, observations=observations) + "\n", encoding="utf-8")
+        p.write_text(render_package_summary_html(package, cues=cues, observations=observations, transcript=transcript) + "\n", encoding="utf-8")
         paths["html"] = str(p)
     return paths

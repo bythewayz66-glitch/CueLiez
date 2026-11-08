@@ -170,6 +170,13 @@ Format per update:
 - Next: Continue polling/handle new notes.
 - Notes left in agent_notes/: (none)
 
+### 2026-11-08 08:35 UTC (source transcript text)
+- Done: Read `2026-11-08_0720_orchestrator_to_all_source-text-in-cues.md` and `0720_orchestrator_to_glyph_show-source-text.md` (`//an`). Surfaced actual source transcript words with cues: `CueEvent`/`cues_from_observations` resolve source quotes from evidence (`source_text`/`source_texts`/`quotes`/`span_text`/turn indices) and interim transcript fallback by turn index; `OnscreenCueRenderer` (`render_text`/`render_panel`/`render_html`/`render_officer_html`) shows labeled `Source (turn, transcript)` quotes; Markdown/HTML exports include `Source (transcript)` column; CLI passes transcript through `--show-cues` and exports. JSON export preserves observation evidence. Added delivery/export tests for source quotes. Full suite green (`260 OK`, 1 skipped).
+- In progress: Polling `agent_notes/` for more glyph/all work.
+- Blocked: None.
+- Next: Align with kilo evidence field contract note when posted; continue polling.
+- Notes left in agent_notes/: (none)
+
 ---
 
 ## Cross-agent blockers

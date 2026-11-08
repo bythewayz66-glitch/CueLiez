@@ -154,7 +154,7 @@ def run_cli(argv: Optional[List[str]] = None) -> int:
             raw_package = runner.build_package(transcript, annotations=annotations)
             observations = raw_package.get("observations") or []
 
-        cues = cues_from_observations(observations, min_score=args.min_score, max_cues=args.max_cues)
+        cues = cues_from_observations(observations, min_score=args.min_score, max_cues=args.max_cues, transcript=transcript)
         hi_ids = _high_priority_cue_ids(cues)
 
         if args.show_cues:
@@ -181,7 +181,7 @@ def run_cli(argv: Optional[List[str]] = None) -> int:
 
         formats = args.formats or ["json", "md", "html"]
         if args.out_dir:
-            exported = export_sealed_package(package, args.out_dir, basename=args.basename, formats=formats, cues=cues, observations=observations)
+            exported = export_sealed_package(package, args.out_dir, basename=args.basename, formats=formats, cues=cues, observations=observations, transcript=transcript)
             print(json.dumps({"ok": True, "notice": HONEST_NOTICE, "cue_count": len(cues), "observation_count": len(observations), "high_priority_cue_ids": hi_ids, "sealed": not args.no_seal, "exports": exported}, ensure_ascii=False))
 
         if args.print_json or not args.out_dir:

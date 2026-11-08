@@ -78,6 +78,99 @@ def _safe_text(value: Any, limit: int = 240) -> str:
         return text[: limit - 1] + "…"
     return text
 
+def _turn_text(turn: Any) -> str:
+    if not isinstance(turn, Mapping):
+        return ""
+    for k in ("text", "utterance", "content", "transcript"):
+        v = turn.get(k)
+        if isinstance(v, str) and v.strip():
+            return v.strip()
+    return ""
+
+
+def _turn_role(turn: Any) -> str:
+    if not isinstance(turn, Mapping):
+        return ""
+    return str(turn.get("role") or turn.get("speaker") or "").strip().lower()
+
+
+def _truncate_quote(text: str, limit: int = 500) -> str:
+    t = " ".join(str(text or "").split())
+    if len(t) > limit:
+        return t[: limit - 1].rstrip() + "…"
+    return t
+
+
+def resolve_source_quotes(
+    obs: Mapping[str, Any],
+    transcript: Optional[Sequence[Mapping[str, Any]]] = None,
+) -> List[Dict[str, Any]]:
+    """Resolve quoted source transcript spans for human review (evidence context only)."""
+    ev = obs.get("evidence") if isinstance(obs.get("evidence"), Mapping) else {}
+    quotes: List[Dict[str, Any]] = []
+
+    # Prefer explicit evidence fields (kilo contract).
+    raw_quotes = ev.get("quotes")
+    if isinstance(raw_quotes, list):
+        for q in raw_quotes:
+            if isinstance(q, Mapping):
+                text = _truncate_quote(q.get("text") or q.get("source_text") or "")
+                if text:
+                    qi: Dict[str, Any] = {"text": text}
+                    if q.get("turn_index") is not None:
+                        try:
+                            qi["turn_index"] = int(q["turn_index"])
+                        except Exception:
+                            pass
+                    if q.get("role") or q.get("speaker"):
+                        qi["role"] = str(q.get("role") or q.get("speaker"))
+                    quotes.append(qi)
+    if not quotes:
+        st = ev.get("source_text") or ev.get("span_text")
+        if isinstance(st, str) and st.strip():
+            quotes.append({"text": _truncate_quote(st), "turn_index": obs.get("turn_index"), "role": ev.get("role") or ev.get("speaker")})
+        sts = ev.get("source_texts")
+        if isinstance(sts, list):
+            tis = ev.get("turn_indices") if isinstance(ev.get("turn_indices"), list) else []
+            for idx, item in enumerate(sts):
+                if isinstance(item, str) and item.strip():
+                    q: Dict[str, Any] = {"text": _truncate_quote(item)}
+                    if idx < len(tis):
+                        q["turn_index"] = tis[idx]
+                    quotes.append(q)
+                elif isinstance(item, Mapping):
+                    text = _truncate_quote(item.get("text") or item.get("source_text") or "")
+                    if text:
+                        quotes.append({"text": text, "turn_index": item.get("turn_index"), "role": item.get("role")})
+
+    # Interim fallback: resolve from transcript by turn indices.
+    if not quotes and transcript is not None:
+        indices: List[int] = []
+        for key in ("turn_index", "turn", "turn_a", "turn_b"):
+            v = obs.get(key) if key in obs else ev.get(key)
+            if isinstance(v, int) and not isinstance(v, bool):
+                indices.append(v)
+        for key in ("turn_indices",):
+            v = ev.get(key)
+            if isinstance(v, list):
+                for x in v:
+                    if isinstance(x, int) and not isinstance(x, bool):
+                        indices.append(x)
+        seen_ti = set()
+        for ti in indices:
+            if ti in seen_ti or ti < 0 or ti >= len(transcript):
+                continue
+            seen_ti.add(ti)
+            text = _turn_text(transcript[ti])
+            if text:
+                quotes.append({"turn_index": ti, "role": _turn_role(transcript[ti]) or None, "text": _truncate_quote(text)})
+    # Clean None roles
+    for q in quotes:
+        if not q.get("role"):
+            q.pop("role", None)
+    return quotes
+
+
 @dataclass
 class CueEvent:
     cue_id: str
@@ -91,10 +184,11 @@ class CueEvent:
     audio_script: str
     turn_index: Optional[int] = None
     evidence_summary: Dict[str, Any] = field(default_factory=dict)
+    source_quotes: List[Dict[str, Any]] = field(default_factory=list)
     non_verdict_notice: str = "Observation cue for professional review; not a finding."
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        d = {
             "cue_id": self.cue_id,
             "label": self.label,
             "category": self.category,
@@ -106,8 +200,10 @@ class CueEvent:
             "audio_script": self.audio_script,
             "turn_index": self.turn_index,
             "evidence_summary": self.evidence_summary,
+            "source_quotes": self.source_quotes,
             "non_verdict_notice": self.non_verdict_notice,
         }
+        return d
 
 
 def _cue_id(obs: Mapping[str, Any], index: int) -> str:
@@ -146,6 +242,7 @@ def cues_from_observations(
     *,
     min_score: float = 0.0,
     max_cues: Optional[int] = None,
+    transcript: Optional[Sequence[Mapping[str, Any]]] = None,
 ) -> List[CueEvent]:
     """Convert observation dicts into deduplicated, prioritized cue events."""
     events: List[CueEvent] = []
@@ -184,6 +281,7 @@ def cues_from_observations(
             audio_script=audio,
             turn_index=int(turn_index) if isinstance(turn_index, int) else None,
             evidence_summary=evs,
+            source_quotes=resolve_source_quotes(obs, transcript),
         ))
     events.sort(key=lambda e: (-PRIORITY_ORDER.get(e.priority, 0), -e.score, e.turn_index if e.turn_index is not None else 10**9))
     if max_cues is not None:

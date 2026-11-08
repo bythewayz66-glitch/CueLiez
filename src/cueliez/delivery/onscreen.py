@@ -55,6 +55,11 @@ class OnscreenCueRenderer:
                 dim = _ANSI["dim"] if self.use_color else ""
                 rst = _ANSI["reset"] if self.use_color else ""
                 lines.append(f"           {dim}evidence: {ev}{rst}")
+            for q in getattr(c, "source_quotes", []) or []:
+                ti = q.get("turn_index")
+                role = f"{q.get('role')} " if q.get("role") else ""
+                where = f"T{ti}" if ti is not None else "source"
+                lines.append(f"           Source ({where}, {role}transcript): \"{q.get('text','')}\"")
         lines.append("Notice: cues are probabilistic observations for professional judgment, not determinations.")
         return "\n".join(lines)
 
@@ -63,10 +68,11 @@ class OnscreenCueRenderer:
         observations: Sequence[Mapping[str, Any]],
         *,
         officer_cue_notes: Optional[Sequence[Mapping[str, Any]]] = None,
+        transcript: Optional[Sequence[Mapping[str, Any]]] = None,
         **kwargs: Any,
     ) -> Dict[str, Any]:
         cue_kwargs = {k: v for k, v in kwargs.items() if k in ("min_score", "max_cues")}
-        cues = cues_from_observations(observations, **cue_kwargs)
+        cues = cues_from_observations(observations, transcript=transcript, **cue_kwargs)
         counts: Dict[str, int] = {}
         for c in cues:
             counts[c.priority] = counts.get(c.priority, 0) + 1
@@ -97,12 +103,19 @@ class OnscreenCueRenderer:
         rows = []
         for c in cues:
             ev = html.escape(json.dumps(c.evidence_summary, ensure_ascii=False)) if c.evidence_summary else ""
+            quotes = []
+            for q in getattr(c, "source_quotes", []) or []:
+                ti = q.get("turn_index")
+                role = f"{q.get('role')} " if q.get("role") else ""
+                where = f"T{ti}" if ti is not None else "source"
+                quotes.append(f"<div class='source'><strong>Source ({html.escape(where)}, {html.escape(role)}transcript):</strong> “{html.escape(str(q.get('text','')))}”</div>")
+            cue_cell = html.escape(c.message) + ("".join(quotes) if quotes else "")
             rows.append(
                 "<tr>"
                 f"<td class='p {html.escape(c.priority)}'>{html.escape(c.priority.upper())}</td>"
                 f"<td>{html.escape(str(c.turn_index) if c.turn_index is not None else '—')}</td>"
                 f"<td>{html.escape(c.category)}</td>"
-                f"<td>{html.escape(c.message)}</td>"
+                f"<td>{cue_cell}</td>"
                 f"<td>{c.score:.2f}</td>"
                 f"<td><code>{ev}</code></td>"
                 "</tr>"
@@ -112,7 +125,7 @@ class OnscreenCueRenderer:
             "<section class='cueliez-cues'>"
             f"<h2>{html.escape(title)}</h2>"
             "<p class='notice'>Observation cues for professional review; not findings.</p>"
-            "<table><thead><tr><th>Priority</th><th>Turn</th><th>Category</th><th>Cue</th><th>Score</th><th>Evidence</th></tr></thead>"
+            "<table><thead><tr><th>Priority</th><th>Turn</th><th>Category</th><th>Cue / Source transcript</th><th>Score</th><th>Evidence</th></tr></thead>"
             f"<tbody>{body}</tbody></table></section>"
         )
 
@@ -120,6 +133,7 @@ class OnscreenCueRenderer:
         self,
         observations: Sequence[Mapping[str, Any]],
         *,
+        transcript: Optional[Sequence[Mapping[str, Any]]] = None,
         title: str = "CueLiez Officer Cues",
         min_score: float = 0.0,
         max_cues: Optional[int] = None,
@@ -129,15 +143,23 @@ class OnscreenCueRenderer:
         Supports acknowledge/dismiss/note locally and exports officer action JSON
         for attachment to a sealed package. Subject is not shown this stream by default.
         """
-        cues = cues_from_observations(observations, min_score=min_score, max_cues=max_cues)
+        cues = cues_from_observations(observations, transcript=transcript, min_score=min_score, max_cues=max_cues)
         cards = []
         for c in cues:
             turn = html.escape(str(c.turn_index)) if c.turn_index is not None else "—"
             msg = html.escape(c.message)
+            quotes = []
+            for q in getattr(c, "source_quotes", []) or []:
+                ti = q.get("turn_index")
+                role = f"{q.get('role')} " if q.get("role") else ""
+                where = f"T{ti}" if ti is not None else "source"
+                quotes.append(f"<div class='source'><strong>Source ({html.escape(where)}, {html.escape(role)}transcript):</strong> “{html.escape(str(q.get('text','')))}”</div>")
+            source_html = "".join(quotes)
             cards.append(
                 f"<article class='cue {html.escape(c.priority)}' data-cue-id='{html.escape(c.cue_id)}' data-priority='{html.escape(c.priority)}' data-label='{html.escape(c.label)}' data-turn='{turn}'>"
                 f"<div class='meta'><span class='prio'>{html.escape(c.priority.upper())}</span> <span class='turn'>Turn {turn}</span> <span class='score'>{c.score:.2f}</span></div>"
                 f"<div class='msg'>{msg}</div>"
+                f"{source_html}"
                 f"<div class='id'><code>{html.escape(c.cue_id)}</code></div>"
                 "<div class='actions'>"
                 "<button data-action='acknowledged'>Acknowledge</button>"
@@ -168,6 +190,7 @@ class OnscreenCueRenderer:
     .cue.high {{ border-left-color: #b57edc; }} .cue.critical {{ border-left-color: #e05d5d; }}
     .meta {{ font-size: 12px; color: #bbb; display: flex; gap: 10px; }}
     .msg {{ font-size: 18px; margin: 8px 0; line-height: 1.3; }}
+    .source {{ font-size: 13px; color: #ccc; margin: 6px 0; padding: 6px 8px; background: #141414; border-left: 3px solid #555; }}
     .id {{ font-size: 11px; color: #888; }}
     .actions button {{ margin-right: 6px; margin-top: 6px; }}
     textarea {{ width: 100%; box-sizing: border-box; margin-top: 8px; background: #0f0f0f; color: #eee; border: 1px solid #333; border-radius: 6px; padding: 8px; }}

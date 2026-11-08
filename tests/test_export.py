@@ -137,6 +137,20 @@ class TestExportSurfaces(unittest.TestCase):
             paths = export_sealed_package(pkg, td, observations=[], cues=[])
             self.assertTrue(Path(paths["json"]).exists())
 
+    def test_export_includes_source_transcript_when_available(self):
+        transcript = [{"role": "subject", "text": "I was at home."}, {"role": "subject", "text": "I was at the store later."}]
+        obs = [{"label": "hedging_language_present", "confidence": {"score": 0.72, "model_id": "m/v1"},
+                "category": "linguistic", "method": "m/v1", "cue": "Ask for specific details.", "turn_index": 1,
+                "evidence": {"source_text": "I was at the store later.", "turn_index": 1, "count": 1}}]
+        pkg = sealed_pkg()
+        pkg["observations"] = obs
+        md = render_package_summary_markdown(pkg, transcript=transcript)
+        self.assertIn("Source (transcript)", md)
+        self.assertIn("I was at the store later.", md)
+        h = render_package_summary_html(pkg, transcript=transcript)
+        self.assertIn("Source (transcript)", h)
+        self.assertIn("I was at the store later.", h)
+
 
 if __name__ == "__main__":
     unittest.main()

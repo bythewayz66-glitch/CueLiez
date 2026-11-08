@@ -60,6 +60,23 @@ class TestCueEvents(unittest.TestCase):
         self.assertEqual(cues[0].cue_id, "stable-cue-1")
         self.assertEqual(cues[0].priority, "critical")
 
+    def test_source_quotes_from_transcript(self):
+        transcript = [
+            {"role": "subject", "text": "I was at home at 9 PM."},
+            {"role": "subject", "text": "Actually I was at the store."},
+            {"role": "officer", "text": "Can you clarify?"},
+            {"role": "subject", "text": "Maybe around there."},
+        ]
+        cues = cues_from_observations(SAMPLE_OBS, transcript=transcript)
+        all_quotes = [q.get("text", "") for c in cues for q in getattr(c, "source_quotes", [])]
+        self.assertTrue(any("Actually I was at the store" in q for q in all_quotes))
+
+    def test_source_quotes_from_evidence(self):
+        obs = [dict(SAMPLE_OBS[0], evidence={"source_text": "quoted evidence text", "turn_index": 1})]
+        cues = cues_from_observations(obs)
+        self.assertTrue(cues[0].source_quotes)
+        self.assertEqual(cues[0].source_quotes[0]["text"], "quoted evidence text")
+
 
 class TestOnscreenRenderer(unittest.TestCase):
     def test_render_text(self):
@@ -69,6 +86,14 @@ class TestOnscreenRenderer(unittest.TestCase):
         self.assertIn("Observation cues", text)
         self.assertIn("not findings", text.lower())
         self.assertIn("not determinations", text.lower())
+
+    def test_render_text_includes_source_quote(self):
+        transcript = [{"role": "subject", "text": "I was at home."}, {"role": "subject", "text": "I was at the store."}]
+        cues = cues_from_observations(SAMPLE_OBS[:1], transcript=transcript)
+        text = OnscreenCueRenderer().render_text(cues)
+        self.assertIn("Source", text)
+        self.assertIn("transcript", text.lower())
+        self.assertIn("store", text.lower())
 
     def test_render_text_empty(self):
         text = OnscreenCueRenderer().render_text([])
