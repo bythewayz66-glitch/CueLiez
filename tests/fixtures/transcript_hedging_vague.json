@@ -1,0 +1,6 @@
+[
+  {"role": "interviewer", "turn_index": 0, "text": "What happened at the location?"},
+  {"role": "subject", "turn_index": 1, "text": "I think maybe I was sort of around there, perhaps doing some stuff, not sure really.", "response_latency_ms": 1800},
+  {"role": "interviewer", "turn_index": 2, "text": "Can you be more specific?"},
+  {"role": "subject", "turn_index": 3, "text": "I guess something happened somewhere with things, you know, whatever it was.", "response_latency_ms": 2100}
+]

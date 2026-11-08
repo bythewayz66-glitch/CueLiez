@@ -74,11 +74,18 @@ Format per update:
 - Notes left in agent_notes/: (none)
 
 ### 2026-11-08 Sprint 2
-- Done: Read `2026-11-08_2335_orchestrator_to_kilo_sprint2.md` and `2026-11-08_0631_iceman_to_kilo_seal-contract-and-gate-state.md`. Signal-quality pass (precision-over-recall on thin evidence, inspectable evidence keys, neutral cues): Hedging, PronounDistancing, DetailVagueness, CertaintySwing, Minimization, Overjustification; ResponseLatency, AnswerLengthVariance, EvasionMarker. Added/extended tests for empty input, single-turn noise, and positive fixtures for touched observers. Confirmed `leg`/`gov` packs default to text observers only (no feature/physio/visual). Posted glyph cue-field contract note. Additional inspectable evidence for speech rate, filled pauses, and interruption observers.
-- In progress: Polling agent notes for more work; continuing workload 2 improvements.
+- Done: Read `2026-11-08_2335_orchestrator_to_kilo_sprint2.md` and `2026-11-08_0631_iceman_to_kilo_seal-contract-and-gate-state.md`. Signal-quality pass (precision-over-recall on thin evidence, inspectable evidence keys, neutral cues): Hedging, PronounDistancing, DetailVagueness, CertaintySwing, Minimization, Overjustification; ResponseLatency, AnswerLengthVariance, EvasionMarker. Added/extended tests for empty input, single-turn noise, and positive fixtures for touched observers. Confirmed `leg`/`gov` packs default to text observers only (no feature/physio/visual). Posted glyph cue-field contract note. Additional inspectable evidence for speech rate, filled pauses, interruption; linguistic evidence key standardization; claim-conflict precision guard; consistency/noise tests.
+- In progress: None.
 - Blocked: None.
-- Next: Keep improving observer signal quality/evidence and respond to new notes/blockers as they appear.
+- Next: Execute Sprint 3.
 - Notes left in agent_notes/: `2026-11-08_0629_kilo_to_glyph_cue-field-contract.md`
+
+### 2026-11-08 Sprint 3
+- Done: Read `2026-11-08_2345_orchestrator_to_kilo_sprint3.md` and `2026-11-08_2345_orchestrator_to_all_sprint3.md`. Added deterministic `cue_id` and `priority` to observations (`base`: `deterministic_cue_id` from method/turn/label/category; `priority` normal|high; claim conflicts high). Reduced ClaimConflict double-firing via overlap-based pair ranking + similar-topic suppression. Added golden fixtures (`tests/fixtures/transcript_{clean_consistent,claim_conflict,hedging_vague}.json`) and `tests/test_fixtures_golden.py` (contract fields incl cue_id/priority, no forbidden labels, expected methods, deterministic ids). Verified runner/pack annotations free of banned keys and packages seal-compatible. Full suite green (225 passed). Posted contract v2 note.
+- In progress: Polling agent notes for more work.
+- Blocked: None.
+- Next: Respond to glyph/iceman integration feedback on cue_id/priority; continue workload 2/3 quality improvements and fixtures as needed.
+- Notes left in agent_notes/: `2026-11-08_0651_kilo_to_all_cue-id-priority-contract-v2.md`, `2026-11-08_0651_kilo_to_glyph_cue-field-contract-superseded.md`
 
 ---
 

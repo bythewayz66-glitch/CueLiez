@@ -7,6 +7,8 @@ All observation methods must emit gate-compatible observations:
 
 from __future__ import annotations
 
+import hashlib
+import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Protocol, Sequence
 
@@ -17,12 +19,30 @@ FORBIDDEN_LABELS = frozenset({
 })
 
 
+def _slug(s: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", (s or "").strip().lower()).strip("-") or "x"
+
+
+def deterministic_cue_id(*, method: str, turn_index: Optional[int], label: str, category: str) -> str:
+    """Deterministic cue id from (method, turn_index, label, category). Same inputs => same id."""
+    ti = "na" if turn_index is None else str(int(turn_index))
+    payload = f"{method}|{ti}|{label}|{category}".encode("utf-8")
+    digest = hashlib.sha256(payload).hexdigest()[:12]
+    return f"cue-t{ti}-{_slug(label)[:32]}-{digest}"
+
+
+def normalize_priority(value: Any) -> str:
+    v = str(value or "normal").strip().lower()
+    return "high" if v == "high" else "normal"
+
+
 def _validate_observation(
     label: str,
     confidence: Dict[str, Any],
     method: Any = None,
     category: Any = None,
     evidence: Any = None,
+    priority: Any = None,
 ) -> tuple[str, float, str]:
     lab = (label or "").strip().lower()
     if lab in FORBIDDEN_LABELS:
@@ -40,6 +60,8 @@ def _validate_observation(
         raise ValueError("category is required")
     if evidence is not None and not isinstance(evidence, dict):
         raise ValueError("evidence must be a dict")
+    if priority is not None and normalize_priority(priority) not in ("normal", "high"):
+        raise ValueError("priority must be normal or high")
     return lab, float(score), str(model_id)
 
 
@@ -54,14 +76,21 @@ class Observation:
     evidence: Dict[str, Any] = field(default_factory=dict)
     cue: Optional[str] = None
     turn_index: Optional[int] = None
+    cue_id: Optional[str] = None
+    priority: str = "normal"
 
     def __post_init__(self) -> None:
         if self.evidence is None:
             self.evidence = {}
-        _validate_observation(self.label, self.confidence, self.method, self.category, self.evidence)
+        self.priority = normalize_priority(self.priority)
+        _validate_observation(self.label, self.confidence, self.method, self.category, self.evidence, self.priority)
+        if not (str(self.cue_id).strip() if self.cue_id is not None else ""):
+            self.cue_id = deterministic_cue_id(
+                method=str(self.method), turn_index=self.turn_index, label=str(self.label), category=str(self.category)
+            )
 
     def to_dict(self) -> Dict[str, Any]:
-        _, score, model_id = _validate_observation(self.label, self.confidence, self.method, self.category, self.evidence)
+        _, score, model_id = _validate_observation(self.label, self.confidence, self.method, self.category, self.evidence, self.priority)
         conf = self.confidence or {}
         out: Dict[str, Any] = {
             "label": self.label,
@@ -69,6 +98,8 @@ class Observation:
             "category": self.category,
             "method": self.method,
             "evidence": dict(self.evidence or {}),
+            "cue_id": str(self.cue_id),
+            "priority": normalize_priority(self.priority),
         }
         if "version" in conf:
             out["confidence"]["version"] = conf["version"]
@@ -114,6 +145,8 @@ def make_observation(
     cue: Optional[str] = None,
     turn_index: Optional[int] = None,
     version: str = "v1",
+    cue_id: Optional[str] = None,
+    priority: str = "normal",
 ) -> Observation:
     return Observation(
         label=label,
@@ -123,6 +156,8 @@ def make_observation(
         evidence=evidence or {},
         cue=cue,
         turn_index=turn_index,
+        cue_id=cue_id,
+        priority=priority,
     )
 
 

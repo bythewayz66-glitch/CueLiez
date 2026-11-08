@@ -64,12 +64,20 @@ def _subject_turns(transcript: Sequence[Mapping[str, Any]]) -> list[tuple[int, s
     return [(i, text_of(t).strip()) for i, t in enumerate(transcript) if is_subject_turn(t) and text_of(t).strip()]
 
 
+def _key_overlap(a: str, b: str) -> float:
+    sa, sb = set(a.split()), set(b.split())
+    if not sa or not sb:
+        return 0.0
+    inter = len(sa & sb)
+    return inter / min(len(sa), len(sb))
+
+
 class ClaimConflictObserver:
     method_id = "cueliez.observations.consistency.claim_conflict/v1"
 
     def observe(self, transcript: Sequence[Mapping[str, Any]]) -> ObservationResult:
         result = ObservationResult(method=self.method_id)
-        buckets: defaultdict[str, list[tuple[int, str, int]]] = defaultdict(list)
+        items: list[tuple[int, str, int, str]] = []
         for i, text in _subject_turns(transcript):
             if len(text) < 12:
                 continue
@@ -77,37 +85,52 @@ class ClaimConflictObserver:
             key_words = key.split()
             if len(key_words) < 2:
                 continue
-            buckets[key].append((i, text, _polarity(text)))
+            items.append((i, text, _polarity(text), key))
 
-        for key, items in buckets.items():
-            if len(items) < 2:
+        candidates: list[tuple[float, tuple[int, int], int, int, str, str, int, int, str, float, int]] = []
+        for idx, (i, text_i, pol_i, key_i) in enumerate(items):
+            for jdx in range(idx + 1, len(items)):
+                j, text_j, pol_j, key_j = items[jdx]
+                if pol_i == pol_j:
+                    continue
+                overlap = _key_overlap(key_i, key_j)
+                shared = len(set(key_i.split()) & set(key_j.split()))
+                if shared < 2 or overlap < 0.5:
+                    continue
+                pair = (min(i, j), max(i, j))
+                pos_i, pos_t = ((i, text_i) if pol_i == 1 else (j, text_j))
+                neg_i, neg_t = ((j, text_j) if pol_j == -1 else (i, text_i))
+                topic = key_i if len(key_i.split()) >= len(key_j.split()) else key_j
+                specificity = min(max(len(key_i.split()), len(key_j.split())), 8) / 8.0
+                score = clamp01(0.46 + specificity * 0.16 + overlap * 0.12)
+                candidates.append((score, pair, pos_i, neg_i, pos_t, neg_t, shared, max(i, j), topic, overlap, 0))
+        candidates.sort(key=lambda x: (-x[0], x[1][0], x[1][1]))
+        emitted_pairs: set[tuple[int, int]] = set()
+        emitted_topics: list[str] = []
+        for score, pair, pos_i, neg_i, pos_t, neg_t, shared, ti, topic, overlap, _ in candidates:
+            if pair in emitted_pairs:
                 continue
-            key_words_n = len(key.split())
-            # Precision: very short topic keys with only two mentions are often noisy.
-            if key_words_n < 3 and len(items) < 3:
+            # Reduce double-firing on same underlying issue: skip if very similar topic already reported.
+            if any(_key_overlap(topic, et) >= 0.75 for et in emitted_topics):
                 continue
-            pols = {p for _, _, p in items}
-            if 1 in pols and -1 in pols:
-                pos = [it for it in items if it[2] == 1][0]
-                neg = [it for it in items if it[2] == -1][0]
-                # Confidence reflects topic-key specificity and repeated mentions, not certainty of conflict.
-                specificity = min(key_words_n, 8) / 8.0
-                score = clamp01(0.46 + specificity * 0.18 + 0.04 * min(len(items), 4))
-                result.observations.append(make_observation(
-                    label="possible_statement_conflict",
-                    score=score,
-                    method_id=self.method_id,
-                    category="consistency",
-                    evidence={
-                        "topic_key": key,
-                        "topic_key_words": key_words_n,
-                        "turn_a": pos[0], "excerpt_a": pos[1][:180], "polarity_a": "affirming",
-                        "turn_b": neg[0], "excerpt_b": neg[1][:180], "polarity_b": "negating",
-                        "mention_count": len(items),
-                    },
-                    cue="Statements on a similar topic differ in affirmation/negation; ask the subject to reconcile them.",
-                    turn_index=max(pos[0], neg[0]),
-                ))
+            emitted_pairs.add(pair)
+            emitted_topics.append(topic)
+            result.observations.append(make_observation(
+                label="possible_statement_conflict",
+                score=score,
+                method_id=self.method_id,
+                category="consistency",
+                evidence={
+                    "topic_key": topic,
+                    "topic_key_overlap": round(overlap, 3),
+                    "shared_key_words": shared,
+                    "turn_a": pos_i, "excerpt_a": pos_t[:180], "polarity_a": "affirming",
+                    "turn_b": neg_i, "excerpt_b": neg_t[:180], "polarity_b": "negating",
+                },
+                cue="Statements on a similar topic differ in affirmation/negation; ask the subject to reconcile them.",
+                turn_index=ti,
+                priority="high",
+            ))
         return result
 
 
@@ -262,7 +285,12 @@ class SelfReferenceShiftObserver:
                     score=score,
                     method_id=self.method_id,
                     category="consistency",
-                    evidence={"first_person_rate": round(fr, 4), "we_rate": round(we, 4), "session_avg_first": round(avg, 4)},
+                    evidence={
+                        "first_person_rate": round(fr, 4),
+                        "we_rate": round(we, 4),
+                        "session_avg_first_person_rate": round(avg, 4),
+                        "turn_count": len(counts),
+                    },
                     cue="First-person reference pattern shifted; clarify personal actions versus group actions.",
                     turn_index=i,
                 ))
