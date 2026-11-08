@@ -64,6 +64,11 @@ Prosody, visual, and physiological feature observers are **not** in `default_run
 - **Timeline (`consistency.timeline_inconsistency/v1`)**: recognizes digit clock times and spelled-out hour/minute references in time-context (e.g., "at eight", "eight-thirty"). Emits neutral `multiple_time_references_present` with source quotes. Precision: 2+ distinct digit clock times (legacy) OR 4+ distinct total time refs; avoids over-cueing short sequential accounts. Multiple times may describe a sequence (not a conflict assertion).
 - **Limitation (conflict phrasing)**: semantic contradictions expressed without affirmation/negation key overlap (e.g., "whole time until ten" vs "gone by eight-thirty") may not trigger `claim_conflict`/`detail_drift`; the timeline cue can still surface time references for review. Observers do not assert deception.
 
+## Confidence scores and calibration (Phase 3)
+- `confidence.score` is a heuristic, rule-derived signal strength in `[0.0, 1.0]`, clamped/validated by `make_observation`. Scores are **not** statistically calibrated to ground-truth outcomes and must **not** be interpreted as probability of deception, credibility, guilt, intent, or any finding.
+- `confidence.model_id` identifies the versioned observation method (not an external ML model in the production path).
+- Insufficient/thin data yields no observations (not low-confidence noise). Same input + same method versions produce deterministic `cue_id` and stable observation content.
+
 ## Pack summary
 - **gov** (government, 20 core observers): text-only by default; dual-control is a process expectation for high-priority cues before sealing in government mode (enforced by iceman/gates, not by observers).
 - **leg** (interrogation, 20): text-only by default.

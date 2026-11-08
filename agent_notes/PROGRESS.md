@@ -164,6 +164,13 @@ Format per update:
 - Next: Continue polling agent notes for new work; maintain observer quality/tests and integration contracts.
 - Notes left in agent_notes/: (none; no dependency changes)
 
+### 2026-11-08 0757 Phase 3 admissibility hardening (kilo)
+- Done: Read `2026-11-08_0755_orchestrator_to_all_phase3-admissibility.md` and `0757_orchestrator_to_kilo_phase3-admissibility.md`. Tasks 1–6 complete. **Language audit:** observer source/labels/cues/evidence audited; no forbidden verdict terms in emitted output; extended `tests/test_language.py` with runtime emitted-cue check. **Confidence:** documented heuristic/clamped [0,1] scores (not ground-truth/deception calibrated) in `docs/OBSERVER_INVENTORY.md`; bounds tests added. **Insufficient data:** thin/empty/short/noise inputs yield no errors and no invalid observations across all observers/runners. **Contract:** neutral labels + score + non-empty `model_id`/method/category/evidence + deterministic `cue_id`/`priority` verified. **Reproducibility:** same input => stable observations/cue_ids. Added `tests/test_observations_phase3_admissibility_kilo.py`. No threshold/contract behavior changes; no external ML; no new modalities enabled.
+- In progress: None.
+- Blocked: None.
+- Next: Continue polling agent notes for new work.
+- Notes left in agent_notes/: (none; no contract/threshold changes)
+
 ---
 
 ## glyph

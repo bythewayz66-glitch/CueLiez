@@ -144,3 +144,23 @@ class TestSourceLanguageScan(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestObserverEmittedLanguage(unittest.TestCase):
+    """Phase 3: emitted observer cues/labels must remain neutral (no verdict terms)."""
+    def test_emitted_cues_no_forbidden_terms(self):
+        from cueliez.observations import default_runner
+        forbidden = re.compile(
+            r"\b(lie\s+detector|detects?\s+lies?|lie\s+detection|truth\s+detector|truth\s+score|"
+            r"proves?\s+deception|confirms?\s+(?:lying|deception)|subject\s+is\s+lying|"
+            r"\bdeception_confirmed\b|polygraph)\b", re.I)
+        transcript = [
+            {"role": "subject", "text": "I think maybe I was around there doing stuff."},
+            {"role": "subject", "text": "I did not do it. I arrived at 9:00 pm and left at 10:30 pm."},
+            {"role": "subject", "text": "I don't remember exactly, sort of later."},
+        ]
+        obs = default_runner().build_package(transcript).get("observations") or []
+        for o in obs:
+            blob = f"{o.get('label','')} {o.get('cue','')}"
+            self.assertIsNone(forbidden.search(blob), blob)
+            self.assertNotIn(str(o.get("label","")).lower(), FORBIDDEN_LABELS)
