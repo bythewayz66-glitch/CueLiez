@@ -1,0 +1,26 @@
+[
+  {
+    "role": "interviewer",
+    "text": "What did you discuss?"
+  },
+  {
+    "role": "subject",
+    "text": "I think it was about schedules, maybe plans for later."
+  },
+  {
+    "role": "interviewer",
+    "text": "Who was there?"
+  },
+  {
+    "role": "subject",
+    "text": "A couple of people, I don't remember exactly who."
+  },
+  {
+    "role": "interviewer",
+    "text": "How long did it last?"
+  },
+  {
+    "role": "subject",
+    "text": "Probably not very long, perhaps ten minutes."
+  }
+]

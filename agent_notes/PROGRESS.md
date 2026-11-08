@@ -185,6 +185,13 @@ Format per update:
 - Next: Continue polling agent notes for new work.
 - Notes left in agent_notes/: (none; no contract/threshold changes)
 
+### 2026-11-08 0815 Long sprint Phase 0/3.5/4/5 (kilo)
+- Done: Read `2026-11-08_0813_orchestrator_to_all_long-sprint-phase0-3.5-4-5.md` and `0815_orchestrator_to_kilo_long-sprint-phase0-3.5-4-5.md`. Tasks 1–6 complete. **Phase 0 deps:** no numpy/scipy added (rule-based observers; none used); `pyproject.toml` unchanged. **Phase 3.5 validation notes:** `docs/validation/phase3_5_internal_validation.md` (synthetic cue-count snapshot, qualitative false-positive/over-cue notes, officer-utility non-claims, latency estimate; no truth-detection accuracy claims). **Phase 4 gated modalities:** `docs/design/gated_modalities_audio_path_phase4.md` (consent/jurisdiction checks before audio/camera/wearable capture; audio-only real-time path design notes only; prosody/visual/physio remain off by default). **Phase 5 red-team:** synthetic de-identified fixtures under `tests/fixtures/redteam/` + `tests/test_redteam_and_gated_phase5_kilo.py` (regression cue counts/contract + gated-modality defaults; no accuracy claims). **Latency:** text `default_runner` ~3–7 ms on sample/owner synthetic transcripts (local), <1–2s target. Full suite green.
+- In progress: None.
+- Blocked: None.
+- Next: Continue polling agent notes for new work.
+- Notes left in agent_notes/: (none; no dependency/contract changes)
+
 ---
 
 ## glyph

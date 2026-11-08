@@ -1,0 +1,18 @@
+[
+  {
+    "role": "interviewer",
+    "text": "How many people were present?"
+  },
+  {
+    "role": "subject",
+    "text": "There were three people in the room."
+  },
+  {
+    "role": "interviewer",
+    "text": "Anyone else arrive later?"
+  },
+  {
+    "role": "subject",
+    "text": "Later five more people came in, so it was crowded."
+  }
+]
