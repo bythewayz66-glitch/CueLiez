@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Sequence
 
-PRIORITY_ORDER = {"low": 10, "medium": 20, "high": 30, "critical": 40}
+PRIORITY_ORDER = {"low": 10, "normal": 15, "medium": 20, "high": 30, "critical": 40}
 
 _CATEGORY_PRIORITY = {
     "consistency": "high",
@@ -20,6 +20,7 @@ _CATEGORY_PRIORITY = {
     "visual": "medium",
     "physiological": "medium",
 }
+_NORMALIZE_PRIORITY = {"normal": "medium", "low": "low", "medium": "medium", "high": "high", "critical": "critical"}
 
 
 def _priority_for(score: float, category: str) -> str:
@@ -35,8 +36,10 @@ def _priority_for(score: float, category: str) -> str:
 
 
 def _priority_from_observation(obs: Mapping[str, Any], score: float, category: str) -> str:
-    # Forward-compatible: honor explicit priority if kilo adds it; otherwise derive.
+    # Forward-compatible: honor explicit priority if kilo/iceman contract provides it.
     raw = str(obs.get("priority") or "").strip().lower()
+    if raw in _NORMALIZE_PRIORITY:
+        return _NORMALIZE_PRIORITY[raw]
     if raw in PRIORITY_ORDER:
         return raw
     return _priority_for(score, category)
