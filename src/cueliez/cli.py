@@ -26,6 +26,7 @@ from .connectors import ConnectorError, push_endpoint, pull_endpoint, push_packa
 from .gates import GateError, SessionGateState, record_consent
 from .session import assert_can_observe, seal
 from .observations import default_runner, full_runner
+from .observations.assisted import make_multi_signal_assisted_adapter, register_assisted_observer, merge_assisted_observations, clear_assisted_registry
 from .packs import get_pack
 
 HONEST_NOTICE = (
@@ -105,6 +106,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--min-score", type=float, default=0.0, help="Minimum cue score to include in cue output.")
     p.add_argument("--max-cues", type=int, help="Maximum cues to render/export.")
     p.add_argument("--show-cues", action="store_true", help="Print rendered cue text to stdout.")
+    p.add_argument("--enable-assisted", action="store_true", help="Enable feature-flagged assisted (multi-signal) observers. Off by default; no external ML. Requires approved deployment.")
     p.add_argument("--no-seal", action="store_true", help="Build observations/cues only; do not apply seal.")
     p.add_argument("--print-json", action="store_true", help="Print final package JSON to stdout.")
     p.add_argument("--stream-turns", action="store_true", help="Real-time mode: read NDJSON turns (one JSON object per line) from transcript/stdin, emit newly surfaced observation cues as turns arrive (subject not shown). Final package/seal runs after stream ends unless --no-seal.")
@@ -272,6 +274,13 @@ def run_cli(argv: Optional[List[str]] = None) -> int:
             runner = full_runner() if args.runner == "full" else default_runner()
             raw_package = runner.build_package(transcript, annotations=annotations)
             observations = raw_package.get("observations") or []
+
+        if getattr(args, "enable_assisted", False):
+            clear_assisted_registry()
+            register_assisted_observer("multi_signal", make_multi_signal_assisted_adapter())
+            observations = merge_assisted_observations(observations, transcript, enabled=True)
+            if isinstance(raw_package, dict):
+                raw_package["observations"] = observations
 
         cues = cues_from_observations(observations, min_score=args.min_score, max_cues=args.max_cues, transcript=transcript)
         hi_ids = _high_priority_cue_ids(cues)
