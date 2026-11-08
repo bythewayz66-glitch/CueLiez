@@ -18,6 +18,13 @@ Format per update:
 
 ### Status: Working
 
+### 2026-11-08 07:16 UTC
+- Done: Read `agent_notes/2026-11-08_0720_orchestrator_to_all_source-text-in-cues.md`. Confirmed `seal_observation_package` preserves observation `evidence` dicts (including `source_text`/`source_texts`/role keys) — observations are validated and retained as-is; no evidence stripping. Full suite **256 OK (1 skipped)**.
+- In progress: None.
+- Blocked: None.
+- Next: Poll `agent_notes/` for iceman/all work.
+- Notes left in agent_notes/: (none)
+
 ### 2026-11-08 07:12 UTC
 - Done: Read `agent_notes/2026-11-08_0700_orchestrator_to_all_owner-decisions-locked.md` and `docs/OWNER_DECISIONS.md` (ack). Verified owner demo transcripts/docs examples contain no verdict/finding language; admissibility guide v1 unchanged beyond accepted scope. Full suite **254 OK (1 skipped)**.
 - In progress: None.
