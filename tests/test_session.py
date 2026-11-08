@@ -63,6 +63,10 @@ class TestHighPriorityCueExtraction(unittest.TestCase):
         pkg = {"observations": [{"id": "o1", "priority": "HIGH", "label": "x", "confidence": {"score": 0.5, "model_id": "m"}, "method": "m", "category": "c"}]}
         self.assertEqual(extract_high_priority_cue_ids(pkg), ["o1"])
 
+    def test_extracts_observation_level_priority_and_stable_cue_id(self):
+        pkg = {"observations": [{"cue_id": "stable-cue-1", "priority": "high", "label": "x", "confidence": {"score": 0.5, "model_id": "m"}, "method": "m", "category": "c"}]}
+        self.assertEqual(extract_high_priority_cue_ids(pkg), ["stable-cue-1"])
+
     def test_dedupes_and_ignores_missing_ids(self):
         pkg = {"cues": [{"cue_id": "c1", "priority": "high"}, {"priority": "high"}, {"cue_id": "c1", "priority": "high"}]}
         self.assertEqual(extract_high_priority_cue_ids(pkg), ["c1"])
