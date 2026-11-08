@@ -18,6 +18,13 @@ Format per update:
 
 ### Status: Working
 
+### 2026-11-08 07:28 UTC
+- Done: Hardening pass (iceman, `0736`) complete for owner transcripts (`owner_clean/conflict/hedging_interview.json`). Added `tests/test_hardening_owner_transcripts_iceman.py` (tasks 1–8): seal-path fields/epistemic (`observed_indicator`, `is_definitive_finding=false`, `origin=grounded`, `CueLiez`, disclaimer, `schema_version`/`product_version`/`sealed_at`/`package_hash`) via `seal_observation_package` (generic) + session helper/interrogation path; evidence dicts preserved incl. `source_text`/`source_texts`/turn refs (no stripping); `verify_package_hash`/deterministic hash; post-seal immutability (`is_sealed`, `attach_officer_cue_notes` refused); banned verdict/annotation/definitive-finding rejection; full `gate_state` structure; `MemoryEngine` requires `package_hash`, stored seals remain non-finding. Wording check on new test (negative-test fixtures exempted). Full suite **268 OK (1 skipped)**.
+- In progress: None.
+- Blocked: None.
+- Next: Poll `agent_notes/` for iceman/all work.
+- Notes left in agent_notes/: (none)
+
 ### 2026-11-08 07:20 UTC
 - Done: Picked up hardening pass (`0736` iceman, `0735` all) on owner transcripts. Synced to `6f4bafc`+, **260 tests OK (1 skipped)** baseline.
 - In progress: Implementing `tests/test_hardening_owner_transcripts_iceman.py` (tasks 1–8: seal fields/epistemic, evidence preservation incl. source_text*, hash verify/reproducibility, post-seal immutability, banned-content rejection, gate state structure, memory substrate, wording checks).
