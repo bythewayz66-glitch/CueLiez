@@ -59,6 +59,11 @@ Prosody, visual, and physiological feature observers are **not** in `default_run
 | `cueliez.observations.behavioral.filled_pauses/v1` | behavioral | rule | gov, leg, med, thrp |
 | `cueliez.observations.behavioral.interruption_overlap/v1` | behavioral | rule | gov, leg |
 
+## Hardening notes (2026-11-08 owner transcript pass)
+- **Hedging (`linguistic.hedging/v1`)**: time-approximation tokens (`about`/`around`/`roughly`/`approximately`) immediately followed by a clock-time expression (e.g., "around nine-thirty") are excluded from hedging counts to reduce false positives on ordinary time approximations; genuine hedges still fire. Threshold constants: `src/cueliez/observations/thresholds.py` (`HEDGING_*`).
+- **Timeline (`consistency.timeline_inconsistency/v1`)**: recognizes digit clock times and spelled-out hour/minute references in time-context (e.g., "at eight", "eight-thirty"). Emits neutral `multiple_time_references_present` with source quotes. Precision: 2+ distinct digit clock times (legacy) OR 4+ distinct total time refs; avoids over-cueing short sequential accounts. Multiple times may describe a sequence (not a conflict assertion).
+- **Limitation (conflict phrasing)**: semantic contradictions expressed without affirmation/negation key overlap (e.g., "whole time until ten" vs "gone by eight-thirty") may not trigger `claim_conflict`/`detail_drift`; the timeline cue can still surface time references for review. Observers do not assert deception.
+
 ## Pack summary
 - **gov** (government, 20 core observers): text-only by default; dual-control is a process expectation for high-priority cues before sealing in government mode (enforced by iceman/gates, not by observers).
 - **leg** (interrogation, 20): text-only by default.

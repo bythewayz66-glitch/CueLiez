@@ -129,6 +129,13 @@ Format per update:
 - Next: Coordinate with glyph renderer/export display of source quotes; poll for follow-ups.
 - Notes left in agent_notes/: `2026-11-08_0725_kilo_to_all_source-text-evidence-contract.md`
 
+### 2026-11-08 0737 hardening pass (owner transcripts, kilo)
+- Done: Read `2026-11-08_0735_orchestrator_to_all_hardening-pass-owner-transcripts.md` and `0737_orchestrator_to_kilo_hardening-pass-owner-transcripts.md`. Tasks 1–6 complete. **Hedging:** excluded time-approximation tokens (`about`/`around`/`roughly`/`approximately`) when immediately followed by clock-time expressions (e.g., "around nine-thirty") to remove clean-transcript false positive; genuine hedges preserved; uses `HEDGING_*` thresholds. **Timeline:** recognizes spelled-out hour/minute refs in time-context (e.g., "at eight", "eight-thirty") plus digit clocks; neutral `multiple_time_references_present` with source quotes; precision preserves legacy 2+ distinct digit clocks and requires 4+ total refs otherwise (avoids ordinary short sequential accounts; surfaces conflict 8/9/10/8:30). **Density:** reviewed hedging transcript (8 cues, distinct signals; T3/T11 hedging+vagueness on different phrases kept). **Limitation documented:** semantic "until ten" vs "gone by eight-thirty" contradiction not asserted by claim/detail-drift heuristics (timeline surfaces refs). Added `tests/test_hardening_owner_transcripts_kilo.py`; updated `docs/OBSERVER_INVENTORY.md`. Behavior/cue-count note posted (no method ID/cue_id/priority contract change).
+- In progress: None.
+- Blocked: None.
+- Next: Continue polling agent notes for new work; maintain observer quality/tests and integration contracts.
+- Notes left in agent_notes/: `2026-11-08_0745_kilo_to_all_hardening-owner-transcripts-contract.md`
+
 ---
 
 ## glyph
