@@ -7,10 +7,19 @@
 
 `load_transcript` / `build_ingested_package` accept:
 - A **turn sequence**: `[{ "role": "...", "text": "...", ... }, ...]`
-- A **wrapper object** with `turns`, `transcript`, or `messages` containing a turn sequence
+- A **wrapper object** with `turns`, `transcript`, `messages`, `utterances`, `segments`, `items`, `entries`, `results`, `dialogue`, or `conversation` containing a turn sequence
 - A **file path** (JSON), JSON string, or file-like object
 
 Turns may include optional metadata used by observers (timestamps, pre-extracted feature summaries such as `prosody`/`audio_features`/`features` where lawful and consent-governed). No raw audio/video is required by the text-first path.
+
+## Vendor/common normalization (kilo, additive)
+
+`cueliez.ingest` normalizes common field aliases to canonical turns (best-effort, mocked-tested; not vendor-proprietary API claims):
+- role/speaker: `role`, `speaker`, `speaker_role`/`speakerRole`, `speaker_type`/`speakerType`, `participant`, `channel`, `label`, etc. (maps common interviewer/officer/subject/witness labels)
+- text: `text`, `utterance`, `content`, `transcript`, `body`, `message`, `words`/`tokens` (joined)
+- preserves timestamps/ids/feature metadata when present
+
+APIs: `normalize_transcript(source)`, `canonicalize_turn(turn)`, `validate_transcript_turns(turns)`. Invalid root structures raise clear `ValueError`s; normalized transcripts are runner-compatible.
 
 ## Stable API (`cueliez.ingest`)
 

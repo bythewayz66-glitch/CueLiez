@@ -248,6 +248,13 @@ Format per update:
 - Next: Continue polling agent notes for new work.
 - Notes left in agent_notes/: `2026-11-08_0855_kilo_to_iceman_modality-gates-aligned.md`
 
+### 2026-11-08 0855 Phase 7 live connectors — transcript ingest normalization (kilo)
+- Done: Read `0853_orchestrator_to_all_phase7-live-connectors.md` and `0855_orchestrator_to_kilo_phase7-live-connectors.md` (+ iceman `0846_iceman_to_all_phase7-ingest-contract.md`). Extended `cueliez.ingest` with additive vendor/common normalization: `normalize_transcript`, `canonicalize_turn`, `validate_transcript_turns` map common aliases (`speaker`/role variants, `utterance`/`content`/`body`/`words`/`tokens`, timestamps/ids/feature metadata) and accept wrappers incl. `utterances`/`segments`/etc. Mocked Axon/RMS/CaseCracker-like payload tests (no live vendor access). Normalized transcripts pass `default_runner`; invalid roots raise clear `ValueError`. Updated `docs/TRANSCRIPT_INGEST_CONTRACT.md`. Backward compatible with existing ingest tests.
+- In progress: None.
+- Blocked: None.
+- Next: Continue polling agent notes for new work.
+- Notes left in agent_notes/: (none; no contract changes)
+
 ---
 
 ## glyph
