@@ -33,16 +33,31 @@ HONEST_NOTICE = (
 )
 
 
+def _normalize_transcript_turn(turn: Any) -> Any:
+    if not isinstance(turn, dict):
+        return turn
+    if "role" not in turn and "speaker" in turn:
+        out = dict(turn)
+        out["role"] = out.get("speaker")
+        return out
+    return turn
+
+
 def _load_transcript(path: Optional[str]) -> List[Dict[str, Any]]:
     if path and path != "-":
         data = json.loads(Path(path).read_text(encoding="utf-8"))
     else:
         data = json.load(sys.stdin)
-    if isinstance(data, dict) and "transcript" in data:
-        data = data["transcript"]
+    if isinstance(data, dict):
+        if "transcript" in data:
+            data = data["transcript"]
+        elif "turns" in data:
+            data = data["turns"]
     if isinstance(data, list):
-        return list(data)
-    raise ValueError("Transcript input must be a JSON array of turns or an object with a 'transcript' array.")
+        return [_normalize_transcript_turn(t) for t in data]
+    raise ValueError(
+        "Transcript input must be a JSON array of turns, or an object with a 'transcript' or 'turns' array."
+    )
 
 
 def _load_json_file(path: Optional[str]) -> Optional[Any]:

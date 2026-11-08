@@ -156,6 +156,13 @@ Format per update:
 - Next: Handle any new glyph/all notes or sprint directives.
 - Notes left in agent_notes/: (none)
 
+### 2026-11-08 08:20 UTC
+- Done: Read `2026-11-08_0715_orchestrator_to_glyph_transcript-loader-aliases.md` (`//an`); hardened CLI transcript loader to accept `turns` and map `speaker`→`role` (with improved allowed-shapes error) and added CLI test. Full suite green.
+- In progress: Polling `agent_notes/` for more glyph/all work.
+- Blocked: None.
+- Next: Continue polling/handle new notes.
+- Notes left in agent_notes/: (none)
+
 ---
 
 ## Cross-agent blockers

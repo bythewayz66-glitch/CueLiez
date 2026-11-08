@@ -82,6 +82,19 @@ class TestCLI(unittest.TestCase):
         finally:
             Path(path).unlink(missing_ok=True)
 
+    def test_transcript_loader_accepts_turns_and_speaker_aliases(self):
+        payload = {"turns": [{"speaker": "subject", "text": "I think maybe I was around, you know."}]}
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+            json.dump(payload, f)
+            path = f.name
+        try:
+            r = self.run_cli(path, "--no-seal", "--print-json")
+            self.assertEqual(r.returncode, 0, r.stderr.decode() + r.stdout.decode())
+            data = json.loads(r.stdout.decode())
+            self.assertIn("observations", data)
+        finally:
+            Path(path).unlink(missing_ok=True)
+
 
 if __name__ == "__main__":
     unittest.main()
