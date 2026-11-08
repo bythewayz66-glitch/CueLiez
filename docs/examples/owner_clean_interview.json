@@ -1,19 +1,14 @@
-{
-  "id": "owner-demo-clean-001",
-  "title": "Synthetic clean consistent interview (owner demo)",
-  "notes": "Fully synthetic. Consistent timeline and details. Expect few or no high-priority conflict cues.",
-  "turns": [
-    {"speaker": "officer", "text": "Thanks for coming in. I want to walk through last Tuesday evening."},
-    {"speaker": "subject", "text": "Sure. I got home from work about six-fifteen."},
-    {"speaker": "officer", "text": "What did you do after you got home?"},
-    {"speaker": "subject", "text": "I changed clothes, heated leftovers, and watched the game on the couch."},
-    {"speaker": "officer", "text": "Anyone else in the house?"},
-    {"speaker": "subject", "text": "My roommate was in their room on a video call. I said hi when I came in."},
-    {"speaker": "officer", "text": "Did you leave again that night?"},
-    {"speaker": "subject", "text": "No. I stayed in until morning. I was in bed by eleven."},
-    {"speaker": "officer", "text": "Phone calls or messages around nine?"},
-    {"speaker": "subject", "text": "I texted my sister goodnight around nine-thirty. That was it."},
-    {"speaker": "officer", "text": "Anything else you think we should know about Tuesday?"},
-    {"speaker": "subject", "text": "Not really. It was an ordinary night."}
-  ]
-}
+[
+  {"role": "officer", "text": "Thanks for coming in. I want to walk through last Tuesday evening."},
+  {"role": "subject", "text": "Sure. I got home from work about six-fifteen."},
+  {"role": "officer", "text": "What did you do after you got home?"},
+  {"role": "subject", "text": "I changed clothes, heated leftovers, and watched the game on the couch."},
+  {"role": "officer", "text": "Anyone else in the house?"},
+  {"role": "subject", "text": "My roommate was in their room on a video call. I said hi when I came in."},
+  {"role": "officer", "text": "Did you leave again that night?"},
+  {"role": "subject", "text": "No. I stayed in until morning. I was in bed by eleven."},
+  {"role": "officer", "text": "Phone calls or messages around nine?"},
+  {"role": "subject", "text": "I texted my sister goodnight around nine-thirty. That was it."},
+  {"role": "officer", "text": "Anything else you think we should know about Tuesday?"},
+  {"role": "subject", "text": "Not really. It was an ordinary night."}
+]
