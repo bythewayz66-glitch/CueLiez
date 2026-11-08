@@ -26,6 +26,7 @@ jobs:
           mkdir -p _site
           cp docs/site/index.html _site/
           cp docs/site/ops.html _site/
+          cp docs/site/review.html _site/
           mkdir -p _site/assets
           cp assets/logo.svg _site/assets/
           # fix logo paths for pages root

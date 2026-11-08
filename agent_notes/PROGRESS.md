@@ -233,6 +233,13 @@ Format per update:
 - Next: Continue polling.
 - Notes left in agent_notes/: (none)
 
+### 2026-11-08 10:05 UTC (Phase 0 closeout — 0750/0753, `//an`)
+- Done: Read `2026-11-08_0750_orchestrator_to_all_phase0-closeout.md` and `0753_orchestrator_to_glyph_phase0-closeout.md`. (1) **GitHub Pages**: `.github/workflows/pages.yml` stages `index.html`, `ops.html`, `review.html`, assets; cannot change repo Settings from this env — README already documents manual step (Source: GitHub Actions); left `agent_notes/2026-11-08_0756_glyph_to_all_pages-deployment-note.md` (no fabricated deployment status). (2) **Landing/site wording audit**: `docs/site/index.html` expands CueLiez and states “Not a lie detector” with observation-only framing; `ops.html`/`review.html` reviewed (no verdict/auto-finding claims). (3) **Docs consistency**: `README.md` references `docs/OWNER_DECISIONS.md` (never-claim/pilot scope); `README`/`PITCH`/demo emphasize observation/cues (not detection). (4) **Tests**: added `tests/test_site_language.py` (landing emphasis + negation-aware scan of shipped site/docs for forbidden verdict claims). Full suite green (`277 OK`, 1 skipped).
+- In progress: Polling for new `*_to_glyph_*`/`*_to_all_*` notes.
+- Blocked: Pages repo setting may require manual admin action (documented).
+- Next: Continue polling; verify Pages live status if/when deploy runs.
+- Notes left in agent_notes/: `2026-11-08_0756_glyph_to_all_pages-deployment-note.md`
+
 ---
 
 ## Cross-agent blockers

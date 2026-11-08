@@ -30,7 +30,7 @@ Heritage: patterns from [mem20-ce](https://github.com/bythewayz66-glitch/mem20-c
 
 ## Language rules
 
-Mandatory vocabulary and bans (including **lie detector**): see [docs/LANGUAGE_RULES.md](docs/LANGUAGE_RULES.md).
+Mandatory vocabulary and bans (including **lie detector**): see [docs/LANGUAGE_RULES.md](docs/LANGUAGE_RULES.md). Locked never-claim framing and pilot scope: [docs/OWNER_DECISIONS.md](docs/OWNER_DECISIONS.md).
 
 ## Mission
 
