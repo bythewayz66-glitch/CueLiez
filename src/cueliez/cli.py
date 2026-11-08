@@ -22,6 +22,7 @@ from typing import Any, Dict, List, Optional
 from .delivery import OnscreenCueRenderer, cues_from_observations
 from .delivery.notes import attach_officer_cue_notes
 from .export import export_sealed_package
+from .connectors import ConnectorError, push_endpoint, pull_endpoint, push_package, pull_package
 from .gates import GateError, SessionGateState, record_consent
 from .session import assert_can_observe, seal
 from .observations import default_runner, full_runner
@@ -107,6 +108,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--no-seal", action="store_true", help="Build observations/cues only; do not apply seal.")
     p.add_argument("--print-json", action="store_true", help="Print final package JSON to stdout.")
     p.add_argument("--stream-turns", action="store_true", help="Real-time mode: read NDJSON turns (one JSON object per line) from transcript/stdin, emit newly surfaced observation cues as turns arrive (subject not shown). Final package/seal runs after stream ends unless --no-seal.")
+    p.add_argument("--push-endpoint", help="HTTP endpoint to POST the final sealed package to after a successful run (overrides CUELIEZ_PUSH_ENDPOINT). Env-based auth: CUELIEZ_CONNECTOR_TOKEN / CUELIEZ_CONNECTOR_AUTH_HEADER. No hardcoded credentials.")
+    p.add_argument("--pull-endpoint", help="HTTP endpoint to GET a sealed package from (supports {id} placeholder or ?id=; overrides CUELIEZ_PULL_ENDPOINT).")
+    p.add_argument("--pull-id", help="Sealed package ID to pull via --pull-endpoint/CUELIEZ_PULL_ENDPOINT, then export/render locally (skips transcript observation).")
+    p.add_argument("--connector-timeout", type=float, default=15.0, help="Connector HTTP timeout in seconds.")
+    p.add_argument("--connector-retries", type=int, default=2, help="Connector retry count for transient/offline errors.")
     return p
 
 
@@ -175,12 +181,23 @@ def _run_stream_turns(args, state, pack, annotations):
         dual_ids = list(args.high_priority_cue_ids) or (hi_ids if state.mode == "government" else [])
         package = seal(package, state, high_priority_cue_ids=dual_ids)
     formats = args.formats or ["json", "md", "html"]
+    pend = push_endpoint(args.push_endpoint)
+    push_result = None
+    if pend:
+        push_result = push_package(pend, package, timeout=args.connector_timeout, retries=args.connector_retries)
+    exported = None
     if args.out_dir:
         exported = export_sealed_package(package, args.out_dir, basename=args.basename, formats=formats, cues=cues, observations=observations, transcript=transcript)
-        print(json.dumps({"ok": True, "event": "stream_end", "notice": HONEST_NOTICE, "cue_count": len(cues), "observation_count": len(observations), "high_priority_cue_ids": hi_ids, "sealed": not args.no_seal, "exports": exported}, ensure_ascii=False), flush=True)
-    if args.print_json or not args.out_dir:
+    if exported or push_result or args.out_dir:
+        ev = {"ok": True, "event": "stream_end", "notice": HONEST_NOTICE, "cue_count": len(cues), "observation_count": len(observations), "high_priority_cue_ids": hi_ids, "sealed": not args.no_seal}
+        if push_result:
+            ev["push"] = {"status": push_result.get("status"), "endpoint": push_result.get("endpoint")}
+        if exported:
+            ev["exports"] = exported
+        print(json.dumps(ev, ensure_ascii=False), flush=True)
+    if args.print_json or (not args.out_dir and not push_result):
         print(json.dumps(package, indent=2, ensure_ascii=False, default=str), flush=True)
-    elif args.out_dir:
+    elif not exported and not push_result and args.out_dir:
         print(json.dumps({"event": "stream_end", "ok": True, "cue_count": len(cues), "notice": HONEST_NOTICE}, ensure_ascii=False), flush=True)
     return 0
 
@@ -189,6 +206,29 @@ def run_cli(argv: Optional[List[str]] = None) -> int:
     parser = build_arg_parser()
     args = parser.parse_args(argv)
     try:
+        # Connector pull path: fetch an existing sealed package, then export/render (no observation).
+        if args.pull_id:
+            pend = pull_endpoint(args.pull_endpoint)
+            if not pend:
+                raise ConnectorError("connector_config_missing", "Pull requires --pull-endpoint or CUELIEZ_PULL_ENDPOINT.")
+            pulled = pull_package(pend, args.pull_id, timeout=args.connector_timeout, retries=args.connector_retries)
+            package = pulled.get("package") if isinstance(pulled.get("package"), dict) else pulled.get("response")
+            if not isinstance(package, dict):
+                raise ConnectorError("connector_invalid_response", "Pulled response did not contain a sealed package object.")
+            observations = package.get("observations") if isinstance(package.get("observations"), list) else []
+            cues = cues_from_observations(observations, min_score=args.min_score, max_cues=args.max_cues)
+            if args.show_cues:
+                print(OnscreenCueRenderer().render_text(cues, header="CueLiez Observation Cues (pulled)"))
+                print()
+            formats = args.formats or ["json", "md", "html"]
+            result = {"ok": True, "action": "pull", "notice": HONEST_NOTICE, "package_id": args.pull_id, "endpoint": pulled.get("endpoint")}
+            if args.out_dir:
+                result["exports"] = export_sealed_package(package, args.out_dir, basename=args.basename, formats=formats, cues=cues, observations=observations)
+            print(json.dumps(result, ensure_ascii=False))
+            if args.print_json or not args.out_dir:
+                print(json.dumps(package, indent=2, ensure_ascii=False, default=str))
+            return 0
+
         annotations: Dict[str, Any] = {
             "mode": args.mode,
             "intended_uses": list(args.intended_uses),
@@ -259,11 +299,22 @@ def run_cli(argv: Optional[List[str]] = None) -> int:
             package = seal(package, state, high_priority_cue_ids=dual_ids)
 
         formats = args.formats or ["json", "md", "html"]
+        pend = push_endpoint(args.push_endpoint)
+        push_result = None
+        if pend:
+            push_result = push_package(pend, package, timeout=args.connector_timeout, retries=args.connector_retries)
+        exported = None
+        # Evidence/package export can be triggered after a successful push when --out-dir is set.
         if args.out_dir:
             exported = export_sealed_package(package, args.out_dir, basename=args.basename, formats=formats, cues=cues, observations=observations, transcript=transcript)
-            print(json.dumps({"ok": True, "notice": HONEST_NOTICE, "cue_count": len(cues), "observation_count": len(observations), "high_priority_cue_ids": hi_ids, "sealed": not args.no_seal, "exports": exported}, ensure_ascii=False))
-
-        if args.print_json or not args.out_dir:
+        result = {"ok": True, "notice": HONEST_NOTICE, "cue_count": len(cues), "observation_count": len(observations), "high_priority_cue_ids": hi_ids, "sealed": not args.no_seal}
+        if push_result:
+            result["push"] = {"status": push_result.get("status"), "endpoint": push_result.get("endpoint")}
+        if exported:
+            result["exports"] = exported
+        if args.out_dir or push_result:
+            print(json.dumps(result, ensure_ascii=False))
+        if args.print_json or (not args.out_dir and not push_result):
             print(json.dumps(package, indent=2, ensure_ascii=False, default=str))
 
         return 0

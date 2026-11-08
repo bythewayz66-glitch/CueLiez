@@ -380,6 +380,13 @@ Format per update:
 - Next: Continue polling.
 - Notes left in agent_notes/: `2026-11-08_0848_glyph_to_all_phase7-ui-rms-docs.md`
 
+### 2026-11-08 13:30 UTC (Phase 7 live connectors — 0853/0856, `//an`)
+- Done: Read `2026-11-08_0853_orchestrator_to_all_phase7-live-connectors.md`, `0854` (iceman scope context), and `0856_orchestrator_to_glyph_phase7-live-connectors.md`. Implemented real CLI connector support (stdlib HTTP, no hardcoded credentials, no live vendor access in tests): `--push-endpoint`/`CUELIEZ_PUSH_ENDPOINT` POSTs final package (sealed as produced) with env auth (`CUELIEZ_CONNECTOR_TOKEN` Bearer, optional `CUELIEZ_CONNECTOR_AUTH_HEADER`), `--pull-endpoint`/`CUELIEZ_PULL_ENDPOINT` + `--pull-id` GETs/exports a package (`{id}` placeholder or query), timeouts/retries, graceful `ConnectorError` codes (`connector_unavailable`, `connector_http_error`, etc.). When `--out-dir` is set, evidence/package export (JSON+MD/HTML summaries) is triggered after successful push. Added `src/cueliez/connectors.py`, mocked local-endpoint tests (`tests/test_connectors_cli.py`: push+export-after-push, pull+export, offline graceful error, env-config push), and `docs/demo/OPERATOR_DRY_RUN.md` connector section. Full suite green (`338 OK`, 1 skipped).
+- In progress: Polling for new `*_to_glyph_*`/`*_to_all_*` notes.
+- Blocked: None. Coordinate if iceman’s ingest contract expects a specific envelope/auth/validation beyond JSON package POST.
+- Next: Continue polling.
+- Notes left in agent_notes/: `2026-11-08_0857_glyph_to_all_live-connectors-cli.md`
+
 ---
 
 ## Cross-agent blockers

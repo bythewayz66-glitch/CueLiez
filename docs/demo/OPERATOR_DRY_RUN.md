@@ -137,7 +137,30 @@ Expected: error indicating consent is required (no observation/seal performed).
 - **Data retention and access controls (operator responsibility):** retain sealed packages, summaries, and any officer-note JSON according to jurisdiction/policy/records schedules. Restrict access to authorized personnel, protect files at rest/in transit per local controls, and avoid storing secrets in package content. CueLiez does not make retention, deletion, or access-control decisions automatically.
 - **Transcript ingest expectations (no live integration required):** provide a JSON array of turns or an object with `transcript`/`turns` (each turn may include `text`/`utterance`/`content`/`transcript` and `role`/`speaker`, plus optional timestamps/metadata). First-pilot path is transcript export/ingest from existing recording workflows; **live Axon/CaseCracker/RMS integrations are post-pilot** unless a partner supplies transcript export only.
 
-## 8. Manual validation-note collection (Phase 3.5/5 support)
+## 8. Connector push/pull (env-based, no hardcoded credentials)
+
+CueLiez can POST a final sealed package to a configured HTTP endpoint and/or GET a package by ID, using environment-based configuration (no live vendor access required; tests use mocked endpoints).
+
+```bash
+# Push final sealed package (env-based endpoint; optional token/header via env)
+export CUELIEZ_PUSH_ENDPOINT="https://connector.example/ingest"
+# export CUELIEZ_CONNECTOR_TOKEN="..."            # optional Bearer token
+# export CUELIEZ_CONNECTOR_AUTH_HEADER="X-Api-Key: ..."  # optional raw header
+PYTHONPATH=src python -m cueliez docs/examples/owner_conflict_interview.json \
+  --mode generic --push-endpoint "$CUELIEZ_PUSH_ENDPOINT" --out-dir ./artifacts/push
+```
+
+When `--out-dir` is set, **evidence/package export** (`sealed_package.json` + summaries) is triggered after a successful push.
+
+```bash
+# Pull a package by ID (endpoint may include {id} placeholder)
+export CUELIEZ_PULL_ENDPOINT="https://connector.example/packages/{id}"
+PYTHONPATH=src python -m cueliez --pull-id "case-123" --out-dir ./artifacts/pulled
+```
+
+Offline/transient failures return graceful errors (`connector_unavailable`/HTTP codes) with retries/timeouts (`--connector-retries`, `--connector-timeout`). Do not hardcode credentials.
+
+## 9. Manual validation-note collection (Phase 3.5/5 support)
 
 Use these paths to collect **internal** utility/quality observations without claiming truth-detection accuracy:
 
