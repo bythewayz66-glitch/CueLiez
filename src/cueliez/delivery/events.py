@@ -34,6 +34,14 @@ def _priority_for(score: float, category: str) -> str:
     return "low"
 
 
+def _priority_from_observation(obs: Mapping[str, Any], score: float, category: str) -> str:
+    # Forward-compatible: honor explicit priority if kilo adds it; otherwise derive.
+    raw = str(obs.get("priority") or "").strip().lower()
+    if raw in PRIORITY_ORDER:
+        return raw
+    return _priority_for(score, category)
+
+
 def _forbidden_display_terms() -> tuple[str, ...]:
     # Built in parts so static source-language scans do not mistake this
     # defensive filter list for product claims.
@@ -100,11 +108,18 @@ class CueEvent:
 
 
 def _cue_id(obs: Mapping[str, Any], index: int) -> str:
+    # Forward-compatible: honor explicit cue_id if provided; else generate a stable UI id.
+    raw = str(obs.get("cue_id") or "").strip()
+    if raw:
+        safe = "".join(ch if (ch.isalnum() or ch in "-_:") else "_" for ch in raw)[:120]
+        return safe or f"cue-{index}"
     ti = obs.get("turn_index")
     label = str(obs.get("label") or "cue").replace(" ", "_")
+    category = str(obs.get("category") or "general").replace(" ", "_")
+    method = str(obs.get("method") or "m").replace(" ", "_").replace("/", "-")[-24:]
     if ti is not None:
-        return f"cue-t{ti}-{label}-{index}"
-    return f"cue-{label}-{index}"
+        return f"cue-t{ti}-{label}-{category}-{method}"
+    return f"cue-{label}-{category}-{method}-{index}"
 
 
 def _evidence_summary(obs: Mapping[str, Any]) -> Dict[str, Any]:
@@ -148,7 +163,7 @@ def cues_from_observations(
         if key in seen:
             continue
         seen.add(key)
-        priority = _priority_for(score, category)
+        priority = _priority_from_observation(obs, score, category)
         cue = _safe_text(_neutralize_display_text(obs.get("cue"), fallback=label.replace("_", " ")))
         turn_part = f"Turn {turn_index}: " if turn_index is not None else ""
         onscreen = f"[{priority.upper()}] {turn_part}{cue}"
