@@ -407,6 +407,35 @@ def package_completeness(package: Any) -> Dict[str, Any]:
     return {"ok": len(errors) == 0, "errors": errors}
 
 
+def validate_sealed_package_ingest(package: Any) -> Dict[str, Any]:
+    """Validate a sealed package for connector/ingest (original artifact). Fail-closed.
+
+    Returns a minimal receipt on success. Raises GateError with auditable codes on failure.
+    """
+    if not isinstance(package, dict):
+        raise GateError("ingest_invalid_package", "Ingest requires a package dict.")
+    if not package.get("sealed"):
+        raise GateError("ingest_not_sealed", "Ingest requires a sealed package (sealed=true).")
+    rep = package_completeness(package)
+    if not rep.get("ok"):
+        errs = rep.get("errors") or []
+        if "invalid:package_hash" in errs or any("missing:package_hash" in str(e) for e in errs):
+            raise GateError("ingest_hash_mismatch", f"Package integrity verification failed: {errs}")
+        if "invalid:epistemic_status" in errs or "invalid:is_definitive_finding" in errs:
+            raise GateError("ingest_epistemic_invalid", f"Package epistemic/disclaimer fields invalid: {errs}")
+        raise GateError("connector_validation_failed", f"Package validation failed: {errs}")
+    if not verify_package_hash(package):
+        raise GateError("ingest_hash_mismatch", "Package hash verification failed.")
+    return {
+        "ok": True,
+        "package_hash": package.get("package_hash"),
+        "schema_version": package.get("schema_version"),
+        "epistemic_status": package.get("epistemic_status"),
+        "sealed_at": package.get("sealed_at"),
+        "mode": (package.get("gate_state") or {}).get("mode") if isinstance(package.get("gate_state"), dict) else None,
+    }
+
+
 def custody_receipt(package: Any) -> Dict[str, Any]:
     """Minimal custody receipt (safe to share for process review; no findings)."""
     if not isinstance(package, dict):

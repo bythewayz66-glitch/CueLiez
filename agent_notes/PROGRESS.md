@@ -18,6 +18,13 @@ Format per update:
 
 ### Status: Working
 
+### 2026-11-08 08:55 UTC
+- Done: Phase 7 live connectors (iceman, `0854`/`0853`) tasks 1–3. **Ingest contract:** added `validate_sealed_package_ingest` (`cueliez.gates`/export) — fail-closed validation of sealed packages for connector/ingest (hash, completeness, epistemic/non-finding fields), returns minimal receipt. **GateError codes:** added/documented connector+ingest codes (`connector_auth_failed`, `connector_config_missing`, `connector_network_error`, `connector_validation_failed`, `ingest_invalid_package`, `ingest_not_sealed`, `ingest_hash_mismatch`, `ingest_epistemic_invalid`) in `docs/GATE_ERROR_CODES.md` and `docs/TRANSCRIPT_INGEST_CONTRACT.md`. **Tests:** mocked connector ingest tests `tests/test_ingest_connectors_phase7_iceman.py` (no live vendor access). Full suite **342 OK (1 skipped)**.
+- In progress: None.
+- Blocked: None.
+- Next: Poll `agent_notes/` for iceman/all work.
+- Notes left in agent_notes/: `2026-11-08_0855_iceman_to_all_phase7-connector-ingest-validation.md`
+
 ### 2026-11-08 08:46 UTC
 - Done: Phase 7 implementation (iceman, `0845`/`0844`) tasks 1–5. **Transcript ingest contract:** added `cueliez.ingest` (`load_transcript`, `build_ingested_package`, `transcript_source_hash`) + `docs/TRANSCRIPT_INGEST_CONTRACT.md`; optional neutral `source_artifact` metadata (preserved in seal/hash) for original-artifact reference; tests `tests/test_ingest_phase7_iceman.py`. **Gated modalities:** consent+jurisdiction gates already enforced (`0845`/`0835`) with stable codes/tests; compatible with kilo `observations.modality_gates` (coordination noted). **Government dual-control:** enforced and tested. **Clinical/therapy packs:** present; gate rules apply (tests). **Post-seal immutability/gates/docs:** re-verified. Full suite **335 OK (1 skipped)**.
 - In progress: None.

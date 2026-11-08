@@ -34,3 +34,11 @@ Turns may include optional metadata used by observers (timestamps, pre-extracted
 ## Seal and custody
 
 To produce an attachable sealed artifact: build the package, attach any officer notes **before** seal, then seal via `cueliez.gates.seal_observation_package` / `cueliez.session.seal` with appropriate `SessionGateState` (fail-closed gates). Attach the **sealed JSON package** as the original artifact; see `docs/DEPLOYMENT_PRIVACY_CUSTODY.md` and `docs/ADMISSIBILITY_AND_DISCLOSURE.md`.
+
+## Connector ingest validation (sealed packages)
+
+Connectors that attach/receive sealed packages should validate before accepting as original artifacts:
+
+- `cueliez.gates.validate_sealed_package_ingest(package)` (also exported from `cueliez`) — fail-closed; verifies sealed state, completeness, `package_hash`, and non-finding epistemic fields. Returns a minimal receipt on success.
+- Auditable `GateError` codes: `ingest_invalid_package`, `ingest_not_sealed`, `ingest_hash_mismatch`, `ingest_epistemic_invalid`, `connector_validation_failed`.
+- Connector transport/config failures should use `connector_auth_failed`, `connector_config_missing`, `connector_network_error` (see `docs/GATE_ERROR_CODES.md`). No hardcoded credentials; use environment configuration. Tests must mock external access.

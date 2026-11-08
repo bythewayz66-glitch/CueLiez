@@ -6,6 +6,10 @@ Stable `GateError.code` strings raised by `cueliez.gates` / session/seal flows. 
 |------|---------|
 | `annotations_invalid` | `annotations` must be a dict |
 | `confidence_out_of_range` | `confidence.score` not in `[0,1]` |
+| `connector_auth_failed` | Connector authentication/authorization failed (env/credentials) |
+| `connector_config_missing` | Required connector configuration (e.g. env var/endpoint) missing |
+| `connector_network_error` | Connector network/transport error (mocked in tests) |
+| `connector_validation_failed` | Connector payload/response validation failed |
 | `consent_attester_required` | `record_consent` requires non-empty attester |
 | `consent_required` | Affirmative consent/attester required for mode/action |
 | `contamination_attempt` | Banned annotation key (verdict/definitive claim) |
@@ -17,6 +21,10 @@ Stable `GateError.code` strings raised by `cueliez.gates` / session/seal flows. 
 | `epistemic_status_forbidden` | Package epistemic status is a forbidden finding class |
 | `export_invalid` | Export requires a sealed observed-indicator package dict |
 | `gate_state_required` | Session gate state required for a gate check |
+| `ingest_epistemic_invalid` | Ingested package epistemic/disclaimer fields invalid (non-finding contract) |
+| `ingest_hash_mismatch` | Ingested package hash verification failed |
+| `ingest_invalid_package` | Ingest requires a valid package dict |
+| `ingest_not_sealed` | Ingest requires a sealed package |
 | `invalid_confidence_score` | `confidence.score` not numeric |
 | `jurisdiction_approval_required` | Jurisdiction approval required before enabling a gated input modality |
 | `jurisdiction_required` | Jurisdiction must be recorded before enabling a gated input modality |
@@ -29,7 +37,7 @@ Stable `GateError.code` strings raised by `cueliez.gates` / session/seal flows. 
 | `modality_consent_required` | Explicit consent required before enabling a gated input modality |
 | `observation_invalid` | Observation entry not a dict |
 | `observations_invalid` | `observations`/`detections` must be a list |
-| `package_sealed` | Mutation refused on sealed package (`assert_not_sealed`) |
+| `package_sealed` | Mutation/re-seal refused on sealed package |
 | `prohibited_use` | Intended use is prohibited by policy |
 | `seal_invalid` | Seal input must be a dict |
 | `training_required` | Training acknowledgement required for mode |

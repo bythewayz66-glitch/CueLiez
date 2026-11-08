@@ -24,6 +24,7 @@ from .gates import (
     require_gated_modality,
     seal_observation_package,
     sign_package,
+    validate_sealed_package_ingest,
     verify_package_hash,
 )
 from .session import assert_can_observe, seal, start_session
@@ -82,6 +83,7 @@ __all__ = [
     "seal_observation_package",
     "sign_package",
     "start_session",
+    "validate_sealed_package_ingest",
     "verify_package_hash",
     "MemoryEngine",
     "ObservationRunner",
