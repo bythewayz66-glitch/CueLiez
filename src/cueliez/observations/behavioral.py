@@ -196,7 +196,13 @@ class SpeechRateShiftObserver:
                     score=score,
                     method_id=self.method_id,
                     category="behavioral",
-                    evidence={"wpm": round(wpm, 2), "median_wpm": round(med, 2), "robust_z": round(z, 3), "direction": direction},
+                    evidence={
+                        "wpm": round(wpm, 2),
+                        "baseline_median_wpm": round(med, 2),
+                        "robust_z": round(z, 3),
+                        "direction": direction,
+                        "sample_count": len(rates),
+                    },
                     cue=f"Speech rate was notably {direction} than baseline; consider cognitive load or topic sensitivity.",
                     turn_index=i,
                 ))
@@ -234,7 +240,12 @@ class FilledPauseMarkerObserver:
                 score=score,
                 method_id=self.method_id,
                 category="behavioral",
-                evidence={"filled_pause_count": total, "word_count": words, "rate": round(rate, 4)},
+                evidence={
+                    "filled_pause_count": total,
+                    "word_count": words,
+                    "disfluency_rate": round(rate, 4),
+                    "source": "metadata" if meta_count is not None else "text_markers",
+                },
                 cue="Filled pauses/disfluency markers were elevated; allow time and ask clear, focused questions.",
                 turn_index=i,
             ))
@@ -254,9 +265,9 @@ class InterruptionOverlapObserver:
             if not interrupted:
                 continue
             score = clamp01(0.45 + min((overlap or 200) / 2000.0, 0.35))
-            ev: dict[str, Any] = {"interrupted": True}
+            ev: dict[str, Any] = {"interrupted": True, "source": "overlap_ms" if overlap is not None else "interrupted_flag"}
             if overlap is not None:
-                ev["overlap_ms"] = overlap
+                ev["overlap_ms"] = round(overlap, 2)
             result.observations.append(make_observation(
                 label="turn_overlap_or_interruption_observed",
                 score=score,
