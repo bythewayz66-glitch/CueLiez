@@ -7,6 +7,7 @@ __version__ = "0.2.0"
 
 from .gates import (
     DISCLAIMER,
+    DISCLAIMER_VERSION,
     GateError,
     SessionGateState,
     assert_not_sealed,
@@ -56,6 +57,7 @@ from .compliance import (
 __all__ = [
     "__version__",
     "DISCLAIMER",
+    "DISCLAIMER_VERSION",
     "GateError",
     "SessionGateState",
     "assert_can_observe",

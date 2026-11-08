@@ -52,6 +52,9 @@ DISCLAIMER = (
     "It must not be used for automated legal or clinical decisions."
 )
 
+# Canonical disclaimer version (hash-based: changes if disclaimer text changes).
+DISCLAIMER_VERSION = "v1-" + hashlib.sha256(DISCLAIMER.encode("utf-8")).hexdigest()[:12]
+
 BANNED_ANNOTATION_KEYS = frozenset({
     "diagnosis",
     "legal_finding",
@@ -314,6 +317,7 @@ def custody_receipt(package: Any) -> Dict[str, Any]:
         "sealed_at": package.get("sealed_at"),
         "epistemic_status": package.get("epistemic_status"),
         "is_definitive_finding": package.get("is_definitive_finding"),
+        "disclaimer_version": package.get("disclaimer_version"),
         "mode": gs.get("mode"),
         "consent_attester_present": bool((gs.get("consent_attested_by") or "").strip()),
         "training_acknowledged": bool(gs.get("training_acknowledged")),
@@ -457,6 +461,7 @@ def seal_observation_package(
     package["origin"] = "grounded"
     package["is_definitive_finding"] = False
     package["disclaimer"] = DISCLAIMER
+    package["disclaimer_version"] = DISCLAIMER_VERSION
     package["product"] = "CueLiez"
     package["product_version"] = CUELIEZ_VERSION
     package["gate_state"] = effective_state.to_dict()

@@ -496,3 +496,18 @@ class TestGateError(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class TestVersionedDisclaimer(unittest.TestCase):
+    def test_sealed_package_contains_canonical_disclaimer_and_version(self):
+        from cueliez.gates import DISCLAIMER, DISCLAIMER_VERSION
+        out = seal_observation_package({"observations": [_valid_obs()]})
+        self.assertEqual(out["disclaimer"], DISCLAIMER)
+        self.assertEqual(out["disclaimer_version"], DISCLAIMER_VERSION)
+        self.assertTrue(out["disclaimer_version"].startswith("v1-"))
+
+    def test_disclaimer_version_hash_based_changes_with_text(self):
+        import hashlib
+        text = "different disclaimer text for observation-only use."
+        v = "v1-" + hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
+        from cueliez.gates import DISCLAIMER_VERSION
+        self.assertNotEqual(v, DISCLAIMER_VERSION)

@@ -9,9 +9,10 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional
 
-from ..gates import DISCLAIMER as BASE_DISCLAIMER
+from ..gates import DISCLAIMER as BASE_DISCLAIMER, DISCLAIMER_VERSION
 
-VERSION = "2026.1"
+# Domain bundle version (kept for compatibility); canonical seal disclaimer uses DISCLAIMER_VERSION.
+VERSION = DISCLAIMER_VERSION
 
 
 @dataclass

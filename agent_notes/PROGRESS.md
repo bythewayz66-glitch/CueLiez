@@ -18,6 +18,13 @@ Format per update:
 
 ### Status: Working
 
+### 2026-11-08 07:45 UTC
+- Done: Phase 0 closeout (iceman, `0751`) — versioned canonical disclaimer. Added `DISCLAIMER_VERSION` (hash-based, `v1-*`) in `cueliez.gates`; `seal_observation_package` embeds `disclaimer` + `disclaimer_version` (uses canonical constants; no seal-literal duplication). `compliance.disclaimers` aligned to canonical version. Updated `docs/schemas/sealed_package_v1.md`, `docs/ADMISSIBILITY_AND_DISCLOSURE.md`, `custody_receipt`. Added `tests.test_gates.TestVersionedDisclaimer`. No new deps (pydantic not used). Full suite **277 OK (1 skipped)**.
+- In progress: None.
+- Blocked: None.
+- Next: Poll `agent_notes/` for iceman/all work.
+- Notes left in agent_notes/: `2026-11-08_0745_iceman_to_all_disclaimer-version.md`
+
 ### 2026-11-08 07:28 UTC
 - Done: Hardening pass (iceman, `0736`) complete for owner transcripts (`owner_clean/conflict/hedging_interview.json`). Added `tests/test_hardening_owner_transcripts_iceman.py` (tasks 1–8): seal-path fields/epistemic (`observed_indicator`, `is_definitive_finding=false`, `origin=grounded`, `CueLiez`, disclaimer, `schema_version`/`product_version`/`sealed_at`/`package_hash`) via `seal_observation_package` (generic) + session helper/interrogation path; evidence dicts preserved incl. `source_text`/`source_texts`/turn refs (no stripping); `verify_package_hash`/deterministic hash; post-seal immutability (`is_sealed`, `attach_officer_cue_notes` refused); banned verdict/annotation/definitive-finding rejection; full `gate_state` structure; `MemoryEngine` requires `package_hash`, stored seals remain non-finding. Wording check on new test (negative-test fixtures exempted). Full suite **268 OK (1 skipped)**.
 - In progress: None.

@@ -13,7 +13,7 @@ A sealed package (from `seal_observation_package` / `session.seal`) is a self-de
 
 - **Identity/version:** `schema_version`, `product` (`CueLiez`), `product_version`
 - **Epistemic (forced at seal):** `epistemic_status="observed_indicator"`, `origin="grounded"`, `is_definitive_finding=false`
-- **Disclaimer:** canonical `disclaimer` text
+- **Disclaimer:** canonical `disclaimer` text and `disclaimer_version` (versioned identifier for the canonical seal disclaimer; matches `cueliez.gates.DISCLAIMER_VERSION`)
 - **Integrity:** `package_hash` (SHA-256 hex), `sealed_at` (Unix timestamp), `sealed=true`, optional `package_signature` (pluggable; excluded from content hash)
 - **Process/gates:** `gate_state` snapshot (mode; consent + attester + timestamp; training acknowledgement + version; `dual_control_records`; `intended_uses`; subject/jurisdiction/operator identifiers when provided; requirement flags)
 - **System observations/cues:** `observations` (neutral, confidence-scored; each has `label`, `confidence.score` in [0,1], non-empty `confidence.model_id`, `method`, `category`) and optional `cues`

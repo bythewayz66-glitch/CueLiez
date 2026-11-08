@@ -14,7 +14,8 @@
 | `epistemic_status` | string | **Forced** to `"observed_indicator"` |
 | `origin` | string | `"grounded"` |
 | `is_definitive_finding` | boolean | **Forced** to `false` |
-| `disclaimer` | string | Canonical disclaimer |
+| `disclaimer` | string | Canonical disclaimer text |
+| `disclaimer_version` | string | Canonical disclaimer version identifier (matches `cueliez.gates.DISCLAIMER_VERSION`) |
 | `sealed` | boolean | `true` |
 | `sealed_at` | number | Unix timestamp (set at seal; **excluded from hash**) |
 | `package_hash` | string | SHA-256 hex (64 chars); **excluded from hash input** |
