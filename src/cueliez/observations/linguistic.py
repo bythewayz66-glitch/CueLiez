@@ -62,6 +62,9 @@ VAGUE_PATTERNS = [
     r"\bsomewhere\b", r"\bsomehow\b",
 ]
 
+# Discourse fillers are common; treat as weak vagueness unless paired with stronger vague referents.
+_WEAK_VAGUE_PATTERNS = frozenset({r"\byou know\b", r"\blike that\b"})
+
 CERTAINTY_HIGH = [r"\bdefinitely\b", r"\bcertainly\b", r"\babsolutely\b", r"\bclearly\b", r"\bno doubt\b", r"\balways\b", r"\bpositive\b", r"\b100%\b"]
 CERTAINTY_LOW = [r"\bmaybe\b", r"\bpossibly\b", r"\bnot sure\b", r"\bi think\b", r"\bmight\b", r"\bcould\b", r"\bunsure\b"]
 
@@ -106,14 +109,25 @@ class HedgingObserver:
             count, found = _count_patterns(text, HEDGE_PATTERNS)
             if not count:
                 continue
+            # Precision: a single weak hedge in short/normal text is common; require stronger evidence.
+            if count < 2 and len(words) < 10:
+                continue
             rate = count / max(1, len(words))
-            score = clamp01(0.35 + rate * 6.0 + min(count, 5) * 0.07)
+            score = clamp01(0.30 + min(rate, 0.35) * 2.2 + min(count, 6) * 0.06)
+            if score < 0.36:
+                continue
             result.observations.append(make_observation(
                 label="hedging_language_present",
                 score=score,
                 method_id=self.method_id,
                 category="linguistic",
-                evidence={"count": count, "word_count": len(words), "rate": round(rate, 4), "patterns": found[:8]},
+                evidence={
+                    "hedge_count": count,
+                    "distinct_pattern_groups": len(found),
+                    "word_count": len(words),
+                    "hedge_rate": round(rate, 4),
+                    "patterns_matched": found[:8],
+                },
                 cue="Response includes hedging/qualification language; consider asking for specific details.",
                 turn_index=i,
             ))
@@ -136,16 +150,25 @@ class PronounDistancingObserver:
             dist_count, found = _count_patterns(text, DISTANCING_PATTERNS)
             if dist_count == 0:
                 continue
+            # Generic third-person references are common; require multiple markers or clear distancing context.
+            generic_only = found and all(p in (r"\bpeople\b", r"\bsomeone\b", r"\ba person\b") for p in found)
+            if generic_only and dist_count < 2:
+                continue
             ratio = dist_count / max(1, i_count + dist_count)
-            score = clamp01(0.25 + dist_count * 0.12 + ratio * 0.35)
-            if score < 0.3:
+            score = clamp01(0.22 + min(dist_count, 5) * 0.10 + ratio * 0.32)
+            if score < 0.34:
                 continue
             result.observations.append(make_observation(
                 label="distancing_language_present",
                 score=score,
                 method_id=self.method_id,
                 category="linguistic",
-                evidence={"distancing_count": dist_count, "first_person_count": i_count, "patterns": found[:8]},
+                evidence={
+                    "distancing_count": dist_count,
+                    "first_person_count": i_count,
+                    "distancing_ratio": round(ratio, 4),
+                    "patterns_matched": found[:8],
+                },
                 cue="Language shows distancing from people/objects/events; consider probing ownership and direct involvement.",
                 turn_index=i,
             ))
@@ -176,7 +199,12 @@ class NegationDensityObserver:
                 score=score,
                 method_id=self.method_id,
                 category="linguistic",
-                evidence={"count": count, "word_count": len(words), "rate": round(rate, 4), "patterns": found[:8]},
+                evidence={
+                    "marker_count": count,
+                    "word_count": len(words),
+                    "marker_rate": round(rate, 4),
+                    "patterns_matched": found[:8],
+                },
                 cue="Response contains emphatic negation/assurance language; focus on verifiable details rather than assurances.",
                 turn_index=i,
             ))
@@ -196,14 +224,19 @@ class DetailVaguenessObserver:
             if len(words) < 8:
                 continue
             vague_count, found = _count_patterns(text, VAGUE_PATTERNS)
+            if not vague_count:
+                continue
+            strong_found = [p for p in found if p not in _WEAK_VAGUE_PATTERNS]
+            weak_only = bool(found) and not strong_found
+            if weak_only and vague_count < 2:
+                continue
             numbers = len(re.findall(r"\b\d+(?:[:/.-]\d+)?\b", text))
             caps = len(re.findall(r"\b[A-Z][a-z]{2,}\b", text))
             specificity = numbers + max(0, caps - 1) * 0.5
-            if vague_count == 0 and specificity >= 2:
-                continue
-            rate = vague_count / max(1, len(words))
-            score = clamp01(0.2 + vague_count * 0.1 + rate * 4.5 - min(specificity, 4) * 0.08)
-            if score < 0.35:
+            effective_vague = vague_count - (0.5 * sum(1 for p in found if p in _WEAK_VAGUE_PATTERNS))
+            rate = effective_vague / max(1, len(words))
+            score = clamp01(0.18 + effective_vague * 0.09 + rate * 4.0 - min(specificity, 5) * 0.07)
+            if score < 0.36:
                 continue
             result.observations.append(make_observation(
                 label="low_specificity_language_present",
@@ -211,8 +244,12 @@ class DetailVaguenessObserver:
                 method_id=self.method_id,
                 category="linguistic",
                 evidence={
-                    "vague_count": vague_count, "specificity_proxy": specificity,
-                    "word_count": len(words), "patterns": found[:8],
+                    "vague_marker_count": vague_count,
+                    "effective_vague_score": round(effective_vague, 2),
+                    "strong_vague_patterns": strong_found[:8],
+                    "specificity_proxy": round(specificity, 2),
+                    "word_count": len(words),
+                    "patterns_matched": found[:8],
                 },
                 cue="Account uses general/vague references; ask for who/what/when/where specifics.",
                 turn_index=i,
@@ -229,24 +266,43 @@ class CertaintySwingObserver:
         if len(subject_turns) < 2:
             return result
         prev_mode = None
+        prev_hi = 0
+        prev_lo = 0
+        prev_i = None
         for i, text in subject_turns:
             hi, _ = _count_patterns(text, CERTAINTY_HIGH)
             lo, _ = _count_patterns(text, CERTAINTY_LOW)
             if hi == 0 and lo == 0:
                 continue
-            mode = "high" if hi >= lo else "low"
+            mode = "high" if hi > lo else ("low" if lo > hi else prev_mode or "high")
+            if mode not in ("high", "low"):
+                mode = "high" if hi >= lo else "low"
             if prev_mode and mode != prev_mode:
-                score = clamp01(0.45 + 0.1 * min(hi + lo, 4))
+                # Precision: require some marker strength on at least one side of the swing.
+                if max(prev_hi, prev_lo, hi, lo) < 1 or (prev_hi + prev_lo + hi + lo) < 2:
+                    prev_mode, prev_hi, prev_lo, prev_i = mode, hi, lo, i
+                    continue
+                strength = min(prev_hi + prev_lo + hi + lo, 6)
+                score = clamp01(0.40 + 0.08 * strength)
                 result.observations.append(make_observation(
                     label="certainty_shift_across_turns",
                     score=score,
                     method_id=self.method_id,
                     category="linguistic",
-                    evidence={"from": prev_mode, "to": mode, "high_markers": hi, "low_markers": lo},
+                    evidence={
+                        "from_mode": prev_mode,
+                        "to_mode": mode,
+                        "from_turn_index": prev_i,
+                        "to_turn_index": i,
+                        "from_high_markers": prev_hi,
+                        "from_low_markers": prev_lo,
+                        "to_high_markers": hi,
+                        "to_low_markers": lo,
+                    },
                     cue="Certainty level shifted across responses; clarify what is known directly vs inferred.",
                     turn_index=i,
                 ))
-            prev_mode = mode
+            prev_mode, prev_hi, prev_lo, prev_i = mode, hi, lo, i
         return result
 
 
@@ -275,7 +331,12 @@ class MinimizationObserver:
                 score=score,
                 method_id=self.method_id,
                 category="linguistic",
-                evidence={"count": count, "rate": round(rate, 4), "patterns": found[:8]},
+                evidence={
+                    "minimizer_count": count,
+                    "word_count": len(words),
+                    "minimizer_rate": round(rate, 4),
+                    "patterns_matched": found[:8],
+                },
                 cue="Response uses minimizing language; probe the full scope and impact of events.",
                 turn_index=i,
             ))
@@ -304,7 +365,12 @@ class PassiveVoiceProxyObserver:
                 score=score,
                 method_id=self.method_id,
                 category="linguistic",
-                evidence={"count": count, "rate": round(rate, 4), "patterns": found[:6]},
+                evidence={
+                    "construction_count": count,
+                    "word_count": len(words),
+                    "construction_rate": round(rate, 4),
+                    "patterns_matched": found[:6],
+                },
                 cue="Account uses passive/agentless constructions; ask who performed key actions.",
                 turn_index=i,
             ))
@@ -336,7 +402,11 @@ class OverjustificationObserver:
                 score=score,
                 method_id=self.method_id,
                 category="linguistic",
-                evidence={"count": count, "word_count": len(words), "patterns": found[:6]},
+                evidence={
+                    "justification_marker_count": count,
+                    "word_count": len(words),
+                    "patterns_matched": found[:6],
+                },
                 cue="Response includes extended justification; separate core facts from explanations and verify key points.",
                 turn_index=i,
             ))
@@ -364,7 +434,11 @@ class MemoryQualifierObserver:
                 score=score,
                 method_id=self.method_id,
                 category="linguistic",
-                evidence={"count": count, "patterns": found[:6]},
+                evidence={
+                    "qualifier_count": count,
+                    "word_count": len(words),
+                    "patterns_matched": found[:6],
+                },
                 cue="Response qualifies memory/certainty; distinguish direct recall from reconstruction.",
                 turn_index=i,
             ))

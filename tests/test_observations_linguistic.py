@@ -87,6 +87,27 @@ class TestLinguistic(unittest.TestCase):
                     MemoryQualifierObserver):
             _seal(cls().observe([]).to_dicts())
 
+    def test_sprint2_single_turn_noise_precision(self):
+        # Thin evidence should not produce cues (precision over recall).
+        self.assertEqual(HedgingObserver().observe(
+            [{"role": "subject", "text": "I think it was fine today."}]
+        ).to_dicts(), [])
+        self.assertEqual(PronounDistancingObserver().observe(
+            [{"role": "subject", "text": "Someone told me about the meeting yesterday."}]
+        ).to_dicts(), [])
+        self.assertEqual(DetailVaguenessObserver().observe(
+            [{"role": "subject", "text": "You know it was okay in the afternoon."}]
+        ).to_dicts(), [])
+        self.assertEqual(CertaintySwingObserver().observe(
+            [{"role": "subject", "text": "I definitely saw it happen clearly."}]
+        ).to_dicts(), [])
+        self.assertEqual(MinimizationObserver().observe(
+            [{"role": "subject", "text": "It was just a small issue."}]
+        ).to_dicts(), [])
+        self.assertEqual(OverjustificationObserver().observe(
+            [{"role": "subject", "text": "Let me explain what happened with the car."}]
+        ).to_dicts(), [])
+
 
 if __name__ == "__main__":
     unittest.main()

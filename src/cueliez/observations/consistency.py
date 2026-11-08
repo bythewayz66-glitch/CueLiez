@@ -82,13 +82,17 @@ class ClaimConflictObserver:
         for key, items in buckets.items():
             if len(items) < 2:
                 continue
+            key_words_n = len(key.split())
+            # Precision: very short topic keys with only two mentions are often noisy.
+            if key_words_n < 3 and len(items) < 3:
+                continue
             pols = {p for _, _, p in items}
             if 1 in pols and -1 in pols:
                 pos = [it for it in items if it[2] == 1][0]
                 neg = [it for it in items if it[2] == -1][0]
                 # Confidence reflects topic-key specificity and repeated mentions, not certainty of conflict.
-                specificity = min(len(key.split()), 8) / 8.0
-                score = clamp01(0.48 + specificity * 0.18 + 0.04 * min(len(items), 4))
+                specificity = min(key_words_n, 8) / 8.0
+                score = clamp01(0.46 + specificity * 0.18 + 0.04 * min(len(items), 4))
                 result.observations.append(make_observation(
                     label="possible_statement_conflict",
                     score=score,
@@ -96,7 +100,7 @@ class ClaimConflictObserver:
                     category="consistency",
                     evidence={
                         "topic_key": key,
-                        "topic_key_words": len(key.split()),
+                        "topic_key_words": key_words_n,
                         "turn_a": pos[0], "excerpt_a": pos[1][:180], "polarity_a": "affirming",
                         "turn_b": neg[0], "excerpt_b": neg[1][:180], "polarity_b": "negating",
                         "mention_count": len(items),

@@ -54,6 +54,12 @@ class TestCueEvents(unittest.TestCase):
         for k in ("cue_id", "priority", "onscreen_text", "audio_script", "non_verdict_notice"):
             self.assertIn(k, d)
 
+    def test_honors_explicit_contract_fields(self):
+        obs = [dict(SAMPLE_OBS[0], cue_id="stable-cue-1", priority="critical")]
+        cues = cues_from_observations(obs)
+        self.assertEqual(cues[0].cue_id, "stable-cue-1")
+        self.assertEqual(cues[0].priority, "critical")
+
 
 class TestOnscreenRenderer(unittest.TestCase):
     def test_render_text(self):

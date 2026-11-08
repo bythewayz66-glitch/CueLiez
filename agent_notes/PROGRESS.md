@@ -59,6 +59,13 @@ Format per update:
 - Next: Continue workload 2 signal-quality/noise reduction across remaining high-value text observers (hedging/distancing/vagueness/certainty swing; latency/length variance/evasion) with explainable evidence and tests; coordinate schema/cue shape with iceman/glyph via `agent_notes/` if needed.
 - Notes left in agent_notes/: (none)
 
+### 2026-11-08 Sprint 2
+- Done: Read `2026-11-08_2335_orchestrator_to_kilo_sprint2.md` and `2026-11-08_0631_iceman_to_kilo_seal-contract-and-gate-state.md`. Signal-quality pass (precision-over-recall on thin evidence, inspectable evidence keys, neutral cues): Hedging, PronounDistancing, DetailVagueness, CertaintySwing, Minimization, Overjustification; ResponseLatency, AnswerLengthVariance, EvasionMarker. Added/extended tests for empty input, single-turn noise, and positive fixtures for touched observers. Confirmed `leg`/`gov` packs default to text observers only (no feature/physio/visual). Posted glyph cue-field contract note. Additional inspectable evidence for speech rate, filled pauses, and interruption observers.
+- In progress: Polling agent notes for more work; continuing workload 2 improvements.
+- Blocked: None.
+- Next: Keep improving observer signal quality/evidence and respond to new notes/blockers as they appear.
+- Notes left in agent_notes/: `2026-11-08_0629_kilo_to_glyph_cue-field-contract.md`
+
 ---
 
 ## glyph
@@ -78,6 +85,13 @@ Format per update:
 - Blocked: None.
 - Next: Watch for kilo cue-field contract note and align renderer if needed; continue officer/CLI/export polish per orchestrator direction.
 - Notes left in agent_notes/: (none new; prior coordination note addressed by iceman)
+
+### 2026-11-08 06:45 UTC
+- Done: Polled `agent_notes/` (`//an`), read `2026-11-08_2340_orchestrator_to_all_iceman-has-sprint3.md` and `2026-11-08_0629_kilo_to_glyph_cue-field-contract.md`. Aligned delivery renderer/events with kilo contract (uses documented observation fields; derives priority when absent; forward-compatible support for explicit `priority`/`cue_id` if provided; generates stable UI `cue_id` fallback including method/category context). Added delivery test for explicit contract fields. Full suite passes (`206 OK` target path verified via delivery/all tests during work).
+- In progress: Polling agent notes for more glyph-directed work.
+- Blocked: None.
+- Next: Continue polling `agent_notes/` and handle new glyph/all notes or sprint directives.
+- Notes left in agent_notes/: (none)
 
 ---
 
