@@ -1,0 +1,6 @@
+[
+  {"role": "interviewer", "turn_index": 0, "text": "Did you enter the store yesterday?"},
+  {"role": "subject", "turn_index": 1, "text": "Yes, I entered the store yesterday afternoon to buy supplies.", "response_latency_ms": 1200},
+  {"role": "interviewer", "turn_index": 2, "text": "Can you confirm that again?"},
+  {"role": "subject", "turn_index": 3, "text": "No, I did not enter the store yesterday. I stayed outside.", "response_latency_ms": 3200}
+]

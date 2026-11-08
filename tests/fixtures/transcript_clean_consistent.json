@@ -1,0 +1,8 @@
+[
+  {"role": "interviewer", "turn_index": 0, "text": "Can you walk me through your evening?"},
+  {"role": "subject", "turn_index": 1, "text": "I left the office at 5:30 pm and drove to the grocery store on Main Street.", "response_latency_ms": 900},
+  {"role": "interviewer", "turn_index": 2, "text": "What did you do after that?"},
+  {"role": "subject", "turn_index": 3, "text": "I bought milk and bread, paid at 6:10 pm, and drove home.", "response_latency_ms": 850},
+  {"role": "interviewer", "turn_index": 4, "text": "Did you meet anyone?"},
+  {"role": "subject", "turn_index": 5, "text": "No, I went home alone and watched the news.", "response_latency_ms": 700}
+]
