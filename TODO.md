@@ -66,8 +66,8 @@ Status key: `[ ]` not started · `[~]` in progress · `[x]` done
 - [x] Clear separation in schema and docs between “system observed/suggested” and “human decided”. (Export/onscreen framing separates system-observed cues from officer notes/human review.)
 
 ### 3.5 Documentation for Disclosure
-- [ ] Write first version of **Admissibility & Disclosure Guide** (what is/isn’t in the package, how consent/training/dual-control appear, recommended disclosure handling).
-- [ ] Keep sales, training, and UI language consistent with technical reality.
+- [x] Write first version of **Admissibility & Disclosure Guide** (what is/isn’t in the package, how consent/training/dual-control appear, recommended disclosure handling). (`docs/ADMISSIBILITY_AND_DISCLOSURE.md` v1 exists; glyph aligned export/disclosure wording and print-to-PDF guidance as observation-only.)
+- [~] Keep sales, training, and UI language consistent with technical reality. (Glyph audited delivery/export/site/demo/docs wording; broader sales/training surfaces remain to verify.)
 - [ ] Prepare short internal validation notes (false-positive / over-cue rates, officer utility) that do **not** claim truth-detection accuracy.
 
 ---

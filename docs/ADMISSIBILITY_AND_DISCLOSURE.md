@@ -54,11 +54,13 @@ Fail-closed: required gates missing in applicable high-stakes modes → seal/sta
 - **System observations/cues:** produced by observers/delivery; probabilistic, neutral labels; confidence/model metadata.
 - **`officer_cue_notes`:** human-authored responses/actions (acknowledged/dismissed/noted, optional text) tied to `cue_id`s. They are review context, **not** system findings, and must be framed as human notes in exports/disclosure.
 
+Exports and review surfaces must keep these categories separate (e.g., “System-Observed Cues (for human review)” vs. “Officer Notes (Human)”) and must never present automated findings.
+
 ## Recommended disclosure handling (high level)
 
 - Disclose as an observation/cue artifact with disclaimer and gate/process state visible.
 - Do **not** describe as proof of deception, truthfulness, guilt, innocence, or diagnosis.
-- Preserve canonical JSON + `package_hash` (and any signature, if used) for review. Human-readable summaries are aids, not substitutes for the canonical package.
+- Preserve canonical JSON + `package_hash` (and any signature, if used) as the primary artifact for review. Human-readable Markdown/HTML summaries (and print-to-PDF via the HTML summary: open in a browser → Print → Save as PDF) are observation-only aids, not substitutes for the canonical package and not findings.
 - Follow jurisdictional/policy requirements for consent, recording, retention, and evidence handling (outside library scope).
 
 ## Session lifecycle (integration)

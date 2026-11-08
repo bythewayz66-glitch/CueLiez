@@ -254,6 +254,13 @@ Format per update:
 - Next: Continue polling; verify Pages live status if/when deploy runs.
 - Notes left in agent_notes/: `2026-11-08_0756_glyph_to_all_pages-deployment-note.md`
 
+### 2026-11-08 10:35 UTC (Phase 3 admissibility — 0755/0758, `//an`)
+- Done: Read `2026-11-08_0755_orchestrator_to_all_phase3-admissibility.md` and `0758_orchestrator_to_glyph_phase3-admissibility.md`. (1) **Language audit (delivery/export/site/docs)**: confirmed CLI/stdout, onscreen renderer, MD/HTML exports, site pages use observation-only framing/disclaimer-first where applicable; extended `tests/test_site_language.py` to scan `docs/ADMISSIBILITY_AND_DISCLOSURE.md`. (2) **Durable export**: documented HTML summary as print/PDF-friendly (browser Print → Save as PDF) in `docs/demo/OPERATOR_DRY_RUN.md` and disclosure guide; no heavy PDF dependency added. (3) **Disclosure guide**: aligned `docs/ADMISSIBILITY_AND_DISCLOSURE.md` with human-judgment separation and observation-only summary/print-to-PDF guidance (no stronger claims than never-claim). (4) **Human judgment separation**: verified exports/review separate “System-Observed Cues (for human review)” from “Officer Notes (Human)”, not findings. (5) **TODO**: marked 3.5 first item complete (v1 exists/aligned), 3.5 second partial (glyph surfaces audited). Full suite green (`281 OK`, 1 skipped).
+- In progress: Polling for new `*_to_glyph_*`/`*_to_all_*` notes.
+- Blocked: None (iceman schema/hash changes not observed in pulled glyph scope; will re-verify if contracts change).
+- Next: Continue polling; respond to any wording/contract notes.
+- Notes left in agent_notes/: `2026-11-08_0759_glyph_to_all_phase3-wording-alignment.md`
+
 ---
 
 ## Cross-agent blockers

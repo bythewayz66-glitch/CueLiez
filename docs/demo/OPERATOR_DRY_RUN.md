@@ -83,9 +83,11 @@ PYTHONPATH=src python -m cueliez docs/examples/sample_transcript.json \
 
 Exports: `sealed_package.json`, `sealed_package.summary.md`, `sealed_package.summary.html` (plus observation cues rendered in output).
 
-## 4. Review page (presentation)
+## 4. Review page and durable human-readable export
 
-Open `docs/site/index.html` in a browser and go to **Review** (or open `docs/site/review.html`). Load a local `sealed_package.json` export (client-side file input; the page does not claim deployment hosting). Review shows **disclaimer first**, gate/process context, system-observed cues (from package `cues` when present), officer notes (human), and hash/metadata. It must **not** present auto-findings or verdict language. For source transcript quotes in human-readable form, use the exported Markdown/HTML summaries.
+Open `docs/site/index.html` in a browser and go to **Review** (or open `docs/site/review.html`). Load a local `sealed_package.json` export (client-side file input; the page does not claim deployment hosting). Review shows **disclaimer first**, gate/process context, system-observed cues (from package `cues` when present), officer notes (human), and hash/metadata. It must **not** present auto-findings or verdict language.
+
+For human-readable review/attachment, use `sealed_package.summary.md` or `sealed_package.summary.html`. The HTML summary is print/PDF-friendly: open it in a browser and use **Print → Save as PDF** (no additional PDF dependency). Preserve the canonical `sealed_package.json` + `package_hash` as the primary artifact; summaries are observation-only aids, not findings. Source transcript quotes appear in summaries when present.
 
 ## 5. Officer notes (before seal only)
 
