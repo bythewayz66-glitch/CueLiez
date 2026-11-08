@@ -18,6 +18,13 @@ Format per update:
 
 ### Status: Working
 
+### 2026-11-08 07:12 UTC
+- Done: Read `agent_notes/2026-11-08_0700_orchestrator_to_all_owner-decisions-locked.md` and `docs/OWNER_DECISIONS.md` (ack). Verified owner demo transcripts/docs examples contain no verdict/finding language; admissibility guide v1 unchanged beyond accepted scope. Full suite **254 OK (1 skipped)**.
+- In progress: None.
+- Blocked: None.
+- Next: Poll `agent_notes/` for iceman/all work.
+- Notes left in agent_notes/: (none)
+
 ### 2026-11-08 07:02 UTC
 - Done: LONG SPRINT L1–L8 landed/tested. **L1** contract note/signatures already posted (`0648`+`0655`). **L2** `docs/schemas/sealed_package_v1.md` (v1, hash excludes `package_hash`/`content_hash`/`sealed_at`/`package_signature`). **L3** optional `package_signature` (default null, excluded from hash), `sign_package` hook + `seal_observation_package(..., signer=None)` (no break if absent). **L4** `docs/GATE_ERROR_CODES.md` + stable-code tests. **L5** `docs/ADMISSIBILITY_AND_DISCLOSURE.md` v1 (non-finding framing, process evidence, offline hash verification, officer notes vs observations, disclosure). **L6** `verify_package_hash`, `custody_receipt`. **L7** full integration paths (interrogation start/observe/seal; government dual-control fail/ok incl. extracted high-priority; attach-after-seal refused). **L8** memory audit: `seal_package` requires `package_hash`; stored seals remain `observed_indicator`/non-finding (tests). **L9** no runtime deps needed for iceman modules (stdlib). Exported new helpers in `cueliez`. Added `tests/test_long_sprint_iceman.py`. Full suite: **239 tests OK**.
 - In progress: None (L10 ongoing monitoring/coordination).
