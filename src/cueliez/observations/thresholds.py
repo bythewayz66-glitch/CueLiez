@@ -55,9 +55,10 @@ CLAIM_MIN_SHARED_WORDS = 2
 CLAIM_MIN_OVERLAP = 0.5
 CLAIM_TOPIC_DEDUP_OVERLAP = 0.75
 
-# Require enough distinct clock-time refs to reduce false positives on ordinary sequential accounts.
-TIMELINE_MIN_DISTINCT_CLOCK_TIMES = 2
-# Spelled-out time references are noisier (common in ordinary accounts); require more distinct refs.
-TIMELINE_MIN_DISTINCT_SPELLED_TIMES = 4
+# Timeline: preserve legacy digit clock-time sensitivity (2+ distinct digit clocks).
+TIMELINE_MIN_DISTINCT_CLOCK_TIMES_LEGACY = 2
+# Total distinct time refs required when legacy digit-clock trigger does not apply
+# (reduces false positives on ordinary short sequential accounts; catches 4-ref spelled conflicts).
+TIMELINE_MIN_DISTINCT_CLOCK_TIMES = 4
 DETAIL_DRIFT_MIN_TURNS = 2
 LOCATION_MIN_REFERENCES = 2

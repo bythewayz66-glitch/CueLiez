@@ -21,7 +21,7 @@ from .base import (
     truncate_source,
 )
 from .thresholds import (CLAIM_MIN_OVERLAP, CLAIM_MIN_SHARED_WORDS, CLAIM_TOPIC_DEDUP_OVERLAP,
-                         TIMELINE_MIN_DISTINCT_CLOCK_TIMES, TIMELINE_MIN_DISTINCT_SPELLED_TIMES)
+                         TIMELINE_MIN_DISTINCT_CLOCK_TIMES, TIMELINE_MIN_DISTINCT_CLOCK_TIMES_LEGACY)
 
 _NEG = re.compile(r"\b(no|not|never|didn't|did not|wasn't|was not|isn't|is not|don't|do not|can't|cannot)\b", re.I)
 _TIME_RE = re.compile(r"\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b|\b(midnight|noon|morning|afternoon|evening|night)\b", re.I)
@@ -184,8 +184,8 @@ class TimelineInconsistencyObserver:
 
     def observe(self, transcript: Sequence[Mapping[str, Any]]) -> ObservationResult:
         result = ObservationResult(method=self.method_id)
-        # (normalized_ref, turn_index, turn, raw_display)
-        clock_refs: list[tuple[str, int, Any, str]] = []
+        # (normalized_ref, turn_index, turn, raw_display, is_digit_clock)
+        clock_refs: list[tuple[str, int, Any, str, bool]] = []
         for i, t in enumerate(transcript):
             if not is_subject_turn(t):
                 continue
@@ -196,49 +196,54 @@ class TimelineInconsistencyObserver:
             for m in _TIME_RE.finditer(text):
                 raw = m.group(0).lower()
                 if re.search(r"\d", raw) and (":" in raw or re.search(r"\b(am|pm)\b", raw)):
-                    clock_refs.append((re.sub(r"\s+", " ", raw).strip(), i, t, raw))
+                    clock_refs.append((re.sub(r"\s+", " ", raw).strip(), i, t, raw, True))
             # Spelled-out hour/minute references (e.g., "at eight", "eight-thirty")
             for m in _SPELLED_TIME_RE.finditer(text):
                 raw = m.group(0).strip()
                 norm = _norm_spelled_time(raw)
                 if norm:
-                    clock_refs.append((norm, i, t, raw.lower()))
+                    clock_refs.append((norm, i, t, raw.lower(), False))
         if len(clock_refs) < 2:
             return result
-        uniq: dict[str, list[tuple[int, Any, str]]] = {}
-        for norm, i, turn, raw in clock_refs:
-            uniq.setdefault(norm, []).append((i, turn, raw))
-        has_digit_ref = any(re.search(r"\d", raw) for _, _, _, raw in clock_refs)
-        min_distinct = TIMELINE_MIN_DISTINCT_CLOCK_TIMES if has_digit_ref else TIMELINE_MIN_DISTINCT_SPELLED_TIMES
-        if len(uniq) >= min_distinct:
-            refs = list(uniq.keys())
-            # A single event can legitimately involve multiple times (sequence); emit as a review cue, not inconsistency.
-            score = clamp01(0.36 + 0.07 * min(len(refs), 6))
-            source_texts = []
-            seen_ti = set()
-            for k, items in list(uniq.items())[:8]:
-                for ti, turn, raw in items[:1]:
-                    if ti in seen_ti:
-                        continue
-                    seen_ti.add(ti)
-                    sp = source_span(turn, ti)
-                    sp["time_ref"] = raw
-                    source_texts.append(sp)
-            result.observations.append(make_observation(
-                label="multiple_time_references_present",
-                score=score,
-                method_id=self.method_id,
-                category="consistency",
-                evidence={
-                    "distinct_time_refs": refs[:10],
-                    "time_reference_count": len(refs),
-                    "turn_indices": sorted(seen_ti),
-                    "examples": {k: v[0][0] for k, v in list(uniq.items())[:6]},
-                    "source_texts": source_texts[:8],
-                    "note": "Multiple clock times may describe a sequence; verify ordering and consistency with the account.",
-                },
-                cue="Multiple specific time references appear across responses; verify the sequence and exact times.",
-            ))
+        uniq: dict[str, list[tuple[int, Any, str, bool]]] = {}
+        for norm, i, turn, raw, is_digit in clock_refs:
+            uniq.setdefault(norm, []).append((i, turn, raw, is_digit))
+        distinct = len(uniq)
+        digit_distinct = sum(1 for items in uniq.values() if any(x[3] for x in items))
+        # Precision: preserve legacy digit clock-time behavior (2+ distinct digit clocks),
+        # and allow 4+ distinct total refs to capture spelled-out conflicts (e.g. 8/9/10/8:30)
+        # while reducing false positives on ordinary short sequential accounts.
+        if not (digit_distinct >= TIMELINE_MIN_DISTINCT_CLOCK_TIMES_LEGACY or distinct >= TIMELINE_MIN_DISTINCT_CLOCK_TIMES):
+            return result
+        refs = list(uniq.keys())
+        # A single event can legitimately involve multiple times (sequence); emit as a review cue, not inconsistency.
+        score = clamp01(0.36 + 0.07 * min(len(refs), 6))
+        source_texts = []
+        seen_ti = set()
+        for k, items in list(uniq.items())[:8]:
+            for ti, turn, raw, _is_digit in items[:1]:
+                if ti in seen_ti:
+                    continue
+                seen_ti.add(ti)
+                sp = source_span(turn, ti)
+                sp["time_ref"] = raw
+                source_texts.append(sp)
+        result.observations.append(make_observation(
+            label="multiple_time_references_present",
+            score=score,
+            method_id=self.method_id,
+            category="consistency",
+            evidence={
+                "distinct_time_refs": refs[:10],
+                "time_reference_count": len(refs),
+                "digit_clock_ref_count": digit_distinct,
+                "turn_indices": sorted(seen_ti),
+                "examples": {k: v[0][0] for k, v in list(uniq.items())[:6]},
+                "source_texts": source_texts[:8],
+                "note": "Multiple clock times may describe a sequence; verify ordering and consistency with the account.",
+            },
+            cue="Multiple specific time references appear across responses; verify the sequence and exact times.",
+        ))
         return result
 
 
