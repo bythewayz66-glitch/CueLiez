@@ -13,6 +13,7 @@ from .notes import (
     notes_by_cue_id,
 )
 from .onscreen import OnscreenCueRenderer
+from .dashboard import LiveDashboardServer
 
 __all__ = [
     "AudioCueRenderer",
@@ -20,6 +21,7 @@ __all__ = [
     "CueEvent",
     "cues_from_observations",
     "OnscreenCueRenderer",
+    "LiveDashboardServer",
     "OFFICER_CUE_NOTES_KEY",
     "OfficerCueNote",
     "attach_officer_cue_notes",
