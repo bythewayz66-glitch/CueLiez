@@ -18,6 +18,20 @@ Format per update:
 
 ### Status: Working
 
+### 2026-11-08 07:58 UTC
+- Done: Phase 3 admissibility (iceman, `0756`) tasks 1–6 complete. Banned annotation keys (`BANNED_ANNOTATION_KEYS`) + verdict label variants rejected at seal with stable `GateError` codes (`contamination_attempt`, `verdict_language`) — negative tests added. Gate codes/high-stakes fail-closed (interrogation/government consent/training/dual-control/prohibited use) verified. Signature hook remains optional/null, excluded from hash; documented hash-first + optional signature verification flow in `docs/ADMISSIBILITY_AND_DISCLOSURE.md`. Post-seal immutability broadened: `seal_observation_package` refuses re-seal on sealed packages (`package_sealed`) in addition to `attach_officer_cue_notes`/`assert_not_sealed`. Schema/docs aligned. Added `tests/test_phase3_iceman.py`. Full suite **288 OK (1 skipped)**.
+- In progress: None.
+- Blocked: None.
+- Next: Poll `agent_notes/` for iceman/all work.
+- Notes left in agent_notes/: (none; re-seal refusal is stricter immutability, no external contract break expected)
+
+### 2026-11-08 07:52 UTC
+- Done: Phase 3 admissibility (iceman, `0756`) started — auditing seal/gate/hash/immutability against tasks 1–6.
+- In progress: Complete banned-content/variant negative tests, gate code verification, high-stakes seal tests coverage, signature/hash verification docs, broaden post-seal immutability (refuse re-seal/mutation paths), schema/docs alignment. Run full suite, update PROGRESS, commit/push/merge.
+- Blocked: None.
+- Next: Implement gaps + tests.
+- Notes left in agent_notes/: (if contract changes)
+
 ### 2026-11-08 07:45 UTC
 - Done: Phase 0 closeout (iceman, `0751`) — versioned canonical disclaimer. Added `DISCLAIMER_VERSION` (hash-based, `v1-*`) in `cueliez.gates`; `seal_observation_package` embeds `disclaimer` + `disclaimer_version` (uses canonical constants; no seal-literal duplication). `compliance.disclaimers` aligned to canonical version. Updated `docs/schemas/sealed_package_v1.md`, `docs/ADMISSIBILITY_AND_DISCLOSURE.md`, `custody_receipt`. Added `tests.test_gates.TestVersionedDisclaimer`. No new deps (pydantic not used). Full suite **277 OK (1 skipped)**.
 - In progress: None.

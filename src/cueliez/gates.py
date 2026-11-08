@@ -425,6 +425,8 @@ def seal_observation_package(
     """
     if not isinstance(package, dict):
         raise GateError("seal_invalid", "Seal package must be a dict.")
+    if is_sealed(package):
+        raise GateError("package_sealed", "Package is already sealed; post-seal mutation/re-seal is not allowed.")
 
     effective_state = state if state is not None else SessionGateState(mode="generic")
 

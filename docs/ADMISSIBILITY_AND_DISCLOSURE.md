@@ -38,16 +38,16 @@ A sealed package (from `seal_observation_package` / `session.seal`) is a self-de
 
 Fail-closed: required gates missing in applicable high-stakes modes → seal/start/observe refuses with a stable `GateError` code.
 
-## Hash meaning and offline verification
+## Hash and signature verification
 
 - `package_hash` = SHA-256 of canonical JSON (sorted keys, compact separators, UTF-8) over package content **excluding** `package_hash`, `content_hash`, `sealed_at`, `package_signature`.
 - Same canonical input ⇒ same hash. `gate_state`, `officer_cue_notes`, and observations are included when present.
+- `package_signature` is **optional** (default `null`) and **excluded from `package_hash`**. Real cryptographic signing is pluggable; absence of a signer never breaks sealing.
 
-**Offline verification (conceptual):**
-1. Load the JSON package.
-2. Remove/ignore `package_hash`, `sealed_at`, `package_signature` for the hash computation (or use library `compute_package_hash` / `verify_package_hash`).
-3. Compute SHA-256 of the canonical JSON form (sorted keys). Compare to stored `package_hash`.
-4. Confirm forced fields: `epistemic_status == "observed_indicator"`, `is_definitive_finding == false`, disclaimer present.
+**Verification flow (recommended):**
+1. **Hash first:** load JSON and verify `package_hash` (`cueliez.gates.verify_package_hash` / `compute_package_hash`, or offline canonical SHA-256). If the hash fails, treat content as not integrity-verified.
+2. **Signature optional:** if `package_signature` is present and a verifier is configured, verify the signature against the package/hash per the signature scheme. Signature verification is independent of, and does not replace, hash verification.
+3. **Forced fields:** confirm `epistemic_status == "observed_indicator"`, `is_definitive_finding == false`, disclaimer and `disclaimer_version` present.
 
 ## Officer notes vs system observations
 
