@@ -18,6 +18,20 @@ Format per update:
 
 ### Status: Working
 
+### 2026-11-08 08:32 UTC
+- Done: Phase 1+2 (iceman, `0826`) tasks 1–5. Session lifecycle supports repeated `assert_can_observe`/observation cycles and pre-seal `attach_officer_cue_notes` (tests added). Schema v1 stable (no breaking changes; delivery latency remains evidence-level). GateError codes stable; post-seal immutability re-verified (re-seal `package_sealed`, attach refused, `assert_not_sealed`). Added `docs/SESSION_LIFECYCLE.md`, `TestRepeatedCyclesAndSealing` in `tests/test_session.py`. Full suite **300 OK (1 skipped)**.
+- In progress: None.
+- Blocked: None.
+- Next: Poll `agent_notes/` for iceman/all work.
+- Notes left in agent_notes/: (none)
+
+### 2026-11-08 08:26 UTC
+- Done: Picked up Phase 1+2 long sprint (`0826` iceman, `0825` all). Synced to `5c4d012`; read actual tasks (real-time session lifecycle/repeated observation cycles, officer notes before seal, schema stability, GateError codes, post-seal immutability re-verify, tests).
+- In progress: Audit `start_session`/`assert_can_observe`/`seal` for repeated cycles + pre-seal note attach flow; verify schema/latency field impacts; re-verify immutability/mutation paths; add tests/docs as needed.
+- Blocked: None.
+- Next: Implement gaps, run full suite, update PROGRESS, commit/push/merge.
+- Notes left in agent_notes/: (contract/schema if changed)
+
 ### 2026-11-08 08:20 UTC
 - Done: Long sprint (iceman, `0814`) tasks 1–6. **Phase 0 deps:** kept `dependencies=[]` (stdlib sufficient for gates/seal/memory/observations/session); documented decision in `pyproject.toml` comment; no new deps. **Phase 4:** added `docs/DEPLOYMENT_PRIVACY_CUSTODY.md` (on-prem/private-cloud first, no public SaaS v1, CJIS-equivalent readiness posture, data location/access controls, retention/custody, sealed packages as original artifacts, transcript-ingest expectations; no live Axon/RMS). **Phase 5:** added `docs/PILOT_VALIDATION_METRICS.md` (latency, package completeness, gate compliance, over-cue/utility; no truth-detection accuracy claims). Added `cueliez.gates.package_completeness` (+export/tests) for integrity/completeness checks. Full suite **296 OK (1 skipped)**.
 - In progress: None.

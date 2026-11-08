@@ -115,3 +115,29 @@ class TestPostSealImmutability(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class TestRepeatedCyclesAndSealing(unittest.TestCase):
+    def test_assert_can_observe_repeatable(self):
+        s = SessionGateState(mode="interrogation", intended_uses=["interview support"])
+        record_consent(s, attested_by="off")
+        s.training_acknowledged = True
+        s.training_version = "v1"
+        for _ in range(3):
+            assert_can_observe(s)
+        start_session(s)
+
+    def test_notes_before_seal_repeated_cycles_pattern(self):
+        s = SessionGateState(mode="interrogation", intended_uses=["interview support"])
+        record_consent(s, attested_by="off")
+        s.training_acknowledged = True
+        s.training_version = "v1"
+        assert_can_observe(s)
+        pkg = {"observations": [_valid_obs()], "cues": [{"cue_id": "c1", "priority": "low"}]}
+        from cueliez.delivery.notes import attach_officer_cue_notes
+        pkg = attach_officer_cue_notes(pkg, [{"cue_id": "c1", "note": "context"}])
+        sealed = seal(pkg, s)
+        self.assertTrue(sealed["sealed"])
+        self.assertIn("officer_cue_notes", sealed)
+        from cueliez.gates import GateError
+        with self.assertRaises((GateError, ValueError)):
+            attach_officer_cue_notes(sealed, [{"cue_id": "c1", "note": "late"}])
