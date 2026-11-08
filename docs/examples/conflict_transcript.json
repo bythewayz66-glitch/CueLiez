@@ -1,0 +1,8 @@
+[
+  {"role": "officer", "text": "Where were you at 9 PM?"},
+  {"role": "subject", "text": "I was at home in Springfield at 9 PM."},
+  {"role": "officer", "text": "Can anyone confirm that?"},
+  {"role": "subject", "text": "I was at the store in Shelbyville around 9 PM. I already told you."},
+  {"role": "officer", "text": "Earlier you said home in Springfield. Which is accurate?"},
+  {"role": "subject", "text": "I mean I stopped by home, but I was mostly at the store."}
+]

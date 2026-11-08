@@ -7,8 +7,8 @@ about what the system does and does not do.
 Dry demo (sample fixture):
   PYTHONPATH=src python -m cueliez docs/examples/sample_transcript.json --no-seal --show-cues
   PYTHONPATH=src python -m cueliez docs/examples/sample_transcript.json \\
-    --mode interrogation --consent --attested-by officer-a \\
-    --training-ack --training-version v1 --out-dir ./out
+    --mode interrogation --consent --consent-attester officer-a \\
+    --training-version v1 --out-dir ./out
 """
 
 from __future__ import annotations
@@ -22,15 +22,8 @@ from typing import Any, Dict, List, Optional
 from .delivery import OnscreenCueRenderer, cues_from_observations
 from .delivery.notes import attach_officer_cue_notes
 from .export import export_sealed_package
-from .gates import (
-    GateError,
-    SessionGateState,
-    check_prohibited_uses,
-    record_consent,
-    require_consent,
-    require_training,
-    seal_observation_package,
-)
+from .gates import GateError, SessionGateState, record_consent
+from .session import assert_can_observe, seal
 from .observations import default_runner, full_runner
 from .packs import get_pack
 
@@ -63,7 +56,7 @@ def _package_is_sealed(package: Dict[str, Any]) -> bool:
 
 
 def _high_priority_cue_ids(cues) -> List[str]:
-    return [c.cue_id for c in cues if getattr(c, "priority", "") == "high" or getattr(c, "priority", "") == "critical"]
+    return [c.cue_id for c in cues if getattr(c, "priority", "") in {"high", "critical"}]
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -71,24 +64,24 @@ def build_arg_parser() -> argparse.ArgumentParser:
         prog="cueliez",
         description="CueLiez operator entry point: transcript -> observations/cues -> gated sealed package + exports.",
         epilog=(
-            "Sample fixture: docs/examples/sample_transcript.json (run with --no-seal for a dry demo). "
-            "For non-generic modes, provide consent/training flags required by gates before observation."
+            "Sample fixtures: docs/examples/sample_transcript.json, docs/examples/conflict_transcript.json. "
+            "For non-generic modes, provide required consent/training flags before observation."
         ),
     )
     p.add_argument("transcript", nargs="?", default="-", help="Transcript JSON file, or '-' for stdin.")
     p.add_argument("--pack", help="Cue pack id (e.g., gov, leg, med, thrp). If omitted, uses runner.")
     p.add_argument("--runner", choices=["default", "full"], default="default", help="Observation runner when --pack is not set.")
     p.add_argument("--mode", choices=["generic", "interrogation", "therapy", "clinical", "government"], default="generic", help="Gate/session mode.")
-    p.add_argument("--consent", action="store_true", help="Record affirmative consent (with --attested-by).")
-    p.add_argument("--attested-by", help="Consent attester ID (officer/clinician identifier).")
+    p.add_argument("--consent", action="store_true", help="Record affirmative consent (with --consent-attester/--attested-by).")
+    p.add_argument("--consent-attester", "--attested-by", dest="attested_by", help="Consent attester ID (officer/clinician identifier).")
     p.add_argument("--subject-id", help="Optional subject/session identifier.")
     p.add_argument("--jurisdiction", help="Optional jurisdiction/context label.")
     p.add_argument("--training-ack", action="store_true", help="Acknowledge operator training.")
-    p.add_argument("--training-version", help="Training version identifier.")
+    p.add_argument("--training-version", help="Training version identifier (required by gated modes when training is acknowledged/required).")
     p.add_argument("--intended-use", action="append", default=[], dest="intended_uses", help="Intended use label. May be repeated.")
     p.add_argument("--high-priority-cue-id", action="append", default=[], dest="high_priority_cue_ids", help="Cue ID requiring dual-control in government mode before seal.")
-    p.add_argument("--print-high-priority-cue-ids", action="store_true", help="Print high-priority cue IDs for dual-control workflow and exit before seal/export unless --continue-after-print is set.")
-    p.add_argument("--continue-after-print", action="store_true", help="With --print-high-priority-cue-ids, continue to seal/export after printing.")
+    p.add_argument("--list-high-priority", "--print-high-priority-cue-ids", dest="print_high_priority_cue_ids", action="store_true", help="List high-priority cue IDs for dual-control workflow.")
+    p.add_argument("--continue-after-print", action="store_true", help="With --list-high-priority, continue to seal/export after printing.")
     p.add_argument("--officer-notes", help="JSON file containing officer cue notes/actions to attach before sealing.")
     p.add_argument("--out-dir", help="Directory to write exported package files.")
     p.add_argument("--basename", default="sealed_package", help="Export basename.")
@@ -106,7 +99,6 @@ def run_cli(argv: Optional[List[str]] = None) -> int:
     args = parser.parse_args(argv)
     try:
         transcript = _load_transcript(args.transcript)
-        check_prohibited_uses(args.intended_uses)
 
         annotations: Dict[str, Any] = {
             "mode": args.mode,
@@ -118,30 +110,28 @@ def run_cli(argv: Optional[List[str]] = None) -> int:
             state = pack.make_gate_state(intended_uses=list(args.intended_uses), jurisdiction=args.jurisdiction, subject_id=args.subject_id)
             annotations["cue_pack"] = pack.id
             annotations["cue_pack_mode"] = pack.mode
-            # Keep explicit mode authoritative when user set it; pack default otherwise.
             if args.mode != "generic":
                 state.mode = args.mode
             else:
                 args.mode = state.mode
                 annotations["mode"] = state.mode
         else:
+            pack = None
             state = SessionGateState(mode=args.mode, intended_uses=list(args.intended_uses), jurisdiction=args.jurisdiction, subject_id=args.subject_id)
 
         if args.consent:
             if not args.attested_by:
-                raise GateError("consent_attester_required", "--consent requires --attested-by.")
+                raise GateError("consent_attester_required", "--consent requires --consent-attester/--attested-by.")
             record_consent(state, attested_by=args.attested_by, subject_id=args.subject_id, jurisdiction=args.jurisdiction)
-        if args.training_ack:
+        if args.training_ack or args.training_version:
             state.training_acknowledged = True
-            state.training_version = args.training_version
+            if args.training_version:
+                state.training_version = args.training_version
 
-        # Interim session flow: refuse to run observers if required gates are not satisfied.
-        # Switch to iceman start_session/assert_can_observe helpers when available.
-        if state.requires_consent() or state.requires_training():
-            require_consent(state, action="observe")
-            require_training(state)
+        # Session lifecycle (iceman API): fail closed before observation.
+        assert_can_observe(state)
 
-        if args.pack:
+        if pack is not None:
             raw_package = pack.build_package(transcript, annotations=annotations)
             observations = raw_package.get("observations") or []
         else:
@@ -171,9 +161,8 @@ def run_cli(argv: Optional[List[str]] = None) -> int:
             package = attach_officer_cue_notes(package, officer_notes)
 
         if not args.no_seal:
-            dual_ids = list(args.high_priority_cue_ids) or hi_ids if state.mode == "government" else list(args.high_priority_cue_ids)
-            # glyph surfaces high-priority ids; do not fabricate dual-control records.
-            package = seal_observation_package(package, state, high_priority_cue_ids=dual_ids)
+            dual_ids = list(args.high_priority_cue_ids) or (hi_ids if state.mode == "government" else [])
+            package = seal(package, state, high_priority_cue_ids=dual_ids)
 
         formats = args.formats or ["json", "md", "html"]
         if args.out_dir:

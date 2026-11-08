@@ -27,13 +27,13 @@ Expected:
 
 ## 2. Gated seal + export (non-generic example)
 
-For modes that require gates, provide consent/training flags before observation/seal:
+For modes that require gates, provide consent/training flags before observation/seal (CLI uses iceman session lifecycle: `assert_can_observe` / `seal`):
 
 ```bash
 PYTHONPATH=src python -m cueliez docs/examples/sample_transcript.json \
   --mode interrogation \
-  --consent --attested-by officer-a \
-  --training-ack --training-version v1 \
+  --consent --consent-attester officer-a \
+  --training-version v1 \
   --out-dir ./out/dry-run \
   --basename dry_run
 ```
@@ -51,9 +51,11 @@ Expected:
 To display cue IDs that may need dual-control handling in applicable workflows:
 
 ```bash
-PYTHONPATH=src python -m cueliez docs/examples/sample_transcript.json \
-  --no-seal --print-high-priority-cue-ids
+PYTHONPATH=src python -m cueliez docs/examples/conflict_transcript.json \
+  --no-seal --list-high-priority
 ```
+
+(Use `--print-high-priority-cue-ids` as an equivalent alias.)
 
 Glyph displays/exports these IDs only; it does not create dual-control records.
 
@@ -63,8 +65,8 @@ Export officer actions from the officer HTML surface as JSON, then attach before
 
 ```bash
 PYTHONPATH=src python -m cueliez docs/examples/sample_transcript.json \
-  --mode interrogation --consent --attested-by officer-a \
-  --training-ack --training-version v1 \
+  --mode interrogation --consent --consent-attester officer-a \
+  --training-version v1 \
   --officer-notes ./officer_cue_notes.json \
   --out-dir ./out/dry-run-notes
 ```

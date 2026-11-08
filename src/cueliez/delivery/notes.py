@@ -10,6 +10,16 @@ import time
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence
 
+try:
+    from ..gates import GateError, assert_not_sealed, is_sealed
+except Exception:  # pragma: no cover
+    def is_sealed(package):  # type: ignore[no-redef]
+        return bool(isinstance(package, Mapping) and (package.get("sealed_at") or package.get("package_hash") or package.get("sealed") is True))
+
+    def assert_not_sealed(package, action="mutate package"):  # type: ignore[no-redef]
+        if is_sealed(package):
+            raise ValueError(f"Cannot {action}: package is already sealed.")
+
 OFFICER_CUE_NOTES_KEY = "officer_cue_notes"
 ALLOWED_ACTIONS = frozenset({"acknowledged", "dismissed", "noted", "responded"})
 
@@ -91,17 +101,19 @@ def attach_officer_cue_notes(
 ) -> Dict[str, Any]:
     """Return a package copy with normalized officer cue notes attached.
 
-    Glyph-owned helper. Iceman seal/hashing must preserve `officer_cue_notes`.
-    Officer notes must be attached before seal; sealed packages refuse mutation.
+    Notes must be attached before seal. Iceman seal/hashing preserves `officer_cue_notes`.
     """
-    if isinstance(package, Mapping) and (
-        package.get("sealed") is True
-        or (package.get("package_hash") and package.get("sealed_at") and package.get("epistemic_status") == "observed_indicator")
-    ):
-        raise ValueError(
-            "Cannot attach officer cue notes to a sealed package. "
-            "Officer notes must be attached before seal."
-        )
+    try:
+        assert_not_sealed(package)
+    except TypeError:
+        try:
+            assert_not_sealed(package, "attach officer cue notes")
+        except GateError as e:
+            raise ValueError(str(e)) from e
+    except GateError as e:
+        raise ValueError(str(e)) from e
+    if is_sealed(package):
+        raise ValueError("Cannot attach officer cue notes to a sealed package. Attach notes before seal.")
     out = dict(package)
     new_notes = normalize_officer_cue_notes(notes)
     if replace or OFFICER_CUE_NOTES_KEY not in out or not isinstance(out.get(OFFICER_CUE_NOTES_KEY), list):

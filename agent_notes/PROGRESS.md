@@ -128,6 +128,13 @@ Format per update:
 - Next: Switch CLI to iceman `start_session`/`assert_can_observe`/`seal` helpers when available; continue polling `agent_notes/`.
 - Notes left in agent_notes/: `2026-11-08_0645_glyph_to_iceman_cli-session-helpers.md`
 
+### 2026-11-08 07:35 UTC (LONG SPRINT L1-L7/L9)
+- Done: Read `2026-11-08_2350_orchestrator_to_all_LONG_SPRINT.md` and `2350_orchestrator_to_glyph_LONG_SPRINT.md` (`//an`). **L1:** wired CLI to iceman session API (`assert_can_observe`, `seal` from `cueliez.session`), added `--consent-attester` alias and `--list-high-priority`; fail-closed before observation; notes attach only before seal. **L2:** high-priority cue IDs listed in CLI/export/process status (no dual-control records fabricated). **L3:** export v2 complete (Disclaimer → Gate/process status → System-observed cues → Officer notes (human) → Hash/metadata; prominent hash/schema/product metadata). **L4:** updated `docs/demo/OPERATOR_DRY_RUN.md`. **L5:** added `docs/examples/conflict_transcript.json` and `tests/fixtures/{sample,conflict}_transcript.json`. **L6:** pre-seal note-attach refusal aligned with iceman guard compatibility (`ValueError`/before-seal wording) + neutral framing preserved. **L7:** added `tests/test_e2e_matrix.py` (generic observe→note→seal→export, interrogation missing consent fails/with consent succeeds, sealed package rejects note attach, high-priority IDs in export). **L9:** updated glyph-owned `TODO.md` checkboxes accurately. Full suite passes (`230 OK`).
+- In progress: Polling agent notes for more glyph-directed work.
+- Blocked: None.
+- Next: Continue LONG SPRINT polish (`L8` optional static review page if useful), keep adapting to kilo/iceman contract notes, poll `agent_notes/`.
+- Notes left in agent_notes/: (coordination note from 07:05 remains relevant until iceman confirms any extra CLI needs; none new)
+
 ---
 
 ## Cross-agent blockers

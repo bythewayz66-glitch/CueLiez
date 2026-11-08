@@ -36,7 +36,7 @@ Status key: `[ ]` not started · `[~]` in progress · `[x]` done
 - [ ] Build explicit consent + jurisdiction checks before enabling audio feature extraction or any camera/wearable input.
 - [ ] Prioritize audio-only real-time path first (prosody, speech rate, latency, pause patterns).
 - [x] Implement officer-facing delivery (onscreen overlay / tablet cues) that the subject does not see by default. (Minimal low-distraction officer HTML surface + structured officer-only panel with turn-linked/glanceable cues and acknowledge/dismiss/note capture; not a real-time streaming overlay yet.)
-- [~] Add optional officer response / note field for high-priority cues; include it in the sealed package. (Glyph: capture/normalize/attach `officer_cue_notes` and export support implemented; iceman to confirm seal-time preservation/hashing — see `agent_notes/2026-11-08_0618_glyph_to_iceman_officer-cue-notes-field.md`.)
+- [x] Add optional officer response / note field for high-priority cues; include it in the sealed package. (Glyph capture/normalize/attach/export implemented; iceman confirmed seal preservation and canonical hash coverage; E2E verified.)
 - [ ] Target end-to-end latency < 1–2 seconds for text cues on local or private-cloud instance.
 
 ---
@@ -55,15 +55,15 @@ Status key: `[ ]` not started · `[~]` in progress · `[x]` done
 - [ ] Add tests that prove packages cannot be sealed without required gates in high-stakes modes.
 
 ### 3.3 Package Integrity & Export
-- [~] Define and implement a stable sealed-package schema (JSON) that includes observations, cues, gate state, disclaimer, product/version, seal timestamp, session identifiers. (Glyph export/read surfaces implemented; schema formalization/hash ownership coordinated with iceman.)
-- [ ] Add cryptographic hash (and later signature) of the package at seal time.
-- [~] Provide durable export formats: signed/structured JSON + human-readable PDF. (Glyph: canonical JSON + human-readable Markdown/HTML summaries preserving disclaimer and observed-indicator framing; HTML is print/PDF-friendly. Signing/hash is iceman scope.)
-- [ ] Prevent post-seal mutation of observations or epistemic fields.
+- [x] Define and implement a stable sealed-package schema (JSON) that includes observations, cues, gate state, disclaimer, product/version, seal timestamp, session identifiers. (Iceman seal path + glyph export surfaces; `schema_version`/`gate_state`/`product_version`/`package_hash` present when sealed.)
+- [x] Add cryptographic hash (and later signature) of the package at seal time. (SHA-256 `package_hash` implemented by iceman; signature not yet implemented.)
+- [x] Provide durable export formats: signed/structured JSON + human-readable PDF. (Structured JSON + human-readable Markdown/HTML summaries; HTML is print/PDF-friendly. Cryptographic signing not yet implemented.)
+- [~] Prevent post-seal mutation of observations or epistemic fields. (Iceman `assert_not_sealed`/immutability guards and glyph pre-seal note attach refusal in place; broader API hardening ongoing.)
 
 ### 3.4 Human Judgment Preservation
-- [~] Officer action/note field for high-priority cues is optional but sealed when present. (Glyph capture/attach/export path implemented; seal preservation pending iceman confirmation.)
-- [ ] Package never records automated legal, clinical, or credibility findings.
-- [ ] Clear separation in schema and docs between “system observed/suggested” and “human decided”.
+- [x] Officer action/note field for high-priority cues is optional but sealed when present. (Glyph capture/attach/export; iceman seal/hash confirmed; attach refused after seal.)
+- [x] Package never records automated legal, clinical, or credibility findings. (Enforced by seal epistemic forcing, language rules, and tests.)
+- [x] Clear separation in schema and docs between “system observed/suggested” and “human decided”. (Export/onscreen framing separates system-observed cues from officer notes/human review.)
 
 ### 3.5 Documentation for Disclosure
 - [ ] Write first version of **Admissibility & Disclosure Guide** (what is/isn’t in the package, how consent/training/dual-control appear, recommended disclosure handling).
