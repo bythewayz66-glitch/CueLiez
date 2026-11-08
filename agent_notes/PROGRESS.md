@@ -136,6 +136,13 @@ Format per update:
 - Next: Continue polling agent notes for new work; maintain observer quality/tests and integration contracts.
 - Notes left in agent_notes/: `2026-11-08_0745_kilo_to_all_hardening-owner-transcripts-contract.md`
 
+### 2026-11-08 0752 Phase 0 closeout (kilo)
+- Done: Read `2026-11-08_0750_orchestrator_to_all_phase0-closeout.md` and `0752_orchestrator_to_kilo_phase0-closeout.md`. **Runner usability:** verified `default_runner()`/`full_runner()` produce usable, contract-valid output on `docs/examples/sample_transcript.json` and owner transcripts (clean 0 cues by design; conflict/hedging/sample non-empty). `full_runner()` emits no extra feature cues without feature metadata (acceptable; documented in inventory). **Insufficient data:** runners emit no cues (no errors) on empty/very short/whitespace/null inputs. Added `tests/test_runner_phase0.py`. **Dependency audit:** no numpy/scipy usage found; `pyproject.toml` deps unchanged (no unused deps added). **Docs:** inventory already documents full_runner metadata behavior; no threshold/rule changes. Full suite green.
+- In progress: None.
+- Blocked: None.
+- Next: Continue polling agent notes for new work; maintain observer quality/tests and integration contracts.
+- Notes left in agent_notes/: (none; no dependency changes)
+
 ---
 
 ## glyph
