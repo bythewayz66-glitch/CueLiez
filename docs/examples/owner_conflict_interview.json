@@ -1,0 +1,23 @@
+{
+  "id": "owner-demo-conflict-001",
+  "title": "Synthetic claim/timeline tension interview (owner demo)",
+  "notes": "Fully synthetic. Built so a careful interviewer might want clarification on time and place. Cues must remain probes—not verdicts.",
+  "turns": [
+    {"speaker": "officer", "text": "Where were you between eight and ten on Friday night?"},
+    {"speaker": "subject", "text": "I was at the diner on Fifth the whole time. I got there at eight."},
+    {"speaker": "officer", "text": "Who were you with?"},
+    {"speaker": "subject", "text": "Just me. I sat at the counter."},
+    {"speaker": "officer", "text": "You mentioned earlier you met a friend."},
+    {"speaker": "subject", "text": "Right—yeah, Sam came later. Maybe around nine."},
+    {"speaker": "officer", "text": "How long did Sam stay?"},
+    {"speaker": "subject", "text": "Not long. We talked and I left."},
+    {"speaker": "officer", "text": "What time did you leave the diner?"},
+    {"speaker": "subject", "text": "I was gone by eight-thirty. Traffic was bad getting home."},
+    {"speaker": "officer", "text": "Eight-thirty—but Sam arrived around nine?"},
+    {"speaker": "subject", "text": "I might have the times mixed up. It was a long day."},
+    {"speaker": "officer", "text": "Where did you go after the diner?"},
+    {"speaker": "subject", "text": "Straight home. I already said that."},
+    {"speaker": "officer", "text": "Earlier you said you were at the diner the whole time until ten."},
+    {"speaker": "subject", "text": "I meant I was out until ten. Part of it was the diner."}
+  ]
+}
