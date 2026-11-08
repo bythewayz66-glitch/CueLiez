@@ -281,14 +281,71 @@ def _validate_observation_entry(d: dict, index: int) -> None:
 
 
 def _canonical_json_for_hash(package: Dict[str, Any]) -> str:
-    """Stable canonical form for hashing. Excludes volatile/hash fields."""
-    excluded = {"package_hash", "content_hash", "sealed_at"}
+    """Stable canonical form for hashing. Excludes volatile/hash/signature fields."""
+    excluded = {"package_hash", "content_hash", "sealed_at", "package_signature"}
     canonical = {k: v for k, v in package.items() if k not in excluded}
     return json.dumps(canonical, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str)
 
 
 def compute_package_hash(package: Dict[str, Any]) -> str:
     return hashlib.sha256(_canonical_json_for_hash(package).encode("utf-8")).hexdigest()
+
+
+def verify_package_hash(package: Any) -> bool:
+    """Return True if package_hash matches canonical content (offline verification)."""
+    if not isinstance(package, dict):
+        return False
+    expected = str(package.get("package_hash") or "").strip()
+    if not expected:
+        return False
+    return compute_package_hash(package) == expected
+
+
+def custody_receipt(package: Any) -> Dict[str, Any]:
+    """Minimal custody receipt (safe to share for process review; no findings)."""
+    if not isinstance(package, dict):
+        return {}
+    gs = package.get("gate_state") if isinstance(package.get("gate_state"), dict) else {}
+    return {
+        "product": package.get("product"),
+        "product_version": package.get("product_version"),
+        "schema_version": package.get("schema_version"),
+        "package_hash": package.get("package_hash"),
+        "sealed_at": package.get("sealed_at"),
+        "epistemic_status": package.get("epistemic_status"),
+        "is_definitive_finding": package.get("is_definitive_finding"),
+        "mode": gs.get("mode"),
+        "consent_attester_present": bool((gs.get("consent_attested_by") or "").strip()),
+        "training_acknowledged": bool(gs.get("training_acknowledged")),
+        "dual_control_record_count": len(gs.get("dual_control_records") or []) if isinstance(gs.get("dual_control_records"), list) else 0,
+    }
+
+
+def sign_package(package: Dict[str, Any], signer: Any = None) -> Dict[str, Any]:
+    """Optional pluggable signing hook. Default is a no-op (never breaks seal).
+
+    If `signer` is callable, it is invoked as `signer(package_hash=..., package=...)`
+    or `signer(package)` and its return value is stored in `package_signature`.
+    The signature is excluded from `package_hash` canonicalization.
+    Mutates and returns `package` when it is a dict.
+    """
+    if not isinstance(package, dict):
+        return package
+    if signer is None:
+        package.setdefault("package_signature", None)
+        return package
+    try:
+        if callable(signer):
+            try:
+                sig = signer(package_hash=package.get("package_hash"), package=package)
+            except TypeError:
+                sig = signer(package)
+            package["package_signature"] = sig
+        else:
+            package["package_signature"] = {"type": "unconfigured", "detail": "signer not callable"}
+    except Exception as e:
+        package["package_signature"] = {"type": "error", "error": str(e)}
+    return package
 
 
 def is_sealed(package: Any) -> bool:
@@ -349,6 +406,7 @@ def seal_observation_package(
     state: Optional[SessionGateState] = None,
     *,
     high_priority_cue_ids: Optional[list[str]] = None,
+    signer: Any = None,
 ) -> dict:
     """
     Harden and seal as observed indicators only — never findings.
@@ -448,8 +506,13 @@ def seal_observation_package(
     # Stable content hash over canonical package content (excludes sealed_at/package_hash).
     package.pop("package_hash", None)
     package.pop("content_hash", None)
+    package.setdefault("package_signature", None)
     package["package_hash"] = compute_package_hash(package)
     package["sealed_at"] = time.time()
+    if signer is not None:
+        package = sign_package(package, signer=signer)
+    elif package.get("package_signature") is None:
+        package["package_signature"] = None
     return package
 
 

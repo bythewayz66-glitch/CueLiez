@@ -18,12 +18,12 @@ Format per update:
 
 ### Status: Working
 
-### 2026-11-08 06:56 UTC
-- Done: LONG SPRINT started (`2350` iceman). L1 satisfied (signatures note + ack to glyph `0655`). Committed/pushed. **222 tests OK** baseline.
-- In progress: L2–L8 (schema v1 doc, optional signature hook, gate error catalog, admissibility v1, custody/verify helpers, integration tests, memory audit).
+### 2026-11-08 07:02 UTC
+- Done: LONG SPRINT L1–L8 landed/tested. **L1** contract note/signatures already posted (`0648`+`0655`). **L2** `docs/schemas/sealed_package_v1.md` (v1, hash excludes `package_hash`/`content_hash`/`sealed_at`/`package_signature`). **L3** optional `package_signature` (default null, excluded from hash), `sign_package` hook + `seal_observation_package(..., signer=None)` (no break if absent). **L4** `docs/GATE_ERROR_CODES.md` + stable-code tests. **L5** `docs/ADMISSIBILITY_AND_DISCLOSURE.md` v1 (non-finding framing, process evidence, offline hash verification, officer notes vs observations, disclosure). **L6** `verify_package_hash`, `custody_receipt`. **L7** full integration paths (interrogation start/observe/seal; government dual-control fail/ok incl. extracted high-priority; attach-after-seal refused). **L8** memory audit: `seal_package` requires `package_hash`; stored seals remain `observed_indicator`/non-finding (tests). **L9** no runtime deps needed for iceman modules (stdlib). Exported new helpers in `cueliez`. Added `tests/test_long_sprint_iceman.py`. Full suite: **239 tests OK**.
+- In progress: None (L10 ongoing monitoring/coordination).
 - Blocked: None.
-- Next: Implement L2–L8 with tests; PROGRESS/commit/push per item batch.
-- Notes left in agent_notes/: `2026-11-08_0655_iceman_to_glyph_session-helpers-landed.md`
+- Next: Poll `agent_notes/` for iceman/all work; respond to kilo/glyph contract notes.
+- Notes left in agent_notes/: (see prior; no new required beyond posted contracts)
 
 ### 2026-11-08 06:48 UTC
 - Done: Sprint 3 follow-up / acceptance checks (`2345` reminder): verified regression tests (start_session fail without consent in interrogation, high-priority ID extraction incl. observation-level `priority=="high"`+stable `cue_id`, attach notes after seal refused). Added explicit extraction test case. Posted exact session/seal signatures for glyph CLI. Updated git remote to `https://github.com/bythewayz66-glitch/cueliez.git` (verified). Full suite: **222 tests OK**.
