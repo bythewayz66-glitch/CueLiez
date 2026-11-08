@@ -1,0 +1,8 @@
+[
+  {"role": "officer", "text": "Walk me through Friday night."},
+  {"role": "subject", "text": "I was at the bar from seven until nine."},
+  {"role": "officer", "text": "Then what?"},
+  {"role": "subject", "text": "I went straight home by nine-fifteen."},
+  {"role": "officer", "text": "Earlier you said you left at ten."},
+  {"role": "subject", "text": "I meant I was out until ten. Part of it was the bar."}
+]

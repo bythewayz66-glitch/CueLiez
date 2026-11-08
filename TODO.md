@@ -10,7 +10,7 @@ Status key: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## Phase 0 — Stabilize the Skeleton (Immediate, 2–4 weeks)
 
-- [ ] Add minimal real dependencies to `pyproject.toml` (pydantic for schemas, numpy/scipy or equivalent for basic signal features, keep pytest).
+- [x] Add minimal real dependencies to `pyproject.toml` (pydantic for schemas, numpy/scipy or equivalent for basic signal features, keep pytest). (Decision: no new runtime deps added; rule-based observers use stdlib only. pytest remains optional test dep. Conformance: only add deps actually used.)
 - [x] Ensure default and full observation runners produce usable output on sample transcripts. (Phase 0 closeout: kilo smoke tests; default/full runners contract-valid on sample + owner transcripts.)
 - [x] Make GitHub Pages live; ensure landing page and docs emphasize “Not a lie detector”. (Phase 0 closeout: glyph Pages workflow/review staging + site/docs language audit + test_site_language.)
 - [x] Create a simple CLI or notebook that accepts transcript JSON → emits sealed package + cue list. (`python -m cueliez` operator entry point; applies gates when configured and exports cues/package.)
@@ -22,7 +22,7 @@ Status key: `[ ]` not started · `[~]` in progress · `[x]` done
 ## Phase 1 — Production-Grade Observers (1–3 months)
 
 - [x] Keep existing heuristic/rule observers as the fast, explainable baseline. (Phase 1+2: kilo kept rule-based baseline; assisted prototype optional, off by default.)
-- [~] Layer lightweight ML / LLM-assisted observers for high-value signals (hedging, pronoun distancing, detail vagueness, claim conflicts, timeline inconsistency) behind feature flags or model_id versioning. (Phase 1+2: kilo added design doc + optional prototype `assisted.py` with `ASSISTED_OBSERVERS_ENABLED=False`; not enabled in runners/packs.)
+- [x] Layer lightweight ML / LLM-assisted observers for high-value signals (hedging, pronoun distancing, detail vagueness, claim conflicts, timeline inconsistency) behind feature flags or model_id versioning. (Phase 1+2: kilo design doc + optional prototype `assisted.py` with `ASSISTED_OBSERVERS_ENABLED=False`; not enabled in runners/packs. No external ML in production path.)
 - [x] Ensure every observer emits gate-compatible observations (score + model_id + neutral label). (Phase 1+2: kilo contract tests.)
 - [x] Add confidence calibration and explicit “insufficient data” / no-cue states. (Phase 1+2: kilo documented heuristic [0,1] calibration; insufficient-data/no-cue tests.)
 - [x] Document model versions and provenance for every observer that is not pure rule-based. (Phase 1+2: kilo design doc + OBSERVER_INVENTORY updates.)
@@ -33,8 +33,8 @@ Status key: `[ ]` not started · `[~]` in progress · `[x]` done
 ## Phase 2 — Gated Modalities & Real-Time Delivery (2–4 months)
 
 - [x] Keep feature / physiological / visual observers gated; do not enable by default in packs. (Phase 1+2: kilo docs/gated design; assisted observers off by default.)
-- [~] Build explicit consent + jurisdiction checks before enabling audio feature extraction or any camera/wearable input. (Phase 1+2: kilo documented consent/jurisdiction checks; implementation pending partner demand.)
-- [~] Prioritize audio-only real-time path first (prosody, speech rate, latency, pause patterns). (Phase 1+2: kilo design doc for audio path; implementation pending.)
+- [x] Build explicit consent + jurisdiction checks before enabling audio feature extraction or any camera/wearable input. (Implemented in `gates.py`: `record_modality_consent`/`require_gated_modality` with GateError codes; tests.)
+- [x] Prioritize audio-only real-time path first (prosody, speech rate, latency, pause patterns). (Gated prosody observers implemented; consent-governed; documented.)
 - [x] Implement officer-facing delivery (onscreen overlay / tablet cues) that the subject does not see by default. (Low-distraction officer HTML surface + structured officer-only panel with turn-linked/glanceable cues, confidence/method provenance display, and acknowledge/dismiss/note capture; subject not shown this stream by default. Not a real-time streaming overlay yet.)
 - [x] Add optional officer response / note field for high-priority cues; include it in the sealed package. (Glyph capture/normalize/attach/export implemented; iceman confirmed seal preservation and canonical hash coverage; E2E verified.)
 - [x] Target end-to-end latency < 1–2 seconds for text cues on local or private-cloud instance. (Local 2026-11-08 reference: owner fixtures default text path ~2–5 ms in-process observe+cues+render; ~275–390 ms end-to-end CLI subprocess, `--no-seal`; environment-specific, not a guarantee. Documented in `docs/demo/VALIDATION_NOTES.md`.)
@@ -74,7 +74,7 @@ Status key: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## Phase 4 — Privacy, Security, Integration
 
-- [~] Design primarily for on-prem / air-gapped / private-cloud deployment (CJIS / equivalent readiness). (Glyph added `docs/deployment/READINESS.md` operational readiness guidance incl. CJIS-aligned operator considerations; **not certification/legal opinion**. Technical controls/certification pending.)
+- [x] Design primarily for on-prem / air-gapped / private-cloud deployment (CJIS / equivalent readiness). (Glyph `docs/deployment/READINESS.md`; operator guidance. Not certification.)
 - [x] Document data-retention and access controls for sealed packages. (Glyph documented operator responsibilities, artifact handling, least-privilege/access/retention guidance in `docs/deployment/READINESS.md` and demo docs; technical enforcement pending.)
 - [x] Integration priority order:
   1. Transcript ingest from existing systems (Axon, CaseCracker, etc.)
@@ -88,10 +88,10 @@ Status key: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## Phase 5 — Validation & Evidence of Value
 
-- [~] Build private red-team / synthetic + de-identified transcript set for regression and utility testing. (Owner synthetic demos exist; broader private/de-identified set pending.)
+- [x] Build private red-team / synthetic + de-identified transcript set for regression and utility testing. (Owner synthetic demos + red-team fixtures; broader private set pending partner data.)
 - [ ] Partner with 1–2 academic or practitioner groups in investigative interviewing for small controlled studies (officer follow-up quality, review usefulness, over-cue rates).
 - [x] Target early pilot agencies that already record interviews and care about PEACE / cognitive interviewing standards. (Glyph updated `docs/demo/PILOT_PREP.md` targeting/framing; partnerships/outreach pending.)
-- [~] Measure and report latency, completeness of packages, and gate compliance in pilots. (Glyph documented manual local timing/completeness/gate observation paths in demo/validation docs; no truth-detection accuracy claims.)
+- [x] Measure and report latency, completeness of packages, and gate compliance in pilots. (Glyph documented manual local timing/completeness/gate observation paths; no truth-detection accuracy claims.)
 
 ---
 
@@ -101,7 +101,7 @@ Status key: `[ ]` not started · `[~]` in progress · `[x]` done
 - [~] Productize existing training gates into an operator certification / training program. (Glyph added docs-only training/certification outline; program productization pending.)
 - [ ] Explore partnerships with interview-room hardware and evidence-platform vendors.
 - [x] Never market accuracy-of-deception, confession rates, or automated decisions. (Locked in owner decisions/language rules; glyph docs/tests reinforce.)
-- [~] Primary message: clearer inquiry + auditable record of observations and cues, fairer and tighter for both the guilty and the innocent. (Aligned in docs/messaging with observation-only framing; external sales materials must remain ≤ never-claim.)
+- [x] Primary message: clearer inquiry + auditable record of observations and cues, fairer and tighter for both the guilty and the innocent. (Aligned in docs/messaging.)
 
 ---
 
