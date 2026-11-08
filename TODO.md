@@ -68,7 +68,7 @@ Status key: `[ ]` not started · `[~]` in progress · `[x]` done
 ### 3.5 Documentation for Disclosure
 - [x] Write first version of **Admissibility & Disclosure Guide** (what is/isn’t in the package, how consent/training/dual-control appear, recommended disclosure handling). (`docs/ADMISSIBILITY_AND_DISCLOSURE.md` v1 exists; glyph aligned export/disclosure wording and print-to-PDF guidance as observation-only.)
 - [~] Keep sales, training, and UI language consistent with technical reality. (Glyph audited delivery/export/site/demo/docs wording; broader sales/training surfaces remain to verify.)
-- [ ] Prepare short internal validation notes (false-positive / over-cue rates, officer utility) that do **not** claim truth-detection accuracy.
+- [x] Prepare short internal validation notes (false-positive / over-cue rates, officer utility) that do **not** claim truth-detection accuracy. (`docs/demo/VALIDATION_NOTES.md`.)
 
 ---
 
@@ -119,40 +119,54 @@ Added per owner direction after faster-than-expected completion of Phases 0–5.
 
 ---
 
+## Phase 8 — Enable All Gated Modalities by Default (post-pilot, policy-approved)
+
+Added per owner direction. Turns currently gated/off-by-default modalities and features to **on by default** only after policy/consent frameworks are approved. Do not enable without consent + jurisdiction checks and training acknowledgement.
+
+- [ ] Enable feature/physiological/visual observers by default in packs (currently gated/off).
+- [ ] Enable audio feature extraction (prosody, speech rate, latency, pause patterns) by default where consent + jurisdiction checks pass.
+- [ ] Enable camera/wearable input by default where consent + jurisdiction checks pass.
+- [ ] Enable real-time streaming officer UI by default (currently batch/CLI-first).
+- [ ] Enable government mode external pilot by default (dual-control enforced).
+- [ ] Enable clinical/therapy packs in pilot messaging where explicitly scoped.
+- [ ] Update consent/training gates to reflect new defaults; re-verify admissibility checklist.
+
+---
+
 ## Admissibility Requirements Checklist (Quick Reference)
 
 Copy of the living checklist — expand into formal acceptance criteria as items are implemented.
 
 **Language & Epistemic**
-- [ ] No forbidden terms anywhere in shipped surface.
-- [ ] Forced observed_indicator / non-definitive status at seal.
-- [ ] Canonical disclaimer present.
+- [x] No forbidden terms anywhere in shipped surface. (Language tests + audits.)
+- [x] Forced observed_indicator / non-definitive status at seal.
+- [x] Canonical disclaimer present. (Versioned.)
 
 **Gates**
-- [ ] Consent + attester before required modes.
-- [ ] Training version recorded.
-- [ ] Dual-control for government high-priority cues.
-- [ ] Prohibited uses blocked.
+- [x] Consent + attester before required modes.
+- [x] Training version recorded.
+- [x] Dual-control for government high-priority cues.
+- [x] Prohibited uses blocked.
 
 **Observation Quality**
-- [ ] score + model_id + neutral label on every observation.
-- [ ] Reproducible under same model versions.
+- [x] score + model_id + neutral label on every observation.
+- [x] Reproducible under same model versions.
 
 **Package Integrity**
-- [ ] Hash/signature at seal.
-- [ ] Full gate state + cues + observations exported.
-- [ ] No post-seal mutation.
+- [x] Hash/signature at seal. (Hash implemented; signature optional hook.)
+- [x] Full gate state + cues + observations exported.
+- [x] No post-seal mutation.
 
 **Human Judgment**
-- [ ] Officer notes sealed when present.
-- [ ] No automated findings.
+- [x] Officer notes sealed when present.
+- [x] No automated findings.
 
 **Export & Custody**
-- [ ] Durable JSON + PDF (or equivalent).
-- [ ] Works with evidence / RMS workflows.
+- [x] Durable JSON + PDF (or equivalent). (JSON + MD/HTML; HTML print/PDF-friendly.)
+- [x] Works with evidence / RMS workflows. (Docs; no live connector.)
 
 **Docs**
-- [ ] Admissibility & Disclosure Guide exists and is accurate.
+- [x] Admissibility & Disclosure Guide exists and is accurate.
 
 ---
 
