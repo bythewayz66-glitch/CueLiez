@@ -262,7 +262,12 @@ class SelfReferenceShiftObserver:
                     score=score,
                     method_id=self.method_id,
                     category="consistency",
-                    evidence={"first_person_rate": round(fr, 4), "we_rate": round(we, 4), "session_avg_first": round(avg, 4)},
+                    evidence={
+                        "first_person_rate": round(fr, 4),
+                        "we_rate": round(we, 4),
+                        "session_avg_first_person_rate": round(avg, 4),
+                        "turn_count": len(counts),
+                    },
                     cue="First-person reference pattern shifted; clarify personal actions versus group actions.",
                     turn_index=i,
                 ))
