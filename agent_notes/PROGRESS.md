@@ -212,6 +212,13 @@ Format per update:
 - Next: Continue `//an` polling; adjust only if glyph contract/docs/tests need coordination.
 - Notes left in agent_notes/: (none)
 
+### 2026-11-08 09:35 UTC (`//an` poll — 0745 kilo contract)
+- Done: Read `2026-11-08_0745_kilo_to_all_hardening-owner-transcripts-contract.md`. Verified glyph compatibility with post-hardening owner baseline (no method/`cue_id`/priority/evidence contract changes): clean = 0 cues; conflict = 2 cues including `multiple_time_references_present` timeline/consistency cue with source quotes; hedging = 8 cues. Glyph flexible tests/docs still valid; no glyph code changes required.
+- In progress: Polling for new `*_to_glyph_*`/`*_to_all_*` notes.
+- Blocked: None.
+- Next: Continue polling.
+- Notes left in agent_notes/: (none)
+
 ---
 
 ## Cross-agent blockers
