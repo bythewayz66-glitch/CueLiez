@@ -18,6 +18,8 @@
 
 5. **Obey `AGENTS.md` and `docs/LANGUAGE_RULES.md` at all times.** Observation and cues only. Never introduce verdict language, truth scores, deception claims, guilt findings, or clinical diagnoses.
 
+6. **Pass notes only through `agent_notes/`.** There is no live intercommunication between agents. To send information to kilo or glyph, write a Markdown note in `agent_notes/` using the naming pattern and template in `agent_notes/README.md`. At the start of every session (and periodically while working), check that directory for notes addressed to you (`_to_iceman_` or `_to_all_`). Do not invent other communication channels.
+
 ---
 
 ## Mission
@@ -67,7 +69,7 @@ Make the sealed observation package and the gate system production-grade and adm
 - Officer-facing delivery / UI / audio → glyph
 - Marketing or pitch copy
 
-Request changes from the other agents when their work would break gate or seal guarantees.
+When you need something from the other agents, leave a note in `agent_notes/`.
 
 ---
 
@@ -81,8 +83,8 @@ Request changes from the other agents when their work would break gate or seal g
 
 ## Coordination
 - Read `TODO.md` Phase 0 and Phase 3 first.
-- Align observation schema with kilo.
-- Align any delivery-written fields (e.g. officer notes) with glyph.
+- Align observation schema with kilo via `agent_notes/`.
+- Align any delivery-written fields (e.g. officer notes) with glyph via `agent_notes/`.
 - Report progress against the relevant checklist items in `TODO.md`.
 
 ---
