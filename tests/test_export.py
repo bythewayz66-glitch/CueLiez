@@ -39,7 +39,8 @@ class TestExportSurfaces(unittest.TestCase):
         self.assertIn("disclaimer", low)
         self.assertIn("not a lie detector", low)  # canonical disclaimer
         self.assertIn("gate / consent status", low)
-        self.assertIn("officer notes", low)
+        self.assertIn("system-observed cues", low)
+        self.assertNotIn("officer notes (human)", low)  # only when notes exist
         for bad in ("detects lies", "lie detection engine", "subject is lying", "truth score", "proves deception", "confirms lying"):
             self.assertNotIn(bad, low)
 
@@ -77,9 +78,38 @@ class TestExportSurfaces(unittest.TestCase):
             "priority": cues[0].priority, "officer_id": "off1",
         }])
         md = render_package_summary_markdown(pkg)
+        self.assertIn("Officer Notes (Human)", md)
+        self.assertIn("not system findings", md.lower())
         self.assertIn("Requested clarification on timeline", md)
         self.assertIn(cues[0].cue_id, md)
         self.assertIn("off1", md)
+
+    def test_e2e_note_attach_seal_export(self):
+        cues = cues_from_observations(OBS)
+        pkg = {"observations": OBS, "annotations": {"mode": "interrogation"}}
+        pkg = attach_officer_cue_notes(pkg, [{"cue_id": cues[0].cue_id, "action": "acknowledged", "note": "Reviewed by officer."}])
+        s = SessionGateState(mode="interrogation", intended_uses=["interview support"])
+        record_consent(s, attested_by="officer-a")
+        s.training_acknowledged = True
+        s.training_version = "v1"
+        sealed = seal_observation_package(pkg, s)
+        self.assertIn("officer_cue_notes", sealed)
+        self.assertIn("gate_state", sealed)
+        self.assertIn("package_hash", sealed)
+        self.assertEqual(sealed["schema_version"], "1.0")
+        with tempfile.TemporaryDirectory() as td:
+            paths = export_sealed_package(sealed, td, cues=cues, observations=OBS)
+            data = json.loads(Path(paths["json"]).read_text())
+            self.assertIn("officer_cue_notes", data)
+            self.assertEqual(data["officer_cue_notes"][0]["note"], "Reviewed by officer.")
+            self.assertIn("Officer Notes (Human)", Path(paths["md"]).read_text())
+
+    def test_export_resilient_without_gate_state_or_hash(self):
+        pkg = {"product": "CueLiez", "observations": [], "disclaimer": "d"}
+        md = render_package_summary_markdown(pkg, observations=[])
+        self.assertIn("not provided", md.lower())
+        h = render_package_summary_html(pkg, observations=[])
+        self.assertIn("not provided", h.lower())
 
     def test_degrades_gracefully_with_no_cues(self):
         pkg = sealed_pkg()

@@ -1,0 +1,8 @@
+[
+  {"role": "officer", "text": "Can you walk me through where you were that evening?"},
+  {"role": "subject", "text": "I think maybe I was around the area, you know, doing stuff.", "response_latency_ms": 4200},
+  {"role": "officer", "text": "What specific location and time?"},
+  {"role": "subject", "text": "I don't really remember exactly. I already told you I was not there.", "response_latency_ms": 3100},
+  {"role": "officer", "text": "Earlier you said you were around the area. Can you clarify?"},
+  {"role": "subject", "text": "I mean nearby, not exactly there. It was probably around 8 or 9."}
+]

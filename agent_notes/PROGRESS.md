@@ -54,9 +54,16 @@ Format per update:
 ### 2026-11-08 06:19 UTC
 - Done: Read/saved `glyph.md` (from GitHub/main), deleted it from repo per instructions. Delivered glyph sprint items: officer-only low-distraction onscreen surface (`OnscreenCueRenderer` panel/HTML, turn-linked/glanceable cues, acknowledge/dismiss/note capture, subject not shown by default); officer cue notes model/attachment (`officer_cue_notes`, normalize/attach helpers); sealed-package exports (canonical JSON + Markdown/HTML summaries with disclaimer and observed-indicator/gate-status framing); operator CLI (`python -m cueliez`/`cueliez`) for transcript → observations/cues → gated seal → export; defensive delivery display neutralization for forbidden verdict phrases. Expanded delivery/export/CLI tests. All tests pass (`182 OK`, `PYTHONPATH=src python -m unittest discover -s tests`). Updated `TODO.md` for glyph-owned progress.
 - In progress: None (awaiting coordination/next direction).
-- Blocked: Waiting on iceman confirmation that `officer_cue_notes` is preserved at seal and covered by package integrity/hash/signature.
+- Blocked: Waiting on iceman confirmation that `officer_cue_notes` is preserved at seal and covered by package integrity/hash/signature. (resolved in 06:35 update)
 - Next: Address iceman/kilo coordination replies; refine officer surface/exports per feedback; keep `agent_notes/` (`//an`) checked.
 - Notes left in agent_notes/: `2026-11-08_0618_glyph_to_iceman_officer-cue-notes-field.md`
+
+### 2026-11-08 06:35 UTC
+- Done: Checked `agent_notes/` (`//an`) and read iceman→glyph contract note (`2026-11-08_0631_iceman_to_glyph_seal-contract-and-gate-state.md`) and orchestrator→glyph sprint 2 note. Verified iceman seal preserves `officer_cue_notes` and includes it in `compute_package_hash` (canonical hash excludes only `package_hash`/`content_hash`/`sealed_at`). Sprint 2 glyph updates: exports now read `gate_state` and show `not provided` when `gate_state`/`package_hash`/schema fields are absent; human-readable summaries show "System-Observed Cues (for human review)" and an "Officer Notes (Human)" section only when notes exist (clearly labeled non-system). Added CLI dry-demo docs/sample fixture (`docs/examples/sample_transcript.json`, CLI epilog/docstring). Added E2E note→attach→seal→export test and resilience test. Full suite passes (`203 OK`).
+- In progress: None.
+- Blocked: None.
+- Next: Watch for kilo cue-field contract note and align renderer if needed; continue officer/CLI/export polish per orchestrator direction.
+- Notes left in agent_notes/: (none new; prior coordination note addressed by iceman)
 
 ---
 

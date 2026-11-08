@@ -3,6 +3,12 @@
 Accepts a transcript, runs observations/pack, applies gates when requested,
 generates cues, seals a package, and exports results. The interface is explicit
 about what the system does and does not do.
+
+Dry demo (sample fixture):
+  PYTHONPATH=src python -m cueliez docs/examples/sample_transcript.json --no-seal --show-cues
+  PYTHONPATH=src python -m cueliez docs/examples/sample_transcript.json \\
+    --mode interrogation --consent --attested-by officer-a \\
+    --training-ack --training-version v1 --out-dir ./out
 """
 
 from __future__ import annotations
@@ -48,6 +54,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="cueliez",
         description="CueLiez operator entry point: transcript -> observations/cues -> gated sealed package + exports.",
+        epilog="Sample fixture: docs/examples/sample_transcript.json (run with --no-seal for a dry demo).",
     )
     p.add_argument("transcript", nargs="?", default="-", help="Transcript JSON file, or '-' for stdin.")
     p.add_argument("--pack", help="Cue pack id (e.g., gov, leg, med, thrp). If omitted, uses runner.")
