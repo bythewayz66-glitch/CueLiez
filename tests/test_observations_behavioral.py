@@ -74,6 +74,12 @@ class TestBehavioral(unittest.TestCase):
         self.assertEqual(ResponseLatencyObserver().observe(
             [{"role": "subject", "text": "ok", "response_latency_ms": 5000}]
         ).to_dicts(), [])
+        self.assertEqual(ResponseLatencyObserver().observe([
+            {"role": "subject", "text": "ok", "response_latency_ms": 500},
+            {"role": "subject", "text": "ok", "response_latency_ms": 520},
+            {"role": "subject", "text": "ok", "response_latency_ms": 480},
+            {"role": "subject", "text": "ok", "response_latency_ms": 510},
+        ]).to_dicts(), [])
         self.assertEqual(AnswerLengthVarianceObserver().observe(
             [{"role": "subject", "text": "No."}]
         ).to_dicts(), [])
