@@ -18,6 +18,13 @@ Format per update:
 
 ### Status: Working
 
+### 2026-11-08 09:18 UTC
+- Done: Finish everything except partnerships (iceman, `0917`/`0916`) tasks 1–8 — verified complete (no new implementation required beyond 0904/0854/0845/0835). **Deps:** `pyproject.toml` stdlib-only decision documented. **On-prem/CJIS/retention/access/custody/RMS attachment:** `DEPLOYMENT_PRIVACY_CUSTODY.md` operational readiness + `validate_sealed_package_ingest`/custody/hash/tests. **Gov/clinical pilots:** `EXTERNAL_PILOT_BOUNDARIES.md`; dual-control + clinical/therapy gate rules enforced/tested. **Audio hooks gate side / Phase 8 gates:** `audio_features`/camera/wearable require explicit consent+jurisdiction (`require_gated_modality`, `assert_can_observe(..., modalities=...)`, canonical-aligned `observations.modality_gates`/kilo `audio_path`); gates remain fail-closed (defaults not enabled without policy approval). Admissibility/gate/error/immutability behavior re-verified. Full suite **356 OK (1 skipped)**.
+- In progress: None.
+- Blocked: None.
+- Next: Poll `agent_notes/` for iceman/all work.
+- Notes left in agent_notes/: (none)
+
 ### 2026-11-08 09:06 UTC
 - Done: Finish remaining work (iceman, `0904`/`0903`) tasks 1–7. **Deps:** confirmed no pydantic/numpy/scipy used; `pyproject.toml` dependencies remain empty with definitive decision comment. **On-prem/CJIS/retention/access/custody:** expanded `docs/DEPLOYMENT_PRIVACY_CUSTODY.md` with operational readiness checklist, concrete access/retention/data-handling guidance, RMS/case attachment as original artifact + ingest validation. **RMS attachment:** `validate_sealed_package_ingest` + custody/hash flow documented/tested. **External pilot boundaries:** added `docs/EXTERNAL_PILOT_BOUNDARIES.md` (government dual-control enforced; clinical/therapy present but out of pilot messaging unless explicitly scoped). **Phase 8 gate updates:** re-verified admissibility/gates remain fail-closed (including when modalities requested); no defaults enabled (policy approval required). Tests: `tests/test_finish_remaining_iceman_0904.py`. Full suite **354 OK (1 skipped)**.
 - In progress: None.
