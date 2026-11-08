@@ -74,33 +74,34 @@ Status key: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## Phase 4 — Privacy, Security, Integration
 
-- [ ] Design primarily for on-prem / air-gapped / private-cloud deployment (CJIS / equivalent readiness).
-- [ ] Document data-retention and access controls for sealed packages.
-- [ ] Integration priority order:
+- [~] Design primarily for on-prem / air-gapped / private-cloud deployment (CJIS / equivalent readiness). (Glyph documented on-prem/private-cloud posture in demo/disclosure docs; CJIS/equivalent operational readiness not implemented.)
+- [~] Document data-retention and access controls for sealed packages. (Glyph added operator-responsibility guidance in demo/disclosure docs; technical controls not implemented.)
+- [x] Integration priority order:
   1. Transcript ingest from existing systems (Axon, CaseCracker, etc.)
   2. Real-time audio stream hooks
   3. Officer UI (tablet overlay or simple web dashboard)
   4. Export into RMS / case / evidence management systems
-- [ ] Make sealed packages easy to attach as original artifacts rather than derivative interpretations.
+  (Documented in TODO/owner posture; first-pilot uses transcript ingest/export only, no live integrations.)
+- [~] Make sealed packages easy to attach as original artifacts rather than derivative interpretations. (Glyph documented canonical JSON+hash as primary artifact and summaries as observation-only aids; RMS workflow integration pending.)
 
 ---
 
 ## Phase 5 — Validation & Evidence of Value
 
-- [ ] Build private red-team / synthetic + de-identified transcript set for regression and utility testing.
+- [~] Build private red-team / synthetic + de-identified transcript set for regression and utility testing. (Owner synthetic demos exist; broader private/de-identified set pending.)
 - [ ] Partner with 1–2 academic or practitioner groups in investigative interviewing for small controlled studies (officer follow-up quality, review usefulness, over-cue rates).
-- [ ] Target early pilot agencies that already record interviews and care about PEACE / cognitive interviewing standards.
-- [ ] Measure and report latency, completeness of packages, and gate compliance in pilots.
+- [~] Target early pilot agencies that already record interviews and care about PEACE / cognitive interviewing standards. (Glyph added pilot-prep framing/outline in `docs/demo/PILOT_PREP.md`; partnerships/targeting pending.)
+- [~] Measure and report latency, completeness of packages, and gate compliance in pilots. (Glyph documented manual local timing/completeness/gate observation paths in demo/validation docs; no truth-detection accuracy claims.)
 
 ---
 
 ## Phase 6 — Go-to-Market & Commercial
 
-- [ ] Pricing experiments that match positioning (per-seat / per-session SaaS or on-prem + support; higher tiers for government dual-control and multi-modality).
-- [ ] Productize existing training gates into an operator certification / training program.
+- [~] Pricing experiments that match positioning (per-seat / per-session SaaS or on-prem + support; higher tiers for government dual-control and multi-modality). (Glyph documented no-accuracy positioning/pricing guardrails in pilot-prep docs; experiments pending.)
+- [~] Productize existing training gates into an operator certification / training program. (Glyph added docs-only training/certification outline; program productization pending.)
 - [ ] Explore partnerships with interview-room hardware and evidence-platform vendors.
-- [ ] Never market accuracy-of-deception, confession rates, or automated decisions.
-- [ ] Primary message: clearer inquiry + auditable record of observations and cues, fairer and tighter for both the guilty and the innocent.
+- [x] Never market accuracy-of-deception, confession rates, or automated decisions. (Locked in owner decisions/language rules; glyph docs/tests reinforce.)
+- [~] Primary message: clearer inquiry + auditable record of observations and cues, fairer and tighter for both the guilty and the innocent. (Aligned in docs/messaging with observation-only framing; external sales materials must remain ≤ never-claim.)
 
 ---
 

@@ -289,6 +289,13 @@ Format per update:
 - Next: Continue polling; respond to any wording/contract notes.
 - Notes left in agent_notes/: `2026-11-08_0759_glyph_to_all_phase3-wording-alignment.md`
 
+### 2026-11-08 11:10 UTC (Long sprint Phase 0/3.5/4/5 — 0813/0816, `//an`)
+- Done: Read `2026-11-08_0813_orchestrator_to_all_long-sprint-phase0-3.5-4-5.md` and `0816_orchestrator_to_glyph_long-sprint-phase0-3.5-4-5.md`. (1) **Phase 4 posture/custody/integration docs**: updated `docs/demo/OPERATOR_DRY_RUN.md` and `docs/ADMISSIBILITY_AND_DISCLOSURE.md` with on-prem/private-cloud posture (no public SaaS v1 assumption), data-retention/access-controls operator guidance, transcript-ingest expectations (JSON `transcript`/`turns`/role aliases), canonical sealed JSON+`package_hash` as original artifact (summaries observation-only), and explicit no live Axon/CaseCracker/RMS integrations. (2) **Phase 3.5 validation support**: added manual over-cue/latency observation paths in demo docs and `docs/demo/VALIDATION_NOTES.md` (neutral; no truth-detection/deception accuracy claims). (3) **Phase 5 pilot prep**: added `docs/demo/PILOT_PREP.md` (first-pilot `generic`+`interrogation`, PEACE/cognitive interviewing support framing, docs-only operator training/cert outline, positioning/pricing guardrails with no accuracy/confession/automated-outcome claims). (4) **Tests**: extended `tests/test_site_language.py` to scan new pilot/validation docs; site language + CLI + full suite green. (5) **TODO**: updated glyph-owned/accurate Phase 4–6 checkboxes to reflect documented readiness vs pending implementation/partnerships. Full suite green (`294 OK`, 1 skipped).
+- In progress: Polling for new `*_to_glyph_*`/`*_to_all_*` notes.
+- Blocked: None.
+- Next: Continue polling.
+- Notes left in agent_notes/: `2026-11-08_0817_glyph_to_all_long-sprint-docs.md`
+
 ---
 
 ## Cross-agent blockers

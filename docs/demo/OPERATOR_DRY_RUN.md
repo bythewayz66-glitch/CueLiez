@@ -114,9 +114,35 @@ PYTHONPATH=src python -m cueliez docs/examples/sample_transcript.json --mode int
 
 Expected: error indicating consent is required (no observation/seal performed).
 
+## 7. Deployment posture, custody, and integration readiness (v1 pilot)
+
+- **Processing posture:** prefer **on-prem or private-cloud** processing of interview text/transcripts for v1. No public SaaS is required. Run the CLI in an operator-controlled environment consistent with local policy.
+- **Sealed packages as original artifacts:** treat exported `sealed_package.json` (+ `package_hash`, and any signature if later added) as the **canonical original artifact** to attach to a case/evidence workflow. Human-readable summaries (MD/HTML, print-to-PDF) are observation-only aids, not substitutes for the canonical package and not findings.
+- **Data retention and access controls (operator responsibility):** retain sealed packages, summaries, and any officer-note JSON according to jurisdiction/policy/records schedules. Restrict access to authorized personnel, protect files at rest/in transit per local controls, and avoid storing secrets in package content. CueLiez does not make retention, deletion, or access-control decisions automatically.
+- **Transcript ingest expectations (no live integration required):** provide a JSON array of turns or an object with `transcript`/`turns` (each turn may include `text`/`utterance`/`content`/`transcript` and `role`/`speaker`, plus optional timestamps/metadata). First-pilot path is transcript export/ingest from existing recording workflows; **live Axon/CaseCracker/RMS integrations are post-pilot** unless a partner supplies transcript export only.
+
+## 8. Manual validation-note collection (Phase 3.5/5 support)
+
+Use these paths to collect **internal** utility/quality observations without claiming truth-detection accuracy:
+
+```bash
+# Capture rendered cues + notice for human review of over-cue/false-positive patterns (owner transcripts)
+PYTHONPATH=src python -m cueliez docs/examples/owner_clean_interview.json --mode generic --show-cues --no-seal
+PYTHONPATH=src python -m cueliez docs/examples/owner_conflict_interview.json --mode generic --show-cues --no-seal
+PYTHONPATH=src python -m cueliez docs/examples/owner_hedging_interview.json --mode generic --show-cues --no-seal
+```
+
+```bash
+# Simple local timing observation (operator environment; not a benchmark claim)
+/usr/bin/time -f 'elapsed=%E' PYTHONPATH=src python -m cueliez docs/examples/owner_hedging_interview.json --mode generic --no-seal > /tmp/cueliez_timing.out
+```
+
+Record observations in internal validation notes (e.g., cue usefulness for follow-up questions, over-cue/under-cue patterns, operator review burden, environment-specific latency). **Do not** report truth-detection accuracy, deception accuracy, confession-rate improvement, or automated legal/clinical outcomes.
+
 ## Language and safety checks
 
 - All user-visible output should use observation/cue language only.
 - No "lie detector", truth/deception verdicts, diagnoses, or automated findings.
 - Human judgment remains required.
 - For a richer contradiction fixture: `docs/examples/conflict_transcript.json`.
+- Pilot prep outline: `docs/demo/PILOT_PREP.md`. Validation-note template/guidance: `docs/demo/VALIDATION_NOTES.md`.

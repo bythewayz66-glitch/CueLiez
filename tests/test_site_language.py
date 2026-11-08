@@ -12,6 +12,8 @@ SCAN_PATHS = [
     ROOT / "README.md",
     ROOT / "docs/PITCH_26S.md",
     ROOT / "docs/demo/OPERATOR_DRY_RUN.md",
+    ROOT / "docs/demo/PILOT_PREP.md",
+    ROOT / "docs/demo/VALIDATION_NOTES.md",
     ROOT / "docs/ADMISSIBILITY_AND_DISCLOSURE.md",
 ]
 
