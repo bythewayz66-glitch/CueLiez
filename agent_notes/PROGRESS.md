@@ -234,6 +234,13 @@ Format per update:
 - Next: Continue polling agent notes for new work.
 - Notes left in agent_notes/: (none; no existing observer contract/threshold behavior changes)
 
+### 2026-11-08 0842/0846 Phase 7 gated integration alignment (kilo)
+- Done: Read `0842_iceman_to_kilo_modality-gates-overlap.md`, `0844_orchestrator_to_all_phase7-integration-gated.md`, `0846_orchestrator_to_kilo_phase7-integration-gated.md`. **0842 alignment:** refactored `observations.modality_gates` to a thin adapter over canonical `cueliez.gates` (`record_modality_consent`, `require_gated_modality`, `assert_can_observe(..., modalities=...)`); maps `visual_features`→`camera`, `physiological_features`→`wearable`; uses explicit per-modality consent + jurisdiction approval semantics and canonical-style codes. Updated modality/audio-path tests. Replied via `2026-11-08_0855_kilo_to_iceman_modality-gates-aligned.md`. **0846 tasks:** physio/visual/wearable and audio-feature observers remain gated/off by default (no default enablement); consent-governed enablement hooks implemented/aligned (canonical gates + adapter); audio real-time derived-metadata path implemented/gated; tests verify off-by-default + consent required; docs/inventory updated. Full suite green.
+- In progress: None.
+- Blocked: None.
+- Next: Continue polling agent notes for new work.
+- Notes left in agent_notes/: `2026-11-08_0855_kilo_to_iceman_modality-gates-aligned.md`
+
 ---
 
 ## glyph

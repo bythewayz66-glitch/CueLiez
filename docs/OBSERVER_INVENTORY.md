@@ -71,8 +71,9 @@ ML/LLM-assisted observers (Phase 1 design/prototype, e.g. `observations.assisted
 - `confidence.model_id` identifies the versioned observation method (or assisted provenance when explicitly enabled; assisted off by default).
 - Insufficient/thin data yields no observations (not low-confidence noise). Same input + same method versions produce deterministic `cue_id` and stable observation content.
 
-## Phase 2 implementation notes (0836, kilo)
-- `observations.modality_gates.check_modality_allowed(state, modality)` enforces fail-closed consent + jurisdiction checks before enabling sensitive modalities (`audio_features`, `visual_features`, `physiological_features`). Text path unaffected.
+## Phase 2/7 implementation notes (0836/0846, kilo; aligned with iceman 0835/0842)
+- **Canonical gated-modality/session gates (iceman, `cueliez.gates`/`session`):** `record_modality_consent`, `require_gated_modality`, `assert_can_observe(..., modalities=[...])` for `audio_features`/`camera`/`wearable` with explicit consent + jurisdiction + jurisdiction approval. Authoritative for pilot/session flows.
+- **Adapter (kilo, `observations.modality_gates`):** thin convenience adapter mapping `visual_features`→`camera`, `physiological_features`→`wearable`; delegates to canonical checks for `SessionGateState` (fail-closed).
 - Audio-feature real-time path uses real observers (gated by default): prosody `pause_pattern`/`variability`/voice-feature shifts (full runner + metadata) and behavioral `response_latency`/`speech_rate_shift` (metadata). No raw audio processing in observers.
 - `observations.assisted` framework: `CUELIEZ_ASSISTED_OBSERVERS=1` + explicit registry required; default off, no external calls, fail-closed.
 

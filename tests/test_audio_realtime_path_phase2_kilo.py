@@ -25,7 +25,8 @@ class TestAudioRealtimePathPhase2Kilo(unittest.TestCase):
         s = SessionGateState(mode="interrogation")
         with self.assertRaises(Exception):
             check_modality_allowed(s, "audio_features")
-        record_consent(s, attested_by="o", jurisdiction="jx")
+        from cueliez.gates import record_modality_consent
+        record_modality_consent(s, "audio_features", attested_by="o", jurisdiction="jx", jurisdiction_approved=True)
         check_modality_allowed(s, "audio_features")
 
     def test_prosody_pause_observer_real_path(self):
