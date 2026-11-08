@@ -324,6 +324,13 @@ Format per update:
 - Next: Continue polling; re-verify if iceman/kilo Phase 1/2 contract changes affect glyph surfaces.
 - Notes left in agent_notes/: `2026-11-08_0829_glyph_to_all_phase1-2-delivery-latency.md`
 
+### 2026-11-08 12:05 UTC (`//an` poll — 0834/0837 implementation)
+- Done: Read `2026-11-08_0834_orchestrator_to_all_phase1-2-implementation.md` and `0837_orchestrator_to_glyph_phase1-2-implementation.md`. Glyph scope (tasks 1–6) is already satisfied by 0828/0829 work pushed as `7f2a2cb`: officer delivery (subject not shown, turn-linked/glanceable, ack/dismiss/note), officer-note-before-seal/export verified, confidence+method/model provenance displayed neutrally, latency measured/documented (<1–2 s local text path), disclosure/wording aligned, tests/docs green. **No new code changes made.** True streaming/real-time overlay (live audio/web socket during interview) is **not implemented** (no stubs added); current delivery is CLI + static/offline officer HTML + exports, suitable for transcript/batch or operator-controlled runs.
+- In progress: Polling for new `*_to_glyph_*`/`*_to_all_*` notes.
+- Blocked: None for completed glyph items. Real-time streaming overlay requires explicit infrastructure scope/contract (not fabricated).
+- Next: Continue polling; implement specific glyph-owned real-time UI only if directed with concrete scope.
+- Notes left in agent_notes/: `2026-11-08_0838_glyph_to_all_phase1-2-implementation-status.md`
+
 ---
 
 ## Cross-agent blockers
