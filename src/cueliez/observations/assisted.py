@@ -63,6 +63,65 @@ def clear_assisted_registry() -> None:
     _REGISTRY.clear()
 
 
+def make_multi_signal_assisted_adapter():
+    """Factory for a deterministic, no-external-ML assisted adapter.
+
+    Combines hedging + vagueness + distancing markers into a single multi-signal
+    cue when at least two distinct marker families are present on one turn.
+    No network/ML calls; safe to register only in approved deployments.
+    """
+    from .linguistic import (
+        HEDGE_PATTERNS,
+        VAGUE_PATTERNS,
+        DISTANCING_PATTERNS,
+        _count_patterns,
+        _words,
+    )
+
+    def adapter(transcript):
+        result = ObservationResult(method="cueliez.observations.assisted.multi_signal/v1")
+        for i, turn in enumerate(transcript):
+            try:
+                from .base import is_subject_turn, text_of, source_span
+            except Exception:
+                continue
+            if not is_subject_turn(turn):
+                continue
+            text = text_of(turn)
+            words = _words(text)
+            if len(words) < 6:
+                continue
+            hc, hf = _count_patterns(text, HEDGE_PATTERNS)
+            vc, vf = _count_patterns(text, VAGUE_PATTERNS)
+            dc, df = _count_patterns(text, DISTANCING_PATTERNS)
+            families = sum(1 for c in (hc, vc, dc) if c > 0)
+            if families < 2:
+                continue
+            score = min(1.0, 0.4 + 0.12 * families + 0.02 * (hc + vc + dc))
+            from .base import make_observation
+            ev = {
+                "hedge_count": hc,
+                "vague_count": vc,
+                "distancing_count": dc,
+                "families": families,
+                "word_count": len(words),
+            }
+            ev.update(source_span(turn, i))
+            result.observations.append(make_observation(
+                label="multi_signal_language_pattern",
+                score=score,
+                method_id="cueliez.observations.assisted.multi_signal/v1",
+                category="linguistic",
+                evidence=ev,
+                cue="Multiple linguistic marker families appear in one response; consider probing for specifics.",
+                turn_index=i,
+                priority="normal",
+            ))
+        return result
+
+    return adapter
+
+
 def run_assisted_observers(transcript: Sequence[Mapping[str, Any]], *, enabled: bool | None = None) -> List[ObservationResult]:
     """Run registered assisted adapters only when explicitly enabled. Default: empty (no external ML)."""
     on = ASSISTED_OBSERVERS_ENABLED if enabled is None else bool(enabled)
