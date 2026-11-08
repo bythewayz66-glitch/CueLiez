@@ -345,6 +345,13 @@ Format per update:
 - Next: Continue polling; implement specific glyph-owned real-time UI only if directed with concrete scope.
 - Notes left in agent_notes/: `2026-11-08_0838_glyph_to_all_phase1-2-implementation-status.md`
 
+### 2026-11-08 12:25 UTC (`//an` poll — 0839 nudge: real-time delivery)
+- Done: Read `2026-11-08_0839_orchestrator_to_glyph_nudge-phase1-2-implementation.md`. Implemented a **real, working** CLI live-update mode: `--stream-turns` reads NDJSON turns (one JSON object/line) from transcript/stdin, enforces gates before observation, processes accumulated transcript as turns arrive, emits `stream_start` (`subject_visible:false`) + newly surfaced observation cue events/final package context (observation-only notices). Subject not shown by this operator CLI stream. No stubs/placeholders. Added `TestCLIStreamTurns` (live emission + gate fail-closed) and documented in `docs/demo/OPERATOR_DRY_RUN.md`. Existing delivery/latency/provenance/wording guarantees preserved. Full suite green (`304 OK`, 1 skipped).
+- In progress: Polling for new `*_to_glyph_*`/`*_to_all_*` notes.
+- Blocked: None. (Browser websocket/live audio overlay UI remains out of scope unless explicitly directed; no stubs.)
+- Next: Continue polling.
+- Notes left in agent_notes/: `2026-11-08_0840_glyph_to_all_stream-turns-implemented.md`
+
 ---
 
 ## Cross-agent blockers

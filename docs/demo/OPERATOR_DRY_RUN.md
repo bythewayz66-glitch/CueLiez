@@ -104,7 +104,22 @@ PYTHONPATH=src python -m cueliez docs/examples/sample_transcript.json \
 
 Officer notes are human-authored context, not system findings. They must be attached before seal.
 
-## 6. Verify gate refusal (safe check)
+## 6. Live-update CLI stream (officer-facing, subject not shown)
+
+For near-real-time/operator-controlled delivery, feed NDJSON turns (one JSON object per line) and emit newly surfaced observation cues as turns arrive:
+
+```bash
+cat docs/examples/owner_hedging_interview.json | PYTHONPATH=src python - <<'PY' | PYTHONPATH=src python -m cueliez - --mode generic --stream-turns --no-seal
+import json,sys
+data=json.load(sys.stdin)
+turns=data.get('transcript') or data.get('turns') or data
+for t in turns: print(json.dumps(t, ensure_ascii=False))
+PY
+```
+
+The stream emits JSON events (`stream_start` with `subject_visible:false`, `new_cues`/`turn`, final package context) plus observation/cue framing notices. It is operator-facing; it does not create a subject-visible display. Gates still fail closed in required modes before observation. No live audio websocket/overlay infrastructure is provided.
+
+## 7. Verify gate refusal (safe check)
 
 A gate-required mode without consent should fail before observation:
 

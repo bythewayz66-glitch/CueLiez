@@ -106,15 +106,89 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--show-cues", action="store_true", help="Print rendered cue text to stdout.")
     p.add_argument("--no-seal", action="store_true", help="Build observations/cues only; do not apply seal.")
     p.add_argument("--print-json", action="store_true", help="Print final package JSON to stdout.")
+    p.add_argument("--stream-turns", action="store_true", help="Real-time mode: read NDJSON turns (one JSON object per line) from transcript/stdin, emit newly surfaced observation cues as turns arrive (subject not shown). Final package/seal runs after stream ends unless --no-seal.")
     return p
+
+
+def _iter_ndjson_turns(path: Optional[str]):
+    fh = open(path, "r", encoding="utf-8") if path and path != "-" else sys.stdin
+    try:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            obj = json.loads(line)
+            if isinstance(obj, dict):
+                yield _normalize_transcript_turn(obj)
+            elif isinstance(obj, list):
+                for t in obj:
+                    yield _normalize_transcript_turn(t)
+    finally:
+        if fh is not sys.stdin:
+            fh.close()
+
+
+def _run_stream_turns(args, state, pack, annotations):
+    transcript: List[Dict[str, Any]] = []
+    seen_cue_ids = set()
+    renderer = OnscreenCueRenderer()
+    print(json.dumps({"event": "stream_start", "notice": HONEST_NOTICE, "streaming": True, "subject_visible": False}, ensure_ascii=False), flush=True)
+    runner = None if pack is not None else (full_runner() if args.runner == "full" else default_runner())
+    for turn in _iter_ndjson_turns(args.transcript):
+        transcript.append(turn)
+        if pack is not None:
+            raw_package = pack.build_package(transcript, annotations=annotations)
+            observations = raw_package.get("observations") or []
+        else:
+            observations = runner.run(transcript)
+            raw_package = {"observations": observations, "annotations": annotations}
+        cues = cues_from_observations(observations, min_score=args.min_score, max_cues=args.max_cues, transcript=transcript)
+        new_cues = [c for c in cues if c.cue_id not in seen_cue_ids]
+        for c in new_cues:
+            seen_cue_ids.add(c.cue_id)
+        if new_cues:
+            print(json.dumps({"event": "new_cues", "turn_count": len(transcript), "cues": [c.to_dict() for c in new_cues], "notice": HONEST_NOTICE}, ensure_ascii=False), flush=True)
+        else:
+            print(json.dumps({"event": "turn", "turn_count": len(transcript), "new_cue_count": 0}, ensure_ascii=False), flush=True)
+
+    # Final result over full accumulated transcript
+    if pack is not None:
+        raw_package = pack.build_package(transcript, annotations=annotations)
+        observations = raw_package.get("observations") or []
+    else:
+        runner = full_runner() if args.runner == "full" else default_runner()
+        raw_package = runner.build_package(transcript, annotations=annotations)
+        observations = raw_package.get("observations") or []
+    cues = cues_from_observations(observations, min_score=args.min_score, max_cues=args.max_cues, transcript=transcript)
+    hi_ids = _high_priority_cue_ids(cues)
+    if args.show_cues:
+        print(renderer.render_text(cues, header="CueLiez Observation Cues (final)"), flush=True)
+    package = dict(raw_package)
+    officer_notes = _load_json_file(args.officer_notes)
+    if officer_notes is not None:
+        if isinstance(officer_notes, dict) and "officer_cue_notes" in officer_notes:
+            officer_notes = officer_notes["officer_cue_notes"]
+        if _package_is_sealed(package):
+            raise GateError("sealed_package_immutable", "Officer notes must be attached before seal; package is already sealed.")
+        package = attach_officer_cue_notes(package, officer_notes)
+    if not args.no_seal:
+        dual_ids = list(args.high_priority_cue_ids) or (hi_ids if state.mode == "government" else [])
+        package = seal(package, state, high_priority_cue_ids=dual_ids)
+    formats = args.formats or ["json", "md", "html"]
+    if args.out_dir:
+        exported = export_sealed_package(package, args.out_dir, basename=args.basename, formats=formats, cues=cues, observations=observations, transcript=transcript)
+        print(json.dumps({"ok": True, "event": "stream_end", "notice": HONEST_NOTICE, "cue_count": len(cues), "observation_count": len(observations), "high_priority_cue_ids": hi_ids, "sealed": not args.no_seal, "exports": exported}, ensure_ascii=False), flush=True)
+    if args.print_json or not args.out_dir:
+        print(json.dumps(package, indent=2, ensure_ascii=False, default=str), flush=True)
+    elif args.out_dir:
+        print(json.dumps({"event": "stream_end", "ok": True, "cue_count": len(cues), "notice": HONEST_NOTICE}, ensure_ascii=False), flush=True)
+    return 0
 
 
 def run_cli(argv: Optional[List[str]] = None) -> int:
     parser = build_arg_parser()
     args = parser.parse_args(argv)
     try:
-        transcript = _load_transcript(args.transcript)
-
         annotations: Dict[str, Any] = {
             "mode": args.mode,
             "intended_uses": list(args.intended_uses),
@@ -145,6 +219,11 @@ def run_cli(argv: Optional[List[str]] = None) -> int:
 
         # Session lifecycle (iceman API): fail closed before observation.
         assert_can_observe(state)
+
+        if args.stream_turns:
+            return _run_stream_turns(args, state, pack, annotations)
+
+        transcript = _load_transcript(args.transcript)
 
         if pack is not None:
             raw_package = pack.build_package(transcript, annotations=annotations)

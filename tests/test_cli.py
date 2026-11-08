@@ -184,3 +184,45 @@ class TestCLIOwnerTranscripts(unittest.TestCase):
                             ("Source (transcript)" in md) or ("Source (T" in md) or ("transcript" in md.lower()),
                             f"{name}: expected source/transcript context in markdown when cues exist",
                         )
+
+
+class TestCLIStreamTurns(unittest.TestCase):
+    def run_cli(self, *args, input_text=None):
+        env = dict(__import__("os").environ)
+        env["PYTHONPATH"] = str(ROOT / "src")
+        cmd = [sys.executable, "-m", "cueliez", *args]
+        inp = input_text.encode() if isinstance(input_text, str) else input_text
+        return subprocess.run(cmd, input=inp, capture_output=True, timeout=120, env=env, cwd=str(ROOT))
+
+    def test_stream_turns_emits_new_cues_and_final_package(self):
+        ndjson = (
+            '{"role":"subject","text":"I arrived at eight."}\n'
+            '{"role":"officer","text":"And when did you leave?"}\n'
+            '{"role":"subject","text":"I think maybe I left around stuff, you know."}\n'
+        )
+        r = self.run_cli("-", "--mode", "generic", "--stream-turns", "--no-seal", input_text=ndjson)
+        self.assertEqual(r.returncode, 0, r.stderr.decode() + r.stdout.decode())
+        lines = [ln for ln in r.stdout.decode().splitlines() if ln.strip()]
+        # stream events + final JSON
+        events = []
+        for ln in lines:
+            try:
+                events.append(json.loads(ln))
+            except Exception:
+                pass
+        self.assertTrue(any(e.get("event") == "stream_start" and e.get("subject_visible") is False for e in events))
+        self.assertTrue(any("notice" in e and "does not determine credibility" in str(e.get("notice")) for e in events))
+        # should have surfaced cues or turn events
+        self.assertTrue(any(e.get("event") in ("new_cues", "turn", "stream_end") for e in events))
+        out_text = r.stdout.decode().lower()
+        self.assertNotIn("subject is lying", out_text)
+        self.assertNotIn("truth detector", out_text)
+        # final package-like object present (may be pretty-printed across lines)
+        self.assertIn('"observations"', r.stdout.decode())
+
+    def test_stream_turns_generic_gated_modes_still_fail_closed(self):
+        ndjson = '{"role":"subject","text":"hello"}\n'
+        r = self.run_cli("-", "--mode", "interrogation", "--stream-turns", "--no-seal", input_text=ndjson)
+        self.assertNotEqual(r.returncode, 0)
+        err = json.loads(r.stderr.decode())
+        self.assertIn(err.get("error_code"), {"consent_required", "training_required"})
