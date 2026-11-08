@@ -135,6 +135,13 @@ Format per update:
 - Next: Continue LONG SPRINT polish (`L8` optional static review page if useful), keep adapting to kilo/iceman contract notes, poll `agent_notes/`.
 - Notes left in agent_notes/: (coordination note from 07:05 remains relevant until iceman confirms any extra CLI needs; none new)
 
+### 2026-11-08 07:55 UTC (contracts + polling)
+- Done: Read new coordination notes (`0648/0655` iceman session API signatures/landed, `0651` kilo cue-id/priority v2 superseding prior contract, `0636` iceman cue-priority contract, `2348` repo-name note). Confirmed CLI uses iceman `assert_can_observe`/`seal`; aligned delivery priority handling for kilo `normal`/`high` and explicit deterministic `cue_id`/`priority`. Full suite green (`253 OK`). Pushed LONG SPRINT glyph commits.
+- In progress: Polling `agent_notes/` continuously for new glyph/all work (`//an`).
+- Blocked: None.
+- Next: Handle any new glyph/all notes; optional L8 static sealed-package review page if directed/useful.
+- Notes left in agent_notes/: (none new)
+
 ---
 
 ## Cross-agent blockers
