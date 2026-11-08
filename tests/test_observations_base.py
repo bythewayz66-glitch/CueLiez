@@ -16,6 +16,10 @@ class TestBase(unittest.TestCase):
         self.assertEqual(d["label"], "signal_present")
         self.assertEqual(d["confidence"]["score"], 0.7)
         self.assertEqual(d["confidence"]["model_id"], "m/v1")
+        self.assertEqual(d["confidence"]["version"], "v1")
+        self.assertEqual(d["method"], "m/v1")
+        self.assertEqual(d["category"], "linguistic")
+        self.assertEqual(d["evidence"], {"x": 1})
         self.assertEqual(d["turn_index"], 2)
         self.assertEqual(d["cue"], "ask")
 
@@ -24,12 +28,24 @@ class TestBase(unittest.TestCase):
             make_observation(label="lying", score=0.5, method_id="m/v1", category="x")
         with self.assertRaises(ValueError):
             make_observation(label="Guilty", score=0.5, method_id="m/v1", category="x")
+        with self.assertRaises(ValueError):
+            make_observation(label="deceptive", score=0.5, method_id="m/v1", category="x")
+        with self.assertRaises(ValueError):
+            make_observation(label="honest", score=0.5, method_id="m/v1", category="x")
 
     def test_rejects_bad_confidence(self):
         with self.assertRaises(ValueError):
             Observation(label="x", confidence={"score": 1.2, "model_id": "m"}, category="c", method="m")
         with self.assertRaises(ValueError):
             Observation(label="x", confidence={"score": 0.5, "model_id": ""}, category="c", method="m")
+
+    def test_rejects_empty_method_or_category(self):
+        with self.assertRaises(ValueError):
+            Observation(label="x", confidence={"score": 0.5, "model_id": "m"}, category="", method="m")
+        with self.assertRaises(ValueError):
+            Observation(label="x", confidence={"score": 0.5, "model_id": "m"}, category="c", method="")
+        with self.assertRaises(ValueError):
+            make_observation(label="x", score=0.5, method_id="", category="c")
 
     def test_result_to_dicts(self):
         r = ObservationResult(method="m", observations=[

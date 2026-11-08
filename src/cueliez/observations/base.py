@@ -17,7 +17,13 @@ FORBIDDEN_LABELS = frozenset({
 })
 
 
-def _validate_observation(label: str, confidence: Dict[str, Any]) -> tuple[str, float, str]:
+def _validate_observation(
+    label: str,
+    confidence: Dict[str, Any],
+    method: Any = None,
+    category: Any = None,
+    evidence: Any = None,
+) -> tuple[str, float, str]:
     lab = (label or "").strip().lower()
     if lab in FORBIDDEN_LABELS:
         raise ValueError(f"Forbidden verdict label: {label!r}")
@@ -28,6 +34,12 @@ def _validate_observation(label: str, confidence: Dict[str, Any]) -> tuple[str, 
     model_id = conf.get("model_id")
     if not (str(model_id).strip() if model_id is not None else ""):
         raise ValueError("confidence.model_id is required")
+    if method is not None and not str(method).strip():
+        raise ValueError("method is required")
+    if category is not None and not str(category).strip():
+        raise ValueError("category is required")
+    if evidence is not None and not isinstance(evidence, dict):
+        raise ValueError("evidence must be a dict")
     return lab, float(score), str(model_id)
 
 
@@ -44,17 +56,19 @@ class Observation:
     turn_index: Optional[int] = None
 
     def __post_init__(self) -> None:
-        _validate_observation(self.label, self.confidence)
+        if self.evidence is None:
+            self.evidence = {}
+        _validate_observation(self.label, self.confidence, self.method, self.category, self.evidence)
 
     def to_dict(self) -> Dict[str, Any]:
-        _, score, model_id = _validate_observation(self.label, self.confidence)
+        _, score, model_id = _validate_observation(self.label, self.confidence, self.method, self.category, self.evidence)
         conf = self.confidence or {}
         out: Dict[str, Any] = {
             "label": self.label,
             "confidence": {"score": score, "model_id": model_id},
             "category": self.category,
             "method": self.method,
-            "evidence": self.evidence,
+            "evidence": dict(self.evidence or {}),
         }
         if "version" in conf:
             out["confidence"]["version"] = conf["version"]

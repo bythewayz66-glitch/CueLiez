@@ -59,6 +59,11 @@ BANNED_ANNOTATION_KEYS = frozenset({
     "truth_score",
 })
 
+FORBIDDEN_OBSERVATION_LABELS = frozenset({
+    "lying", "lie", "deception_confirmed", "guilty", "truthful",
+    "deceptive", "dishonest", "honest",
+})
+
 
 @dataclass
 class DualControlRecord:
@@ -232,11 +237,21 @@ def _validate_observation_entry(d: dict, index: int) -> None:
         raise GateError("missing_model_id", f"Observation[{index}] missing confidence.model_id.")
     # Reject verdict-shaped labels inside observations
     label = (d.get("label") or d.get("claim") or "").strip().lower()
-    if label in {"lying", "lie", "deception_confirmed", "guilty", "truthful"}:
+    if label in FORBIDDEN_OBSERVATION_LABELS:
         raise GateError(
             "verdict_language",
             f"Observation[{index}] uses forbidden verdict label {label!r}. Indicators only.",
         )
+
+    method = d.get("method")
+    if method is not None and not str(method).strip():
+        raise GateError("missing_method", f"Observation[{index}] has empty method.")
+    category = d.get("category")
+    if category is not None and not str(category).strip():
+        raise GateError("missing_category", f"Observation[{index}] has empty category.")
+    evidence = d.get("evidence")
+    if evidence is not None and not isinstance(evidence, dict):
+        raise GateError("invalid_evidence", f"Observation[{index}] evidence must be a dict when present.")
 
 
 def seal_observation_package(

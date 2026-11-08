@@ -74,7 +74,8 @@ class ClaimConflictObserver:
             if len(text) < 12:
                 continue
             key = _normalize_claim_key(text)
-            if len(key.split()) < 2:
+            key_words = key.split()
+            if len(key_words) < 2:
                 continue
             buckets[key].append((i, text, _polarity(text)))
 
@@ -85,7 +86,9 @@ class ClaimConflictObserver:
             if 1 in pols and -1 in pols:
                 pos = [it for it in items if it[2] == 1][0]
                 neg = [it for it in items if it[2] == -1][0]
-                score = clamp01(0.55 + 0.05 * min(len(items), 4))
+                # Confidence reflects topic-key specificity and repeated mentions, not certainty of conflict.
+                specificity = min(len(key.split()), 8) / 8.0
+                score = clamp01(0.48 + specificity * 0.18 + 0.04 * min(len(items), 4))
                 result.observations.append(make_observation(
                     label="possible_statement_conflict",
                     score=score,
@@ -93,8 +96,10 @@ class ClaimConflictObserver:
                     category="consistency",
                     evidence={
                         "topic_key": key,
-                        "turn_a": pos[0], "excerpt_a": pos[1][:180],
-                        "turn_b": neg[0], "excerpt_b": neg[1][:180],
+                        "topic_key_words": len(key.split()),
+                        "turn_a": pos[0], "excerpt_a": pos[1][:180], "polarity_a": "affirming",
+                        "turn_b": neg[0], "excerpt_b": neg[1][:180], "polarity_b": "negating",
+                        "mention_count": len(items),
                     },
                     cue="Statements on a similar topic differ in affirmation/negation; ask the subject to reconcile them.",
                     turn_index=max(pos[0], neg[0]),
@@ -125,14 +130,20 @@ class TimelineInconsistencyObserver:
         for i, r, ex in clock_times:
             uniq.setdefault(r, []).append((i, ex))
         if len(uniq) >= 2:
-            score = clamp01(0.4 + 0.08 * min(len(uniq), 5))
+            refs = list(uniq.keys())
+            # A single event can legitimately involve multiple times (sequence); emit as a review cue, not inconsistency.
+            score = clamp01(0.36 + 0.07 * min(len(refs), 6))
             result.observations.append(make_observation(
                 label="multiple_time_references_present",
                 score=score,
                 method_id=self.method_id,
                 category="consistency",
-                evidence={"distinct_time_refs": list(uniq.keys())[:10],
-                          "examples": {k: v[0][0] for k, v in list(uniq.items())[:6]}},
+                evidence={
+                    "distinct_time_refs": refs[:10],
+                    "time_reference_count": len(refs),
+                    "examples": {k: v[0][0] for k, v in list(uniq.items())[:6]},
+                    "note": "Multiple clock times may describe a sequence; verify ordering and consistency with the account.",
+                },
                 cue="Multiple specific time references appear across responses; verify the sequence and exact times.",
             ))
         return result

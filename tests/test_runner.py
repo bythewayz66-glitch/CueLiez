@@ -2,6 +2,7 @@ import unittest
 
 from cueliez.gates import seal_observation_package, SessionGateState, record_consent
 from cueliez.observations import ObservationRunner, default_runner, full_runner
+from cueliez.observations.base import FORBIDDEN_LABELS
 
 
 class TestRunner(unittest.TestCase):
@@ -54,6 +55,52 @@ class TestRunner(unittest.TestCase):
         s.training_version = "v1"
         sealed = seal_observation_package(pkg, s)
         self.assertTrue(sealed["firewall"]["consent_rechecked"])
+
+    def test_empty_transcript_emits_no_observations(self):
+        for r in (default_runner(), full_runner()):
+            pkg = r.build_package([])
+            self.assertEqual(pkg["observations"], [])
+            seal_observation_package(pkg)
+
+    def test_observations_have_required_contract_fields(self):
+        t = [
+            {"role": "subject", "text": "I think maybe I was around there doing stuff.", "response_latency_ms": 4000},
+            {"role": "subject", "text": "I did not enter the store. I entered the store.", "response_latency_ms": 500},
+            {"role": "subject", "text": "I arrived at 9:00 pm and left at 10:30 pm."},
+        ]
+        for r in (default_runner(), full_runner()):
+            pkg = r.build_package(t)
+            for o in pkg["observations"]:
+                self.assertIsInstance(o.get("label"), str)
+                self.assertTrue(o["label"].strip())
+                self.assertNotIn(str(o["label"]).lower(), FORBIDDEN_LABELS)
+                conf = o.get("confidence") or {}
+                self.assertIsInstance(conf.get("score"), (int, float))
+                self.assertGreaterEqual(conf["score"], 0.0)
+                self.assertLessEqual(conf["score"], 1.0)
+                self.assertTrue(str(conf.get("model_id") or "").strip())
+                self.assertTrue(str(o.get("method") or "").strip())
+                self.assertTrue(str(o.get("category") or "").strip())
+                self.assertIsInstance(o.get("evidence"), dict)
+            seal_observation_package(pkg)
+
+    def test_cue_text_has_no_forbidden_phrases(self):
+        forbidden = (
+            "lie detector", "detects lies", "lie detection", "truth detector", "truth machine",
+            "polygraph", "proves deception", "confirms lying", "subject is lying",
+            "guilty finding", "not guilty finding",
+        )
+        t = [
+            {"role": "subject", "text": "I think maybe perhaps I was around there doing stuff.", "response_latency_ms": 5000},
+            {"role": "subject", "text": "I did not do it, I swear honestly never. Why would you ask that?"},
+            {"role": "subject", "text": "I entered the store. I did not enter the store."},
+            {"role": "subject", "text": "I arrived at 9:00 pm and at 10:30 pm I was gone."},
+        ]
+        pkg = default_runner().build_package(t)
+        for o in pkg["observations"]:
+            cue = str(o.get("cue") or "").lower()
+            for bad in forbidden:
+                self.assertNotIn(bad, cue, f"forbidden phrase {bad!r} in cue: {o.get('cue')}")
 
 
 if __name__ == "__main__":
