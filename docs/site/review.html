@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>CueLiez Sealed Package Review</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: system-ui, sans-serif; margin: 20px; line-height: 1.4; }
+    h1,h2 { margin: 0.2em 0 0.4em; }
+    .notice { background: #f6f7f9; border-left: 4px solid #555; padding: 12px; margin: 12px 0; }
+    .danger { color: #8a1f1f; }
+    textarea { width: 100%; min-height: 140px; box-sizing: border-box; font-family: ui-monospace, monospace; }
+    table { border-collapse: collapse; width: 100%; font-size: 14px; }
+    th, td { border: 1px solid #ccc; padding: 6px 8px; vertical-align: top; text-align: left; }
+    th { background: #f3f3f3; }
+    code { overflow-wrap: anywhere; }
+    .muted { color: #555; }
+    section { margin: 16px 0; }
+    .drop { border: 2px dashed #999; padding: 12px; border-radius: 8px; margin: 8px 0; }
+  </style>
+</head>
+<body>
+  <h1>CueLiez Sealed Package Review</h1>
+  <div class="notice">
+    <strong>Notice:</strong> This page displays observed indicators and interview-support cues only. It does not display findings, diagnoses, or determinations about credibility. Human judgment remains required.
+  </div>
+
+  <section>
+    <h2>Load package JSON</h2>
+    <p class="muted">Client-side only. Paste or drop a sealed package JSON export. No data is uploaded by this page.</p>
+    <div id="drop" class="drop">Drop a <code>.json</code> file here, or paste JSON below.</div>
+    <textarea id="input" placeholder='Paste sealed package JSON...'></textarea>
+    <p><button id="render" type="button">Render package</button></p>
+    <div id="error" class="danger"></div>
+  </section>
+
+  <div id="out"></div>
+
+<script>
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+function show(v){ return v==null || v==='' || (Array.isArray(v)&&!v.length) ? 'not provided' : Array.isArray(v) ? v.join(', ') : String(v); }
+function cuesFrom(pkg){
+  if (Array.isArray(pkg.cues)) return pkg.cues;
+  return [];
+}
+function observations(pkg){ return Array.isArray(pkg.observations) ? pkg.observations : []; }
+function officerNotes(pkg){ return Array.isArray(pkg.officer_cue_notes) ? pkg.officer_cue_notes : []; }
+function gateSummary(pkg){
+  const fw = pkg.firewall && typeof pkg.firewall==='object' ? pkg.firewall : {};
+  const gs = pkg.gate_state && typeof pkg.gate_state==='object' ? pkg.gate_state : {};
+  return { mode: gs.mode || (pkg.annotations||{}).mode || (pkg.annotations||{}).cue_pack_mode,
+    gateState: Object.keys(gs).length ? 'present' : 'not provided',
+    consent: fw.consent_rechecked, training: fw.training_rechecked,
+    intended: gs.intended_uses, dual: gs.dual_control_records };
+}
+function render(pkg){
+  const cues = cuesFrom(pkg);
+  const obs = observations(pkg);
+  const notes = officerNotes(pkg);
+  const g = gateSummary(pkg);
+  const hi = cues.filter(c=>c && (c.priority==='high'||c.priority==='critical') && c.cue_id).map(c=>c.cue_id);
+  const rows = cues.length ? cues.map(c=>`<tr><td>${esc(c.priority||'')}</td><td>${esc(c.turn_index)}</td><td><code>${esc(c.cue_id||'')}</code></td><td>${esc(c.label||'')}</td><td>${esc(c.score==null?'':Number(c.score).toFixed(2))}</td><td>${esc(c.message||c.cue||'')}</td></tr>`).join('') : '<tr><td colspan="6">No cues present in package.</td></tr>';
+  const noteSec = notes.length ? `<section><h2>Officer Notes (Human)</h2><p>Human-authored context recorded by the reviewing officer. These notes are not system findings.</p><ul>${notes.map(n=>`<li><strong>${esc(n.cue_id)}</strong> [${esc(n.action||'noted')}]: ${esc(n.note||'(no text)')}</li>`).join('')}</ul></section>` : '';
+  document.getElementById('out').innerHTML = `
+    <section><h2>Disclaimer</h2>
+      <div class="notice"><p><strong>Notice:</strong> This export contains observed indicators and interview-support cues only. It does not contain findings, diagnoses, or determinations about credibility.</p>
+      <p><strong>Disclaimer:</strong> ${esc(pkg.disclaimer||'not provided')}</p></div>
+      <p><strong>Package type:</strong> ${esc(show(pkg.epistemic_status))} (observed indicators and cues only) &nbsp;|&nbsp; <strong>Definitive finding:</strong> ${esc(pkg.is_definitive_finding)}</p>
+    </section>
+    <section><h2>Gate / Process Status</h2>
+      <ul>
+        <li>Mode/context: ${esc(show(g.mode))}</li>
+        <li>Gate state: ${esc(g.gateState)}</li>
+        <li>Consent rechecked at seal: ${esc(show(g.consent))}</li>
+        <li>Training rechecked at seal: ${esc(show(g.training))}</li>
+        ${hi.length?`<li>High-priority cue IDs (dual-control workflow reference): <code>${esc(hi.join(', '))}</code></li>`:''}
+      </ul>
+    </section>
+    <section><h2>System-Observed Cues (for human review)</h2>
+      <table><thead><tr><th>Priority</th><th>Turn</th><th>Cue ID</th><th>Label</th><th>Score</th><th>Message</th></tr></thead><tbody>${rows}</tbody></table>
+      <p class="muted">Observations in package: ${obs.length}. If the package stores cues separately, they are shown above; otherwise cues may be derived by external tools.</p>
+    </section>
+    ${noteSec}
+    <section><h2>Hash / Metadata</h2>
+      <ul>
+        <li><strong>Product:</strong> ${esc(pkg.product||'CueLiez')}</li>
+        <li><strong>Product version:</strong> <code>${esc(show(pkg.product_version))}</code></li>
+        <li><strong>Schema version:</strong> <code>${esc(show(pkg.schema_version))}</code></li>
+        <li><strong>Package hash:</strong> <code>${esc(show(pkg.package_hash))}</code></li>
+        <li><strong>Sealed at (unix):</strong> ${esc(show(pkg.sealed_at))}</li>
+      </ul>
+    </section>`;
+}
+document.getElementById('render').onclick = () => {
+  document.getElementById('error').textContent = '';
+  try { render(JSON.parse(document.getElementById('input').value)); }
+  catch(e){ document.getElementById('error').textContent = 'Could not parse JSON: ' + e.message; }
+};
+const drop = document.getElementById('drop');
+drop.ondragover = e => { e.preventDefault(); };
+drop.ondrop = async e => { e.preventDefault(); const f = e.dataTransfer.files && e.dataTransfer.files[0]; if(!f) return; document.getElementById('input').value = await f.text(); document.getElementById('render').click(); };
+</script>
+</body>
+</html>

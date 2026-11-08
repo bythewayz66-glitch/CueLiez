@@ -73,6 +73,10 @@ PYTHONPATH=src python -m cueliez docs/examples/sample_transcript.json \
 
 Officer notes are human-authored context, not system findings. They must be attached before seal.
 
+## 5. Static sealed-package review (optional)
+
+For human review of an exported package JSON, open `docs/site/review.html` in a browser and paste/drop the JSON file. Rendering is client-side only (no upload). Disclaimer appears first; no auto-findings.
+
 ## Language and safety checks
 
 - All user-visible output should use observation/cue language only.
