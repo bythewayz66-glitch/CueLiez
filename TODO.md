@@ -21,20 +21,20 @@ Status key: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## Phase 1 — Production-Grade Observers (1–3 months)
 
-- [ ] Keep existing heuristic/rule observers as the fast, explainable baseline.
-- [ ] Layer lightweight ML / LLM-assisted observers for high-value signals (hedging, pronoun distancing, detail vagueness, claim conflicts, timeline inconsistency) behind feature flags or model_id versioning.
-- [ ] Ensure every observer emits gate-compatible observations (score + model_id + neutral label).
-- [ ] Add confidence calibration and explicit “insufficient data” / no-cue states.
-- [ ] Document model versions and provenance for every observer that is not pure rule-based.
-- [ ] Expand test coverage for new observers (neutral labels, confidence bounds, no verdict language).
+- [x] Keep existing heuristic/rule observers as the fast, explainable baseline. (Phase 1+2: kilo kept rule-based baseline; assisted prototype optional, off by default.)
+- [~] Layer lightweight ML / LLM-assisted observers for high-value signals (hedging, pronoun distancing, detail vagueness, claim conflicts, timeline inconsistency) behind feature flags or model_id versioning. (Phase 1+2: kilo added design doc + optional prototype `assisted.py` with `ASSISTED_OBSERVERS_ENABLED=False`; not enabled in runners/packs.)
+- [x] Ensure every observer emits gate-compatible observations (score + model_id + neutral label). (Phase 1+2: kilo contract tests.)
+- [x] Add confidence calibration and explicit “insufficient data” / no-cue states. (Phase 1+2: kilo documented heuristic [0,1] calibration; insufficient-data/no-cue tests.)
+- [x] Document model versions and provenance for every observer that is not pure rule-based. (Phase 1+2: kilo design doc + OBSERVER_INVENTORY updates.)
+- [x] Expand test coverage for new observers (neutral labels, confidence bounds, no verdict language). (Phase 1+2: kilo tests.)
 
 ---
 
 ## Phase 2 — Gated Modalities & Real-Time Delivery (2–4 months)
 
-- [ ] Keep feature / physiological / visual observers gated; do not enable by default in packs.
-- [ ] Build explicit consent + jurisdiction checks before enabling audio feature extraction or any camera/wearable input.
-- [ ] Prioritize audio-only real-time path first (prosody, speech rate, latency, pause patterns).
+- [x] Keep feature / physiological / visual observers gated; do not enable by default in packs. (Phase 1+2: kilo docs/gated design; assisted observers off by default.)
+- [~] Build explicit consent + jurisdiction checks before enabling audio feature extraction or any camera/wearable input. (Phase 1+2: kilo documented consent/jurisdiction checks; implementation pending partner demand.)
+- [~] Prioritize audio-only real-time path first (prosody, speech rate, latency, pause patterns). (Phase 1+2: kilo design doc for audio path; implementation pending.)
 - [x] Implement officer-facing delivery (onscreen overlay / tablet cues) that the subject does not see by default. (Low-distraction officer HTML surface + structured officer-only panel with turn-linked/glanceable cues, confidence/method provenance display, and acknowledge/dismiss/note capture; subject not shown this stream by default. Not a real-time streaming overlay yet.)
 - [x] Add optional officer response / note field for high-priority cues; include it in the sealed package. (Glyph capture/normalize/attach/export implemented; iceman confirmed seal preservation and canonical hash coverage; E2E verified.)
 - [x] Target end-to-end latency < 1–2 seconds for text cues on local or private-cloud instance. (Local 2026-11-08 reference: owner fixtures default text path ~2–5 ms in-process observe+cues+render; ~275–390 ms end-to-end CLI subprocess, `--no-seal`; environment-specific, not a guarantee. Documented in `docs/demo/VALIDATION_NOTES.md`.)
