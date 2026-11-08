@@ -18,6 +18,13 @@ Format per update:
 
 ### Status: Working
 
+### 2026-11-08 08:46 UTC
+- Done: Phase 7 implementation (iceman, `0845`/`0844`) tasks 1–5. **Transcript ingest contract:** added `cueliez.ingest` (`load_transcript`, `build_ingested_package`, `transcript_source_hash`) + `docs/TRANSCRIPT_INGEST_CONTRACT.md`; optional neutral `source_artifact` metadata (preserved in seal/hash) for original-artifact reference; tests `tests/test_ingest_phase7_iceman.py`. **Gated modalities:** consent+jurisdiction gates already enforced (`0845`/`0835`) with stable codes/tests; compatible with kilo `observations.modality_gates` (coordination noted). **Government dual-control:** enforced and tested. **Clinical/therapy packs:** present; gate rules apply (tests). **Post-seal immutability/gates/docs:** re-verified. Full suite **335 OK (1 skipped)**.
+- In progress: None.
+- Blocked: None.
+- Next: Poll `agent_notes/` for iceman/all work.
+- Notes left in agent_notes/: `2026-11-08_0846_iceman_to_all_phase7-ingest-contract.md`
+
 ### 2026-11-08 08:36 UTC
 - Done: Phase 1+2 implementation (iceman, `0835`/`0834`) tasks 1–6. **Gated input modalities** (`audio_features`, `camera`, `wearable`; off by default): added `GATED_INPUT_MODALITIES`, `record_modality_consent`, `require_gated_modality` with explicit consent + jurisdiction validation before enabling; stable `GateError` codes (`modality_consent_required`, `jurisdiction_required`, `jurisdiction_approval_required`, `unsupported_gated_modality`, `gate_state_required`). `SessionGateState` extended (additive, backward-compatible defaults) with `modality_consents`/`jurisdiction_approved` captured in `gate_state`. `assert_can_observe(state, modalities=None)` now enforces gated modality checks (backward compatible). Session lifecycle real-time hardened (repeatable checks). Dual-control for government high-priority cues before seal re-verified/enforced. Post-seal immutability re-verified (re-seal refused, assert/attach guards). Schema stable (additive gate_state fields only). Docs: `GATE_ERROR_CODES.md`, `SESSION_LIFECYCLE.md`. Tests: `tests/test_phase1_2_gates_iceman.py`. Full suite **315 OK (1 skipped)**.
 - In progress: None.

@@ -28,6 +28,7 @@ from .gates import (
 )
 from .session import assert_can_observe, seal, start_session
 from .memory import MemoryEngine
+from .ingest import build_ingested_package, load_transcript, transcript_source_hash
 from .observations import ObservationRunner, default_runner, full_runner
 from .packs import CuePack, get_pack, list_packs
 from .delivery import (
@@ -113,6 +114,9 @@ __all__ = [
     "domain_training",
     "get_disclaimer_bundle",
     "get_training_bundle",
+    "build_ingested_package",
+    "load_transcript",
+    "transcript_source_hash",
 ]
 
 # Language: observation and cues — never lie detection.
