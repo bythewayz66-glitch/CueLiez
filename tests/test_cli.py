@@ -98,3 +98,89 @@ class TestCLI(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+ROOT = Path(__file__).resolve().parents[1]
+OWNER = {
+    "clean": ROOT / "docs/examples/owner_clean_interview.json",
+    "conflict": ROOT / "docs/examples/owner_conflict_interview.json",
+    "hedging": ROOT / "docs/examples/owner_hedging_interview.json",
+}
+
+# Verdict/banned claim phrases that must not appear as assertions in outputs.
+# (The required disclaimer legitimately contains "not a lie detector"/"not a polygraph"; exports may include it.)
+FORBIDDEN_CLAIM_PHRASES = (
+    "subject is lying",
+    "subject is deceptive",
+    "confirms lying",
+    "proves deception",
+    "proves lying",
+    "truth detector",
+    "detects lies",
+    "lie detection result",
+    "guilty finding",
+    "diagnosed as",
+)
+
+
+def _assert_no_forbidden_claims(testcase, text, *, allow_disclaimer=False):
+    low = text.lower()
+    if allow_disclaimer:
+        # Remove the canonical disclaimer block's known negated references so we can still catch positive claims.
+        low = low.replace("not a lie detector, not a medical device, and not a polygraph", "")
+        low = low.replace("not a lie detector", "")
+    for bad in FORBIDDEN_CLAIM_PHRASES:
+        testcase.assertNotIn(bad, low, f"forbidden claim phrase {bad!r} found in output")
+
+
+class TestCLIOwnerTranscripts(unittest.TestCase):
+    def run_cli(self, *args):
+        env = dict(__import__("os").environ)
+        env["PYTHONPATH"] = str(ROOT / "src")
+        cmd = [sys.executable, "-m", "cueliez", *args]
+        return subprocess.run(cmd, capture_output=True, timeout=120, env=env, cwd=str(ROOT))
+
+    def test_owner_transcripts_show_cues_generic_no_seal(self):
+        for name, path in OWNER.items():
+            with self.subTest(transcript=name):
+                r = self.run_cli(str(path), "--mode", "generic", "--show-cues", "--no-seal")
+                self.assertEqual(r.returncode, 0, (name, r.stderr.decode(), r.stdout.decode()))
+                out = r.stdout.decode() + "\n" + r.stderr.decode()
+                self.assertIn("does not determine credibility or produce findings", out)
+                _assert_no_forbidden_claims(self, out, allow_disclaimer=True)
+                if '"cue_count": 0' not in out and "No observation cues" not in out:
+                    self.assertIn("Source", out)
+
+    def test_owner_transcripts_sealed_exports_and_hash(self):
+        from cueliez.gates import compute_package_hash
+
+        for name, path in OWNER.items():
+            with self.subTest(transcript=name):
+                with tempfile.TemporaryDirectory() as td:
+                    out = Path(td) / "out"
+                    r = self.run_cli(
+                        str(path), "--mode", "generic", "--show-cues",
+                        "--out-dir", str(out), "--basename", f"owner_{name}",
+                    )
+                    self.assertEqual(r.returncode, 0, (name, r.stderr.decode(), r.stdout.decode()))
+                    for ext, fn in (("json", f"owner_{name}.json"), ("md", f"owner_{name}.summary.md"), ("html", f"owner_{name}.summary.html")):
+                        self.assertTrue((out / fn).exists(), (name, ext, list(out.iterdir())))
+                    pkg = json.loads((out / f"owner_{name}.json").read_text(encoding="utf-8"))
+                    self.assertTrue(pkg.get("sealed"))
+                    self.assertIn("gate_state", pkg)
+                    ph = str(pkg.get("package_hash") or "")
+                    self.assertRegex(ph, r"^[0-9a-f]{64}$")
+                    self.assertEqual(pkg.get("epistemic_status"), "observed_indicator")
+                    self.assertFalse(pkg.get("is_definitive_finding"))
+                    self.assertIn("disclaimer", pkg)
+                    # Hash determinism on the exported structure (iceman owns canonicalization contract).
+                    self.assertEqual(compute_package_hash(pkg), compute_package_hash(json.loads(json.dumps(pkg))))
+                    md = (out / f"owner_{name}.summary.md").read_text(encoding="utf-8")
+                    html = (out / f"owner_{name}.summary.html").read_text(encoding="utf-8")
+                    _assert_no_forbidden_claims(self, md, allow_disclaimer=True)
+                    _assert_no_forbidden_claims(self, html, allow_disclaimer=True)
+                    obs = pkg.get("observations") or []
+                    if obs:
+                        self.assertTrue(
+                            ("Source (transcript)" in md) or ("Source (T" in md) or ("transcript" in md.lower()),
+                            f"{name}: expected source/transcript context in markdown when cues exist",
+                        )

@@ -198,6 +198,13 @@ Format per update:
 - Next: Align with kilo evidence field contract note when posted; continue polling.
 - Notes left in agent_notes/: (none)
 
+### 2026-11-08 09:15 UTC (hardening pass, owner transcripts — 0738)
+- Done: Read `2026-11-08_0735_orchestrator_to_all_hardening-pass-owner-transcripts.md` and `0738_orchestrator_to_glyph_hardening-pass-owner-transcripts.md` (`//an`, pulled from local `/tmp/opencode/CueLiez`). Updated `docs/demo/OPERATOR_DRY_RUN.md`: owner transcripts (`owner_clean/conflict/hedging_interview.json`) are preferred demos with copy-paste generic `--show-cues` commands, sealed/export example, expected counts after kilo hardening noted (clean 0, conflict ≥1 timeline cue, hedging several; current observer output may differ — contract-aware), sample transcript kept as minimal smoke; review page note clarified (disclaimer first, no auto-findings). Verified CLI runs for all 3 owner transcripts: `--show-cues` generic succeeds (exit 0), notice printed, `--no-seal` and sealed paths work; sealed exports include disclaimer, `gate_state`, 64-hex `package_hash`, `epistemic_status=observed_indicator`, `is_definitive_finding=false`. Wording audit (CLI/renderer/export/review/demo): observation/cue framing only, no verdict/auto-finding terms in rendered surfaces. Added `TestCLIOwnerTranscripts` in `tests/test_cli.py` (all 3 transcripts, no-seal+show-cues, sealed json/md/html exports created, seal/hash fields present and deterministic, no forbidden claim phrases, source quotes/context present when cues exist; cue counts flexible). Verified `docs/site/review.html` behavior (disclaimer first, no auto-findings; shows package `cues` when present — note in demo). Glyph-owned TODO unchanged (no completed glyph-owned checkbox items). Full suite green (`262 OK`, 1 skipped).
+- In progress: Polling `agent_notes/` for new `*_to_glyph_*`/`*_to_all_*` notes.
+- Blocked: None (observer cue-count expectations depend on kilo hardening; glyph tests/docs are contract-aware).
+- Next: Continue `//an` polling; adjust only if glyph contract/docs/tests need coordination.
+- Notes left in agent_notes/: (none)
+
 ---
 
 ## Cross-agent blockers
