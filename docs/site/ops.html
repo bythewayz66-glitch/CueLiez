@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CueLiez Ops — Progress & Test LLM</title>
+  <meta name="description" content="Private agent progress tracker and Pollinations test LLM for CueLiez. Not a lie detector.">
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+  <style>
+    :root {
+      --bg: #0c1522;
+      --fg: #e8f1fa;
+      --muted: #8aa0b8;
+      --accent: #7eb6e8;
+      --gold: #c5a46a;
+      --card: #132033;
+      --ok: #6bcf8e;
+      --warn: #e0b35a;
+      --border: #1e2f45;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      line-height: 1.55;
+    }
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    header a { color: var(--accent); text-decoration: none; }
+    header .brand { display: flex; align-items: center; gap: 0.75rem; font-weight: 600; }
+    header img { width: 36px; height: 36px; border-radius: 8px; }
+    main { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+    @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.15rem 1.25rem;
+    }
+    .card h2 {
+      margin: 0 0 0.75rem;
+      font-size: 1.05rem;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    .ban {
+      border-left: 3px solid var(--gold);
+      padding: 0.6rem 0.9rem;
+      background: #101c2c;
+      margin-bottom: 1.25rem;
+      font-size: 0.92rem;
+      color: var(--muted);
+    }
+    button, .btn {
+      background: var(--accent);
+      color: #0c1522;
+      border: none;
+      border-radius: 8px;
+      padding: 0.45rem 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    button.secondary {
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid var(--border);
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    textarea, input, select {
+      width: 100%;
+      background: #0c1522;
+      color: var(--fg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.6rem 0.75rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.88rem;
+    }
+    textarea { min-height: 110px; resize: vertical; }
+    label { display: block; font-size: 0.82rem; color: var(--muted); margin: 0.6rem 0 0.3rem; }
+    .row { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin-top: 0.75rem; }
+    pre, .mono {
+      background: #0c1522;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.85rem;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.82rem;
+      color: var(--muted);
+      max-height: 420px;
+    }
+    .agent-block { margin-bottom: 1rem; }
+    .agent-block h3 {
+      margin: 0 0 0.35rem;
+      font-size: 0.95rem;
+      color: var(--fg);
+    }
+    .status-pill {
+      display: inline-block;
+      font-size: 0.72rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 999px;
+      background: #1a2d44;
+      color: var(--ok);
+      margin-left: 0.35rem;
+    }
+    .meta { font-size: 0.8rem; color: var(--muted); margin-top: 0.5rem; }
+    .full { grid-column: 1 / -1; }
+    .error { color: #f0a0a0; }
+    .ok { color: var(--ok); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <img src="assets/logo.svg" alt="CueLiez" onerror="this.style.display='none'">
+      <span>CueLiez Ops</span>
+    </div>
+    <nav>
+      <a href="index.html">Home</a>
+      ·
+      <a href="https://github.com/bythewayz66-glitch/CueLiez" target="_blank" rel="noopener">GitHub</a>
+      ·
+      <a href="https://github.com/bythewayz66-glitch/CueLiez/tree/main/agent_notes" target="_blank" rel="noopener">agent_notes</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="ban">
+      <strong>Not a lie detector.</strong>
+      This page is an internal ops surface: agent progress + Pollinations <em>test-only</em> LLM.
+      Production implementation must stay private; Pollinations is not a required runtime dependency.
+    </div>
+
+    <div class="grid">
+      <!-- Progress -->
+      <section class="card">
+        <h2>
+          Agent progress
+          <button type="button" class="secondary" id="btnRefreshProgress">Refresh</button>
+        </h2>
+        <div id="progressStatus" class="meta">Loading…</div>
+        <div id="progressView" class="mono" style="margin-top:0.75rem; min-height: 200px;">—</div>
+        <div class="meta">
+          Source:
+          <a href="https://raw.githubusercontent.com/bythewayz66-glitch/CueLiez/main/agent_notes/PROGRESS.md" target="_blank" rel="noopener">PROGRESS.md</a>
+        </div>
+      </section>
+
+      <!-- Test LLM -->
+      <section class="card">
+        <h2>Test LLM (Pollinations)</h2>
+        <p class="meta" style="margin-top:0;">Keyless text endpoint for experiments only. Do not use for production seal path.</p>
+
+        <label for="llmPrompt">Prompt</label>
+        <textarea id="llmPrompt" placeholder="e.g. Rewrite this observation label to stay neutral and non-verdict…"></textarea>
+
+        <label for="llmModel">Model (optional)</label>
+        <input id="llmModel" placeholder="leave blank for default, or e.g. openai" value="">
+
+        <div class="row">
+          <button type="button" id="btnRunLlm">Run test</button>
+          <button type="button" class="secondary" id="btnClearLlm">Clear</button>
+          <span id="llmStatus" class="meta"></span>
+        </div>
+
+        <label>Response</label>
+        <pre id="llmOut">—</pre>
+      </section>
+
+      <!-- Notes list helper -->
+      <section class="card full">
+        <h2>
+          Recent agent_notes (raw index)
+          <button type="button" class="secondary" id="btnRefreshNotes">Refresh list</button>
+        </h2>
+        <div id="notesStatus" class="meta">—</div>
+        <div id="notesView" class="mono" style="margin-top:0.75rem;">Open GitHub agent_notes or refresh.</div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const REPO = "bythewayz66-glitch/CueLiez";
+    const BRANCH = "main";
+    const PROGRESS_URL = `https://raw.githubusercontent.com/${REPO}/${BRANCH}/agent_notes/PROGRESS.md`;
+    const NOTES_API = `https://api.github.com/repos/${REPO}/contents/agent_notes?ref=${BRANCH}`;
+
+    async function loadProgress() {
+      const status = document.getElementById("progressStatus");
+      const view = document.getElementById("progressView");
+      status.textContent = "Fetching PROGRESS.md…";
+      status.className = "meta";
+      try {
+        const res = await fetch(PROGRESS_URL + "?t=" + Date.now(), { cache: "no-store" });
+        if (!res.ok) throw new Error(res.status + " " + res.statusText);
+        const text = await res.text();
+        view.textContent = text;
+        status.textContent = "Updated " + new Date().toLocaleString();
+        status.className = "meta ok";
+      } catch (err) {
+        view.textContent = "Failed to load progress.\n" + err;
+        status.textContent = "Error loading progress";
+        status.className = "meta error";
+      }
+    }
+
+    async function loadNotesList() {
+      const status = document.getElementById("notesStatus");
+      const view = document.getElementById("notesView");
+      status.textContent = "Fetching agent_notes listing…";
+      try {
+        const res = await fetch(NOTES_API + "&t=" + Date.now(), {
+          headers: { Accept: "application/vnd.github+json" },
+          cache: "no-store"
+        });
+        if (!res.ok) throw new Error(res.status + " " + res.statusText);
+        const data = await res.json();
+        if (!Array.isArray(data)) throw new Error("Unexpected API response");
+        const lines = data
+          .filter(f => f.type === "file")
+          .sort((a, b) => (b.name > a.name ? 1 : -1))
+          .map(f => `${f.name}  (${f.size} bytes)\n  ${f.html_url}`);
+        view.textContent = lines.length ? lines.join("\n\n") : "(no files)";
+        status.textContent = data.length + " entries · " + new Date().toLocaleString();
+        status.className = "meta ok";
+      } catch (err) {
+        view.textContent = "Could not list notes via API (rate limit or network).\nOpen the folder on GitHub instead.\n" + err;
+        status.textContent = "List failed";
+        status.className = "meta error";
+      }
+    }
+
+    async function runTestLlm() {
+      const prompt = document.getElementById("llmPrompt").value.trim();
+      const model = document.getElementById("llmModel").value.trim();
+      const out = document.getElementById("llmOut");
+      const status = document.getElementById("llmStatus");
+      const btn = document.getElementById("btnRunLlm");
+
+      if (!prompt) {
+        status.textContent = "Enter a prompt";
+        status.className = "meta error";
+        return;
+      }
+
+      btn.disabled = true;
+      status.textContent = "Calling Pollinations…";
+      status.className = "meta";
+      out.textContent = "…";
+
+      try {
+        let url = "https://gen.pollinations.ai/text/" + encodeURIComponent(prompt);
+        if (model) url += (url.includes("?") ? "&" : "?") + "model=" + encodeURIComponent(model);
+        // cache-bust
+        url += (url.includes("?") ? "&" : "?") + "t=" + Date.now();
+
+        const res = await fetch(url, { method: "GET" });
+        const text = await res.text();
+        if (!res.ok) throw new Error(res.status + " " + res.statusText + "\n" + text);
+        out.textContent = text;
+        status.textContent = "OK · test-only endpoint";
+        status.className = "meta ok";
+      } catch (err) {
+        out.textContent = String(err);
+        status.textContent = "Request failed";
+        status.className = "meta error";
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    document.getElementById("btnRefreshProgress").addEventListener("click", loadProgress);
+    document.getElementById("btnRefreshNotes").addEventListener("click", loadNotesList);
+    document.getElementById("btnRunLlm").addEventListener("click", runTestLlm);
+    document.getElementById("btnClearLlm").addEventListener("click", () => {
+      document.getElementById("llmPrompt").value = "";
+      document.getElementById("llmOut").textContent = "—";
+      document.getElementById("llmStatus").textContent = "";
+    });
+
+    loadProgress();
+    loadNotesList();
+  </script>
+</body>
+</html>
