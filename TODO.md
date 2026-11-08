@@ -44,21 +44,21 @@ Status key: `[ ]` not started · `[~]` in progress · `[x]` done
 ## Phase 3 — Admissibility Hardening (Parallel, start immediately)
 
 ### 3.1 Language & Epistemic Status
-- [ ] Audit all code, docs, UI strings, and package fields for forbidden terms.
-- [ ] Force `epistemic_status = "observed_indicator"` and `is_definitive_finding = false` at every seal.
-- [ ] Embed canonical disclaimer in every sealed package.
-- [ ] Reject banned annotation keys and verdict labels at seal time (already partially present — complete and test).
+- [x] Audit all code, docs, UI strings, and package fields for forbidden terms. (Phase 3: kilo observer surface + glyph site/docs/exports audits + language tests extended.)
+- [x] Force `epistemic_status = "observed_indicator"` and `is_definitive_finding = false` at every seal.
+- [x] Embed canonical disclaimer in every sealed package.
+- [x] Reject banned annotation keys and verdict labels at seal time (already partially present — complete and test). (Phase 3: iceman banned keys/verdict labels rejected with GateError codes + tests.)
 
 ### 3.2 Consent, Training, Dual-Control Capture
-- [ ] Ensure full gate state (consent attester + timestamp, training version, dual-control records, intended uses) is serialized into the sealed package.
-- [ ] Make consent / training / dual-control failures produce clear, auditable GateError codes.
-- [ ] Add tests that prove packages cannot be sealed without required gates in high-stakes modes.
+- [x] Ensure full gate state (consent attester + timestamp, training version, dual-control records, intended uses) is serialized into the sealed package.
+- [x] Make consent / training / dual-control failures produce clear, auditable GateError codes. (Phase 3: iceman stable codes.)
+- [x] Add tests that prove packages cannot be sealed without required gates in high-stakes modes. (Phase 3: iceman tests.)
 
 ### 3.3 Package Integrity & Export
 - [x] Define and implement a stable sealed-package schema (JSON) that includes observations, cues, gate state, disclaimer, product/version, seal timestamp, session identifiers. (Iceman seal path + glyph export surfaces; `schema_version`/`gate_state`/`product_version`/`package_hash` present when sealed.)
 - [x] Add cryptographic hash (and later signature) of the package at seal time. (SHA-256 `package_hash` implemented by iceman; signature not yet implemented.)
 - [x] Provide durable export formats: signed/structured JSON + human-readable PDF. (Structured JSON + human-readable Markdown/HTML summaries; HTML is print/PDF-friendly. Cryptographic signing not yet implemented.)
-- [~] Prevent post-seal mutation of observations or epistemic fields. (Iceman `assert_not_sealed`/immutability guards and glyph pre-seal note attach refusal in place; broader API hardening ongoing.)
+- [x] Prevent post-seal mutation of observations or epistemic fields. (Phase 3: iceman re-seal refusal + broader immutability; glyph pre-seal note attach refusal.)
 
 ### 3.4 Human Judgment Preservation
 - [x] Officer action/note field for high-priority cues is optional but sealed when present. (Glyph capture/attach/export; iceman seal/hash confirmed; attach refused after seal.)
