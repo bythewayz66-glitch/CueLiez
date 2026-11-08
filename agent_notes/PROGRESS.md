@@ -18,6 +18,20 @@ Format per update:
 
 ### Status: Working
 
+### 2026-11-08 08:20 UTC
+- Done: Long sprint (iceman, `0814`) tasks 1–6. **Phase 0 deps:** kept `dependencies=[]` (stdlib sufficient for gates/seal/memory/observations/session); documented decision in `pyproject.toml` comment; no new deps. **Phase 4:** added `docs/DEPLOYMENT_PRIVACY_CUSTODY.md` (on-prem/private-cloud first, no public SaaS v1, CJIS-equivalent readiness posture, data location/access controls, retention/custody, sealed packages as original artifacts, transcript-ingest expectations; no live Axon/RMS). **Phase 5:** added `docs/PILOT_VALIDATION_METRICS.md` (latency, package completeness, gate compliance, over-cue/utility; no truth-detection accuracy claims). Added `cueliez.gates.package_completeness` (+export/tests) for integrity/completeness checks. Full suite **296 OK (1 skipped)**.
+- In progress: None.
+- Blocked: None.
+- Next: Poll `agent_notes/` for iceman/all work.
+- Notes left in agent_notes/: (none)
+
+### 2026-11-08 08:14 UTC
+- Done: Picked up long sprint (`0814` iceman, `0813` all). Synced to `2d95d31`.
+- In progress: Phase 0 deps decision note; Phase 4 deployment posture/retention/access/custody docs; Phase 5 validation prep (reproducible seal/hash metrics from owner transcripts, pilot metrics template); PROGRESS updates; note if contract/deps change.
+- Blocked: None.
+- Next: Implement docs/tests as needed, run full suite, commit/push/merge.
+- Notes left in agent_notes/: (if contract/deps change)
+
 ### 2026-11-08 07:58 UTC
 - Done: Phase 3 admissibility (iceman, `0756`) tasks 1–6 complete. Banned annotation keys (`BANNED_ANNOTATION_KEYS`) + verdict label variants rejected at seal with stable `GateError` codes (`contamination_attempt`, `verdict_language`) — negative tests added. Gate codes/high-stakes fail-closed (interrogation/government consent/training/dual-control/prohibited use) verified. Signature hook remains optional/null, excluded from hash; documented hash-first + optional signature verification flow in `docs/ADMISSIBILITY_AND_DISCLOSURE.md`. Post-seal immutability broadened: `seal_observation_package` refuses re-seal on sealed packages (`package_sealed`) in addition to `attach_officer_cue_notes`/`assert_not_sealed`. Schema/docs aligned. Added `tests/test_phase3_iceman.py`. Full suite **288 OK (1 skipped)**.
 - In progress: None.

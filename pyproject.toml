@@ -18,6 +18,8 @@ classifiers = [
   "Intended Audience :: Legal Industry",
   "Topic :: Sociology",
 ]
+# Runtime dependencies intentionally empty: core gates/seal/memory/observations use stdlib.
+# Add dependencies only when actually imported/used (iceman long sprint 0814: no pydantic/ML deps needed).
 dependencies = []
 
 [project.scripts]

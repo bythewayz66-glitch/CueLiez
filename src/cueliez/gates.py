@@ -304,6 +304,33 @@ def verify_package_hash(package: Any) -> bool:
     return compute_package_hash(package) == expected
 
 
+def package_completeness(package: Any) -> Dict[str, Any]:
+    """Report sealed-package completeness/integrity checks (observations only; no findings)."""
+    if not isinstance(package, dict):
+        return {"ok": False, "errors": ["not_a_dict"]}
+    errors = []
+    for k in ("schema_version", "product", "product_version", "epistemic_status", "origin",
+              "disclaimer", "disclaimer_version", "gate_state", "observations", "package_hash", "sealed_at"):
+        if k not in package or package.get(k) in (None, ""):
+            if k != "observations":  # observations can be empty list
+                errors.append(f"missing:{k}")
+    if "observations" not in package or not isinstance(package.get("observations"), list):
+        if "missing:observations" not in errors:
+            errors.append("invalid:observations")
+    if package.get("epistemic_status") != "observed_indicator":
+        errors.append("invalid:epistemic_status")
+    if package.get("is_definitive_finding") is not False:
+        errors.append("invalid:is_definitive_finding")
+    if package.get("origin") != "grounded":
+        errors.append("invalid:origin")
+    if not verify_package_hash(package):
+        errors.append("invalid:package_hash")
+    gs = package.get("gate_state")
+    if not isinstance(gs, dict):
+        errors.append("invalid:gate_state")
+    return {"ok": len(errors) == 0, "errors": errors}
+
+
 def custody_receipt(package: Any) -> Dict[str, Any]:
     """Minimal custody receipt (safe to share for process review; no findings)."""
     if not isinstance(package, dict):

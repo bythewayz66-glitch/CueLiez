@@ -88,3 +88,18 @@ class TestPhase3Immutability(unittest.TestCase):
         self.assertTrue(verify_package_hash(out))
         with self.assertRaises(GateError):
             assert_not_sealed(out)
+
+class TestValidationHelpers(unittest.TestCase):
+    def test_package_completeness_ok_for_sealed(self):
+        from cueliez.gates import package_completeness
+        out = seal_observation_package({"observations": [_valid_obs()]}, SessionGateState(mode="generic"))
+        rep = package_completeness(out)
+        self.assertTrue(rep["ok"], rep)
+
+    def test_package_completeness_detects_tamper(self):
+        from cueliez.gates import package_completeness
+        out = seal_observation_package({"observations": [_valid_obs()]}, SessionGateState(mode="generic"))
+        out["disclaimer"] = "tampered"
+        rep = package_completeness(out)
+        self.assertFalse(rep["ok"])
+        self.assertIn("invalid:package_hash", rep["errors"])
