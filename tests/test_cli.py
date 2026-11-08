@@ -56,6 +56,32 @@ class TestCLI(unittest.TestCase):
         self.assertIn("observation", text)
         self.assertNotIn("lie detector", text)
 
+    def test_non_generic_requires_gates_before_observe(self):
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+            json.dump(TRANSCRIPT, f)
+            path = f.name
+        try:
+            r = self.run_cli(path, "--mode", "interrogation", "--no-seal", "--print-json")
+            self.assertNotEqual(r.returncode, 0)
+            err = json.loads(r.stderr.decode())
+            self.assertIn(err.get("error_code"), {"consent_required", "training_required"})
+        finally:
+            Path(path).unlink(missing_ok=True)
+
+    def test_print_high_priority_cue_ids(self):
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+            json.dump(TRANSCRIPT, f)
+            path = f.name
+        try:
+            r = self.run_cli(path, "--no-seal", "--print-high-priority-cue-ids")
+            self.assertEqual(r.returncode, 0, r.stderr.decode() + r.stdout.decode())
+            data = json.loads(r.stdout.decode())
+            self.assertIn("high_priority_cue_ids", data)
+            self.assertIsInstance(data["high_priority_cue_ids"], list)
+            self.assertIn("notice", data)
+        finally:
+            Path(path).unlink(missing_ok=True)
+
 
 if __name__ == "__main__":
     unittest.main()

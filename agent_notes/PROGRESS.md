@@ -100,6 +100,13 @@ Format per update:
 - Next: Continue polling `agent_notes/` and handle new glyph/all notes or sprint directives.
 - Notes left in agent_notes/: (none)
 
+### 2026-11-08 07:05 UTC (Sprint 3)
+- Done: Read `2026-11-08_2345_orchestrator_to_glyph_sprint3.md` / `2345_orchestrator_to_all_sprint3.md` (`//an`). CLI session flow (interim, iceman helpers not yet merged): enforces gates before observation in required modes via existing `require_consent`/`require_training`, requires `--attested-by` with `--consent`, refuses attaching officer notes to already-sealed packages, surfaces/prints high-priority cue IDs for dual-control workflow (`--print-high-priority-cue-ids`) without fabricating dual-control records. Export v2: section order Disclaimer → Gate/process status → System-observed cues → Officer notes (human) → Hash/metadata; prominent `package_hash`/`schema_version`/`product_version`; gate_state/hash resilience; high-priority cue IDs shown when present. Added `docs/demo/OPERATOR_DRY_RUN.md`. Added CLI/export tests. Full suite passes (`224 OK`). Left coordination note for iceman session lifecycle API wiring.
+- In progress: Polling agent notes for more glyph-directed work.
+- Blocked: None (iceman session lifecycle helpers not merged yet; interim wrapper in place).
+- Next: Switch CLI to iceman `start_session`/`assert_can_observe`/`seal` helpers when available; continue polling `agent_notes/`.
+- Notes left in agent_notes/: `2026-11-08_0645_glyph_to_iceman_cli-session-helpers.md`
+
 ---
 
 ## Cross-agent blockers

@@ -20,9 +20,17 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .delivery import OnscreenCueRenderer, cues_from_observations
-from .delivery.notes import attach_officer_cue_notes, normalize_officer_cue_notes
+from .delivery.notes import attach_officer_cue_notes
 from .export import export_sealed_package
-from .gates import SessionGateState, check_prohibited_uses, record_consent, seal_observation_package
+from .gates import (
+    GateError,
+    SessionGateState,
+    check_prohibited_uses,
+    record_consent,
+    require_consent,
+    require_training,
+    seal_observation_package,
+)
 from .observations import default_runner, full_runner
 from .packs import get_pack
 
@@ -50,24 +58,37 @@ def _load_json_file(path: Optional[str]) -> Optional[Any]:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
+def _package_is_sealed(package: Dict[str, Any]) -> bool:
+    return bool(package.get("sealed_at") or package.get("package_hash") or package.get("sealed") is True)
+
+
+def _high_priority_cue_ids(cues) -> List[str]:
+    return [c.cue_id for c in cues if getattr(c, "priority", "") == "high" or getattr(c, "priority", "") == "critical"]
+
+
 def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="cueliez",
         description="CueLiez operator entry point: transcript -> observations/cues -> gated sealed package + exports.",
-        epilog="Sample fixture: docs/examples/sample_transcript.json (run with --no-seal for a dry demo).",
+        epilog=(
+            "Sample fixture: docs/examples/sample_transcript.json (run with --no-seal for a dry demo). "
+            "For non-generic modes, provide consent/training flags required by gates before observation."
+        ),
     )
     p.add_argument("transcript", nargs="?", default="-", help="Transcript JSON file, or '-' for stdin.")
     p.add_argument("--pack", help="Cue pack id (e.g., gov, leg, med, thrp). If omitted, uses runner.")
     p.add_argument("--runner", choices=["default", "full"], default="default", help="Observation runner when --pack is not set.")
     p.add_argument("--mode", choices=["generic", "interrogation", "therapy", "clinical", "government"], default="generic", help="Gate/session mode.")
-    p.add_argument("--consent", action="store_true", help="Record affirmative consent (requires --attested-by for gated modes).")
+    p.add_argument("--consent", action="store_true", help="Record affirmative consent (with --attested-by).")
     p.add_argument("--attested-by", help="Consent attester ID (officer/clinician identifier).")
-    p.add_argument("--subject-id", help="Optional subject/session subject identifier.")
+    p.add_argument("--subject-id", help="Optional subject/session identifier.")
     p.add_argument("--jurisdiction", help="Optional jurisdiction/context label.")
     p.add_argument("--training-ack", action="store_true", help="Acknowledge operator training.")
-    p.add_argument("--training-version", help="Training version identifier (required with --training-ack in gated modes).")
+    p.add_argument("--training-version", help="Training version identifier.")
     p.add_argument("--intended-use", action="append", default=[], dest="intended_uses", help="Intended use label. May be repeated.")
     p.add_argument("--high-priority-cue-id", action="append", default=[], dest="high_priority_cue_ids", help="Cue ID requiring dual-control in government mode before seal.")
+    p.add_argument("--print-high-priority-cue-ids", action="store_true", help="Print high-priority cue IDs for dual-control workflow and exit before seal/export unless --continue-after-print is set.")
+    p.add_argument("--continue-after-print", action="store_true", help="With --print-high-priority-cue-ids, continue to seal/export after printing.")
     p.add_argument("--officer-notes", help="JSON file containing officer cue notes/actions to attach before sealing.")
     p.add_argument("--out-dir", help="Directory to write exported package files.")
     p.add_argument("--basename", default="sealed_package", help="Export basename.")
@@ -97,47 +118,70 @@ def run_cli(argv: Optional[List[str]] = None) -> int:
             state = pack.make_gate_state(intended_uses=list(args.intended_uses), jurisdiction=args.jurisdiction, subject_id=args.subject_id)
             annotations["cue_pack"] = pack.id
             annotations["cue_pack_mode"] = pack.mode
-            if args.mode == "generic":
-                state.mode = pack.mode  # align gates to pack unless explicitly generic requested? keep explicit mode precedence
-                args.mode = pack.mode
+            # Keep explicit mode authoritative when user set it; pack default otherwise.
+            if args.mode != "generic":
+                state.mode = args.mode
+            else:
+                args.mode = state.mode
+                annotations["mode"] = state.mode
+        else:
+            state = SessionGateState(mode=args.mode, intended_uses=list(args.intended_uses), jurisdiction=args.jurisdiction, subject_id=args.subject_id)
+
+        if args.consent:
+            if not args.attested_by:
+                raise GateError("consent_attester_required", "--consent requires --attested-by.")
+            record_consent(state, attested_by=args.attested_by, subject_id=args.subject_id, jurisdiction=args.jurisdiction)
+        if args.training_ack:
+            state.training_acknowledged = True
+            state.training_version = args.training_version
+
+        # Interim session flow: refuse to run observers if required gates are not satisfied.
+        # Switch to iceman start_session/assert_can_observe helpers when available.
+        if state.requires_consent() or state.requires_training():
+            require_consent(state, action="observe")
+            require_training(state)
+
+        if args.pack:
             raw_package = pack.build_package(transcript, annotations=annotations)
             observations = raw_package.get("observations") or []
         else:
-            state = SessionGateState(mode=args.mode, intended_uses=list(args.intended_uses), jurisdiction=args.jurisdiction, subject_id=args.subject_id)
             runner = full_runner() if args.runner == "full" else default_runner()
             raw_package = runner.build_package(transcript, annotations=annotations)
             observations = raw_package.get("observations") or []
 
-        if args.consent and args.attested_by:
-            record_consent(state, attested_by=args.attested_by, subject_id=args.subject_id, jurisdiction=args.jurisdiction)
-        if args.training_ack:
-            state.training_acknowledged = True
-            if args.training_version:
-                state.training_version = args.training_version
-
         cues = cues_from_observations(observations, min_score=args.min_score, max_cues=args.max_cues)
+        hi_ids = _high_priority_cue_ids(cues)
+
         if args.show_cues:
             print(OnscreenCueRenderer().render_text(cues, header="CueLiez Observation Cues"))
             print()
+
+        if args.print_high_priority_cue_ids:
+            print(json.dumps({"high_priority_cue_ids": hi_ids, "notice": HONEST_NOTICE}, ensure_ascii=False))
+            if not args.continue_after_print:
+                return 0
 
         package = dict(raw_package)
         officer_notes = _load_json_file(args.officer_notes)
         if officer_notes is not None:
             if isinstance(officer_notes, dict) and "officer_cue_notes" in officer_notes:
                 officer_notes = officer_notes["officer_cue_notes"]
+            if _package_is_sealed(package):
+                raise GateError("sealed_package_immutable", "Officer notes must be attached before seal; package is already sealed.")
             package = attach_officer_cue_notes(package, officer_notes)
 
         if not args.no_seal:
-            package = seal_observation_package(package, state, high_priority_cue_ids=args.high_priority_cue_ids)
+            dual_ids = list(args.high_priority_cue_ids) or hi_ids if state.mode == "government" else list(args.high_priority_cue_ids)
+            # glyph surfaces high-priority ids; do not fabricate dual-control records.
+            package = seal_observation_package(package, state, high_priority_cue_ids=dual_ids)
 
         formats = args.formats or ["json", "md", "html"]
-        exported = {}
         if args.out_dir:
             exported = export_sealed_package(package, args.out_dir, basename=args.basename, formats=formats, cues=cues, observations=observations)
-            print(json.dumps({"ok": True, "notice": HONEST_NOTICE, "cue_count": len(cues), "observation_count": len(observations), "sealed": not args.no_seal, "exports": exported}, ensure_ascii=False))
+            print(json.dumps({"ok": True, "notice": HONEST_NOTICE, "cue_count": len(cues), "observation_count": len(observations), "high_priority_cue_ids": hi_ids, "sealed": not args.no_seal, "exports": exported}, ensure_ascii=False))
 
         if args.print_json or not args.out_dir:
-            print(json.dumps(package, indent=2, ensure_ascii=False))
+            print(json.dumps(package, indent=2, ensure_ascii=False, default=str))
 
         return 0
     except Exception as e:

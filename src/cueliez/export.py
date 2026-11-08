@@ -34,11 +34,7 @@ def _gate_summary(package: Mapping[str, Any]) -> Dict[str, Any]:
     firewall = package.get("firewall") if isinstance(package.get("firewall"), Mapping) else {}
     annotations = package.get("annotations") if isinstance(package.get("annotations"), Mapping) else {}
     gate_state = package.get("gate_state") if isinstance(package.get("gate_state"), Mapping) else {}
-    mode = (
-        gate_state.get("mode")
-        or annotations.get("mode")
-        or annotations.get("cue_pack_mode")
-    )
+    mode = gate_state.get("mode") or annotations.get("mode") or annotations.get("cue_pack_mode")
     dual_control_records = gate_state.get("dual_control_records")
     if dual_control_records is None:
         dual_control_records = package.get("dual_control_records") if "dual_control_records" in package else annotations.get("dual_control_records")
@@ -81,6 +77,10 @@ def _cue_events(
     return [c.to_dict() if isinstance(c, CueEvent) else dict(c) for c in cues]
 
 
+def _high_priority_cue_ids(cue_events: Sequence[Mapping[str, Any]]) -> List[str]:
+    return [str(c.get("cue_id")) for c in cue_events if c.get("priority") in {"high", "critical"} and c.get("cue_id")]
+
+
 def render_package_summary_markdown(
     package: Mapping[str, Any],
     *,
@@ -93,33 +93,22 @@ def render_package_summary_markdown(
     cue_events = _cue_events(pkg, cues, observations)
     notes = normalize_officer_cue_notes(pkg.get(OFFICER_CUE_NOTES_KEY))
     gates = _gate_summary(pkg)
+    hi_ids = _high_priority_cue_ids(cue_events)
     disclaimer = str(pkg.get("disclaimer") or "not provided")
     lines: List[str] = []
     lines.append("# CueLiez Package Summary")
     lines.append("")
-    lines.append(f"**Product:** {pkg.get('product', 'CueLiez')}")
-    lines.append(f"**Product version:** {_display_value(pkg.get('product_version'))}")
-    lines.append(f"**Schema version:** {_display_value(pkg.get('schema_version'))}")
-    lines.append(f"**Package type:** {_display_value(pkg.get('epistemic_status'))} (observed indicators and cues only)")
-    lines.append(f"**Definitive finding:** {pkg.get('is_definitive_finding', False)}")
-    lines.append(f"**Origin:** {_display_value(pkg.get('origin'))}")
-    if pkg.get("session_id"):
-        lines.append(f"**Session ID:** {pkg.get('session_id')}")
-    if pkg.get("seal_id"):
-        lines.append(f"**Seal ID:** {pkg.get('seal_id')}")
-    lines.append(f"**Sealed at (unix):** {_display_value(pkg.get('sealed_at'))}")
-    lines.append(f"**Package hash:** {_display_value(pkg.get('package_hash'))}")
-    lines.append(f"**Gate state:** {'present' if gates.get('gate_state_present') else 'not provided'}")
-    lines.append("")
-    lines.append("## Notice")
+    lines.append("## Disclaimer")
     lines.append("")
     lines.append(EXPORT_NOTICE)
     lines.append("")
     lines.append(f"**Disclaimer:** {disclaimer}")
+    lines.append(f"**Package type:** {_display_value(pkg.get('epistemic_status'))} (observed indicators and cues only) — **Definitive finding:** {pkg.get('is_definitive_finding', False)}")
     lines.append("")
-    lines.append("## Gate / Consent Status (at a glance)")
+    lines.append("## Gate / Process Status")
     lines.append("")
     lines.append(f"- Mode/context: {_display_value(gates.get('mode'))}")
+    lines.append(f"- Gate state: {'present' if gates.get('gate_state_present') else 'not provided'}")
     lines.append(f"- Consent rechecked at seal: {_display_value(gates.get('consent_rechecked'))}")
     lines.append(f"- Training rechecked at seal: {_display_value(gates.get('training_rechecked'))}")
     if gates.get("gate_state_present"):
@@ -132,6 +121,8 @@ def render_package_summary_markdown(
         lines.append(f"- Dual-control records present: {len(dc) if isinstance(dc, list) else 'yes'}")
     if gates.get("intended_uses") is not None:
         lines.append(f"- Intended uses: {_display_value(gates.get('intended_uses'))}")
+    if hi_ids:
+        lines.append(f"- High-priority cue IDs (dual-control workflow reference): {', '.join(hi_ids)}")
     lines.append("")
     lines.append("## System-Observed Cues (for human review)")
     lines.append("")
@@ -155,8 +146,18 @@ def render_package_summary_markdown(
                          + (f" (officer {n.get('officer_id')})" if n.get('officer_id') else "")
                          + f": {n.get('note') or '(no text)'}")
     lines.append("")
-    lines.append("## Counts")
+    lines.append("## Hash / Metadata")
     lines.append("")
+    lines.append(f"- **Product:** {pkg.get('product', 'CueLiez')}")
+    lines.append(f"- **Product version:** {_display_value(pkg.get('product_version'))}")
+    lines.append(f"- **Schema version:** {_display_value(pkg.get('schema_version'))}")
+    lines.append(f"- **Origin:** {_display_value(pkg.get('origin'))}")
+    if pkg.get("session_id"):
+        lines.append(f"- **Session ID:** {pkg.get('session_id')}")
+    if pkg.get("seal_id"):
+        lines.append(f"- **Seal ID:** {pkg.get('seal_id')}")
+    lines.append(f"- **Sealed at (unix):** {_display_value(pkg.get('sealed_at'))}")
+    lines.append(f"- **Package hash:** {_display_value(pkg.get('package_hash'))}")
     lines.append(f"- Observations in package: {len(obs)}")
     lines.append(f"- Cues rendered: {len(cue_events)}")
     lines.append(f"- Officer note records (human): {len(notes)}")
@@ -179,12 +180,15 @@ def render_package_summary_html(
     cue_events = _cue_events(pkg, cues, observations)
     notes = normalize_officer_cue_notes(pkg.get(OFFICER_CUE_NOTES_KEY))
     gates = _gate_summary(pkg)
+    hi_ids = _high_priority_cue_ids(cue_events)
     disclaimer = html.escape(str(pkg.get("disclaimer") or "not provided"))
     notice = html.escape(EXPORT_NOTICE)
     rows = []
     for c in cue_events:
-        rows.append("<tr>"
-                    f"<td>{html.escape(str(c.get('priority','')))}</td>"
+        prio = html.escape(str(c.get('priority','')))
+        cls = " class='high-priority'" if c.get('priority') in {'high','critical'} else ""
+        rows.append(f"<tr{cls}>"
+                    f"<td>{prio}</td>"
                     f"<td>{html.escape(str(c.get('turn_index','')))}</td>"
                     f"<td><code>{html.escape(str(c.get('cue_id','')))}</code></td>"
                     f"<td>{html.escape(str(c.get('label','')))}</td>"
@@ -199,8 +203,8 @@ def render_package_summary_html(
             + (f" (officer {html.escape(str(n.get('officer_id')))})" if n.get('officer_id') else "")
             + f"]: {html.escape(str(n.get('note') or '(no text)'))}</li>" for n in notes
         )
-        notes_section = f"<h2>Officer Notes (Human)</h2><p>Human-authored context recorded by the reviewing officer. These notes are not system findings.</p><ul>{note_items}</ul>"
-    gate_state_line = f"<li>Gate state: {html.escape('present' if gates.get('gate_state_present') else 'not provided')}</li>"
+        notes_section = f"<section><h2>Officer Notes (Human)</h2><p>Human-authored context recorded by the reviewing officer. These notes are not system findings.</p><ul>{note_items}</ul></section>"
+    hi_line = f"<li>High-priority cue IDs (dual-control workflow reference): <code>{html.escape(', '.join(hi_ids))}</code></li>" if hi_ids else ""
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -213,30 +217,43 @@ def render_package_summary_html(
     table {{ border-collapse: collapse; width: 100%; font-size: 14px; }}
     th, td {{ border: 1px solid #ddd; padding: 8px; vertical-align: top; }}
     th {{ background: #fafafa; text-align: left; }}
-    code {{ font-size: 12px; }}
+    code {{ font-size: 12px; overflow-wrap: anywhere; }}
+    .high-priority td:first-child {{ font-weight: 700; }}
   </style>
 </head>
 <body>
   <h1>{html.escape(title)}</h1>
-  <p><strong>Product:</strong> {html.escape(str(pkg.get('product','CueLiez')))} &nbsp;|&nbsp;
-     <strong>Product version:</strong> {html.escape(_display_value(pkg.get('product_version')))} &nbsp;|&nbsp;
-     <strong>Schema version:</strong> {html.escape(_display_value(pkg.get('schema_version')))} &nbsp;|&nbsp;
-     <strong>Status:</strong> {html.escape(_display_value(pkg.get('epistemic_status')))} (observed indicators and cues only) &nbsp;|&nbsp;
-     <strong>Definitive finding:</strong> {html.escape(str(pkg.get('is_definitive_finding', False)))} &nbsp;|&nbsp;
-     <strong>Package hash:</strong> <code>{html.escape(_display_value(pkg.get('package_hash')))}</code></p>
-  <div class="notice"><p><strong>Notice:</strong> {notice}</p><p><strong>Disclaimer:</strong> {disclaimer}</p></div>
-  <h2>Gate / Consent Status (at a glance)</h2>
-  <ul>
-    <li>Mode/context: {html.escape(_display_value(gates.get('mode')))}</li>
-    <li>Consent rechecked at seal: {html.escape(_display_value(gates.get('consent_rechecked')))}</li>
-    <li>Training rechecked at seal: {html.escape(_display_value(gates.get('training_rechecked')))}</li>
-    {gate_state_line}
-  </ul>
-  <h2>System-Observed Cues (for human review)</h2>
-  <table><thead><tr><th>Priority</th><th>Turn</th><th>Cue ID</th><th>Label</th><th>Score</th><th>Message</th></tr></thead><tbody>{cue_body}</tbody></table>
+  <section>
+    <h2>Disclaimer</h2>
+    <div class="notice"><p><strong>Notice:</strong> {notice}</p><p><strong>Disclaimer:</strong> {disclaimer}</p></div>
+    <p><strong>Package type:</strong> {html.escape(_display_value(pkg.get('epistemic_status')))} (observed indicators and cues only) &nbsp;|&nbsp; <strong>Definitive finding:</strong> {html.escape(str(pkg.get('is_definitive_finding', False)))}</p>
+  </section>
+  <section>
+    <h2>Gate / Process Status</h2>
+    <ul>
+      <li>Mode/context: {html.escape(_display_value(gates.get('mode')))}</li>
+      <li>Gate state: {html.escape('present' if gates.get('gate_state_present') else 'not provided')}</li>
+      <li>Consent rechecked at seal: {html.escape(_display_value(gates.get('consent_rechecked')))}</li>
+      <li>Training rechecked at seal: {html.escape(_display_value(gates.get('training_rechecked')))}</li>
+      {hi_line}
+    </ul>
+  </section>
+  <section>
+    <h2>System-Observed Cues (for human review)</h2>
+    <table><thead><tr><th>Priority</th><th>Turn</th><th>Cue ID</th><th>Label</th><th>Score</th><th>Message</th></tr></thead><tbody>{cue_body}</tbody></table>
+  </section>
   {notes_section}
-  <h2>Counts</h2>
-  <ul><li>Observations in package: {len(obs)}</li><li>Cues rendered: {len(cue_events)}</li><li>Officer note records (human): {len(notes)}</li></ul>
+  <section>
+    <h2>Hash / Metadata</h2>
+    <ul>
+      <li><strong>Product:</strong> {html.escape(str(pkg.get('product','CueLiez')))}</li>
+      <li><strong>Product version:</strong> <code>{html.escape(_display_value(pkg.get('product_version')))}</code></li>
+      <li><strong>Schema version:</strong> <code>{html.escape(_display_value(pkg.get('schema_version')))}</code></li>
+      <li><strong>Package hash:</strong> <code>{html.escape(_display_value(pkg.get('package_hash')))}</code></li>
+      <li><strong>Sealed at (unix):</strong> {html.escape(_display_value(pkg.get('sealed_at')))}</li>
+      <li>Observations in package: {len(obs)} | Cues rendered: {len(cue_events)} | Officer note records (human): {len(notes)}</li>
+    </ul>
+  </section>
   <hr/>
   <p>Generated for review and evidence-system attachment without reinterpretation. Observed indicators and cues only; human judgment remains required.</p>
 </body>

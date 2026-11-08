@@ -38,11 +38,21 @@ class TestExportSurfaces(unittest.TestCase):
         self.assertIn("observed indicators and cues only", low)
         self.assertIn("disclaimer", low)
         self.assertIn("not a lie detector", low)  # canonical disclaimer
-        self.assertIn("gate / consent status", low)
+        self.assertIn("gate / process status", low)
         self.assertIn("system-observed cues", low)
+        self.assertIn("hash / metadata", low)
         self.assertNotIn("officer notes (human)", low)  # only when notes exist
         for bad in ("detects lies", "lie detection engine", "subject is lying", "truth score", "proves deception", "confirms lying"):
             self.assertNotIn(bad, low)
+
+    def test_export_v2_section_order_and_metadata(self):
+        pkg = sealed_pkg()
+        md = render_package_summary_markdown(pkg)
+        self.assertLess(md.index("## Disclaimer"), md.index("## Gate / Process Status"))
+        self.assertLess(md.index("## Gate / Process Status"), md.index("## System-Observed Cues"))
+        self.assertLess(md.index("## System-Observed Cues"), md.index("## Hash / Metadata"))
+        self.assertIn("package hash", md.lower())
+        self.assertIn("schema version", md.lower())
 
     def test_html_has_required_framing(self):
         h = render_package_summary_html(sealed_pkg())
@@ -50,7 +60,8 @@ class TestExportSurfaces(unittest.TestCase):
         self.assertIn("observed indicators and cues only", low)
         self.assertIn("disclaimer", low)
         self.assertIn("not a lie detector", low)  # canonical disclaimer
-        self.assertIn("gate / consent status", low)
+        self.assertIn("gate / process status", low)
+        self.assertIn("hash / metadata", low)
         for bad in ("detects lies", "lie detection engine", "subject is lying", "truth score", "proves deception", "confirms lying"):
             self.assertNotIn(bad, low)
 

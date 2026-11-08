@@ -1,0 +1,78 @@
+# CueLiez Operator Dry Run
+
+This is a safe, local dry run using the sample transcript fixture. CueLiez produces **observation cues for human review only** — not findings, diagnoses, or determinations about credibility.
+
+## Prerequisites
+
+From the repository root:
+
+```bash
+export PYTHONPATH=src
+```
+
+Fixture transcript: `docs/examples/sample_transcript.json`
+
+## 1. Dry demo (no seal)
+
+Runs observations and renders cues without applying seal/gate state:
+
+```bash
+PYTHONPATH=src python -m cueliez docs/examples/sample_transcript.json --no-seal --show-cues
+```
+
+Expected:
+- Observation cues are printed (glanceable, priority/turn-linked text).
+- Output states cues are for professional review / not findings.
+- No forbidden verdict language appears.
+
+## 2. Gated seal + export (non-generic example)
+
+For modes that require gates, provide consent/training flags before observation/seal:
+
+```bash
+PYTHONPATH=src python -m cueliez docs/examples/sample_transcript.json \
+  --mode interrogation \
+  --consent --attested-by officer-a \
+  --training-ack --training-version v1 \
+  --out-dir ./out/dry-run \
+  --basename dry_run
+```
+
+Expected:
+- Gates are checked before observation in required modes.
+- A sealed package is produced with forced `epistemic_status=observed_indicator`, `is_definitive_finding=false`, disclaimer, `gate_state`, and `package_hash` (when iceman seal path is used).
+- Exports are written:
+  - `./out/dry-run/dry_run.json` (structured package)
+  - `./out/dry-run/dry_run.summary.md` (human-readable)
+  - `./out/dry-run/dry_run.summary.html` (print/PDF-friendly)
+
+## 3. High-priority cue IDs (dual-control workflow reference)
+
+To display cue IDs that may need dual-control handling in applicable workflows:
+
+```bash
+PYTHONPATH=src python -m cueliez docs/examples/sample_transcript.json \
+  --no-seal --print-high-priority-cue-ids
+```
+
+Glyph displays/exports these IDs only; it does not create dual-control records.
+
+## 4. Officer notes (before seal only)
+
+Export officer actions from the officer HTML surface as JSON, then attach before sealing:
+
+```bash
+PYTHONPATH=src python -m cueliez docs/examples/sample_transcript.json \
+  --mode interrogation --consent --attested-by officer-a \
+  --training-ack --training-version v1 \
+  --officer-notes ./officer_cue_notes.json \
+  --out-dir ./out/dry-run-notes
+```
+
+Officer notes are human-authored context, not system findings. They must be attached before seal.
+
+## Language and safety checks
+
+- All user-visible output should use observation/cue language only.
+- No "lie detector", truth/deception verdicts, diagnoses, or automated findings.
+- Human judgment remains required.
