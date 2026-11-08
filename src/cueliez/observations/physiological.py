@@ -14,7 +14,9 @@ from typing import Any, Mapping, Sequence
 from .base import ObservationResult, clamp01, is_subject_turn, make_observation
 
 
-def _feat(turn: Mapping[str, Any], *keys: str) -> float | None:
+def _feat(turn: Any, *keys: str) -> float | None:
+    if not isinstance(turn, Mapping):
+        return None
     for k in keys:
         v = turn.get(k)
         if isinstance(v, (int, float)):

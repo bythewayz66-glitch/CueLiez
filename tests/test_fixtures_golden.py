@@ -6,7 +6,7 @@ from cueliez.observations import default_runner
 from cueliez.observations.base import FORBIDDEN_LABELS
 from cueliez.packs import get_pack
 
-FIXTURES = Path(__file__).resolve().parent / "fixtures"
+FIXTURES = Path(__file__).resolve().parent / "fixtures" / "transcripts"
 
 
 def load(name: str):
@@ -31,7 +31,7 @@ class TestGoldenFixtures(unittest.TestCase):
             self.assertIn(o.get("priority"), ("normal", "high"), f"invalid priority: {o}")
 
     def test_clean_consistent_few_high_priority(self):
-        t = load("transcript_clean_consistent.json")
+        t = load("clean_consistent.json")
         pkg = default_runner().build_package(t, session_id="fixture-clean")
         obs = pkg["observations"]
         self._assert_observation_contract(obs)
@@ -42,7 +42,7 @@ class TestGoldenFixtures(unittest.TestCase):
         self._assert_observation_contract(pkg2["observations"])
 
     def test_claim_conflict_fixture_triggers_expected(self):
-        t = load("transcript_claim_conflict.json")
+        t = load("claim_conflict.json")
         pkg = default_runner().build_package(t, session_id="fixture-conflict")
         obs = pkg["observations"]
         self._assert_observation_contract(obs)
@@ -59,7 +59,7 @@ class TestGoldenFixtures(unittest.TestCase):
             self.assertTrue(all(str(o.get("cue_id", "")).startswith("cue-") for o in conflicts))
 
     def test_hedging_vague_fixture_triggers_linguistic(self):
-        t = load("transcript_hedging_vague.json")
+        t = load("hedging_vague.json")
         pkg = default_runner().build_package(t, session_id="fixture-hedge-vague")
         obs = pkg["observations"]
         self._assert_observation_contract(obs)
@@ -71,8 +71,38 @@ class TestGoldenFixtures(unittest.TestCase):
         leg_obs = get_pack("leg").build_package(t)["observations"]
         self._assert_observation_contract(leg_obs)
 
+    def test_evasion_short_fixture_triggers_behavioral(self):
+        t = load("evasion_short.json")
+        pkg = default_runner().build_package(t, session_id="fixture-evasion")
+        obs = pkg["observations"]
+        self._assert_observation_contract(obs)
+        methods = {o.get("method", "") for o in obs}
+        labels = {o.get("label", "") for o in obs}
+        self.assertTrue(
+            any("evasion" in m or "answer_length" in m for m in methods)
+            or "question_deflection_markers_present" in labels
+            or "notably_brief_response_observed" in labels,
+            f"expected evasion/brief-response observation, got methods={sorted(methods)} labels={sorted(labels)}",
+        )
+        leg_obs = get_pack("leg").build_package(t)["observations"]
+        self._assert_observation_contract(leg_obs)
+
+    def test_multi_turn_drift_fixture_triggers_consistency(self):
+        t = load("multi_turn_drift.json")
+        pkg = default_runner().build_package(t, session_id="fixture-drift")
+        obs = pkg["observations"]
+        self._assert_observation_contract(obs)
+        methods = {o.get("method", "") for o in obs}
+        labels = {o.get("label", "") for o in obs}
+        self.assertTrue(
+            any("detail_drift" in m for m in methods) or "numeric_detail_drift_observed" in labels,
+            f"expected detail drift observation, got methods={sorted(methods)} labels={sorted(labels)}",
+        )
+        leg_obs = get_pack("leg").build_package(t)["observations"]
+        self._assert_observation_contract(leg_obs)
+
     def test_cue_ids_are_deterministic(self):
-        t = load("transcript_claim_conflict.json")
+        t = load("claim_conflict.json")
         a = default_runner().build_package(t)["observations"]
         b = default_runner().build_package(t)["observations"]
         ids_a = sorted(o.get("cue_id") for o in a)

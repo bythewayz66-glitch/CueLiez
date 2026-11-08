@@ -27,7 +27,9 @@ _EVASION_PATTERNS = [
 _FILLER_RE = re.compile(r"\b(um+|uh+|er+|ah+|hmm+|mm+)\b", re.I)
 
 
-def _num(turn: Mapping[str, Any], *keys: str) -> float | None:
+def _num(turn: Any, *keys: str) -> float | None:
+    if not isinstance(turn, Mapping):
+        return None
     for k in keys:
         v = turn.get(k)
         if isinstance(v, (int, float)):
@@ -260,7 +262,8 @@ class InterruptionOverlapObserver:
         for i, turn in enumerate(transcript):
             if not is_subject_turn(turn):
                 continue
-            interrupted = turn.get("interrupted") is True or (_num(turn, "overlap_ms") or 0) > 150
+            interrupted_flag = turn.get("interrupted") is True if isinstance(turn, Mapping) else False
+            interrupted = interrupted_flag or (_num(turn, "overlap_ms") or 0) > 150
             overlap = _num(turn, "overlap_ms")
             if not interrupted:
                 continue

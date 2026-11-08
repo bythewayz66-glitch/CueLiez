@@ -161,7 +161,9 @@ def make_observation(
     )
 
 
-def text_of(turn: Mapping[str, Any]) -> str:
+def text_of(turn: Any) -> str:
+    if not isinstance(turn, Mapping):
+        return ""
     for k in ("text", "utterance", "content", "transcript"):
         v = turn.get(k)
         if isinstance(v, str):
@@ -169,11 +171,15 @@ def text_of(turn: Mapping[str, Any]) -> str:
     return ""
 
 
-def role_of(turn: Mapping[str, Any]) -> str:
+def role_of(turn: Any) -> str:
+    if not isinstance(turn, Mapping):
+        return ""
     return str(turn.get("role") or turn.get("speaker") or "").lower()
 
 
-def is_subject_turn(turn: Mapping[str, Any]) -> bool:
+def is_subject_turn(turn: Any) -> bool:
+    if not isinstance(turn, Mapping):
+        return False
     role = role_of(turn)
     if role in {"subject", "interviewee", "respondent", "suspect", "witness", "client", "patient"}:
         return True

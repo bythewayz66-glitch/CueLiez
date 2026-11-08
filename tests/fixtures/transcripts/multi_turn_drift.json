@@ -1,0 +1,35 @@
+[
+  {
+    "role": "interviewer",
+    "turn_index": 0,
+    "text": "How many people were involved?"
+  },
+  {
+    "role": "subject",
+    "turn_index": 1,
+    "text": "There were 3 people at the location when I arrived.",
+    "response_latency_ms": 1000
+  },
+  {
+    "role": "interviewer",
+    "turn_index": 2,
+    "text": "Are you sure about that number?"
+  },
+  {
+    "role": "subject",
+    "turn_index": 3,
+    "text": "I remember 3 people clearly.",
+    "response_latency_ms": 900
+  },
+  {
+    "role": "interviewer",
+    "turn_index": 4,
+    "text": "What about vehicles or others?"
+  },
+  {
+    "role": "subject",
+    "turn_index": 5,
+    "text": "Later I saw 5 people and 8 cars near the building.",
+    "response_latency_ms": 1400
+  }
+]

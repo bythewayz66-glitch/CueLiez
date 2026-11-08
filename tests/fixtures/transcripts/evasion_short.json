@@ -1,0 +1,46 @@
+[
+  {
+    "role": "interviewer",
+    "turn_index": 0,
+    "text": "Can you describe what you did that night?"
+  },
+  {
+    "role": "subject",
+    "turn_index": 1,
+    "text": "I was at the park for about two hours talking with several friends about plans.",
+    "response_latency_ms": 900
+  },
+  {
+    "role": "interviewer",
+    "turn_index": 2,
+    "text": "Who were you with?"
+  },
+  {
+    "role": "subject",
+    "turn_index": 3,
+    "text": "I was with a group of people for a while and we discussed different things in detail.",
+    "response_latency_ms": 950
+  },
+  {
+    "role": "interviewer",
+    "turn_index": 4,
+    "text": "Did you go anywhere else?"
+  },
+  {
+    "role": "subject",
+    "turn_index": 5,
+    "text": "Why would you ask that? I already told you, let's move on.",
+    "response_latency_ms": 1100
+  },
+  {
+    "role": "interviewer",
+    "turn_index": 6,
+    "text": "Please answer the question."
+  },
+  {
+    "role": "subject",
+    "turn_index": 7,
+    "text": "No.",
+    "response_latency_ms": 600
+  }
+]

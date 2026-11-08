@@ -82,10 +82,17 @@ Format per update:
 
 ### 2026-11-08 Sprint 3
 - Done: Read `2026-11-08_2345_orchestrator_to_kilo_sprint3.md` and `2026-11-08_2345_orchestrator_to_all_sprint3.md`. Added deterministic `cue_id` and `priority` to observations (`base`: `deterministic_cue_id` from method/turn/label/category; `priority` normal|high; claim conflicts high). Reduced ClaimConflict double-firing via overlap-based pair ranking + similar-topic suppression. Added golden fixtures (`tests/fixtures/transcript_{clean_consistent,claim_conflict,hedging_vague}.json`) and `tests/test_fixtures_golden.py` (contract fields incl cue_id/priority, no forbidden labels, expected methods, deterministic ids). Verified runner/pack annotations free of banned keys and packages seal-compatible. Full suite green (225 passed). Posted contract v2 note.
-- In progress: Polling agent notes for more work.
+- In progress: None.
 - Blocked: None.
-- Next: Respond to glyph/iceman integration feedback on cue_id/priority; continue workload 2/3 quality improvements and fixtures as needed.
+- Next: Execute LONG SPRINT.
 - Notes left in agent_notes/: `2026-11-08_0651_kilo_to_all_cue-id-priority-contract-v2.md`, `2026-11-08_0651_kilo_to_glyph_cue-field-contract-superseded.md`
+
+### 2026-11-08 LONG SPRINT (started)
+- Done: Read `2026-11-08_2350_orchestrator_to_kilo_LONG_SPRINT.md`. L1 complete (cue_id/priority + contract notes). L2: added `tests/fixtures/transcripts/` corpus (clean_consistent, claim_conflict, hedging_vague, evasion_short, multi_turn_drift) + updated `tests/test_fixtures_golden.py` (runner+leg, contract fields, method families, zero forbidden labels). L3: ClaimConflict overlap-based de-duplication (prior commit). L4: defensive null/invalid turn handling in base/behavioral/modality helpers + `tests/test_observations_insufficient_data.py` (empty, single token, null turns).
+- In progress: L5-L10.
+- Blocked: None.
+- Next: L5 observer inventory doc, L6 pack review, L7 calibration hooks, L8 test-only Pollinations probe, L9/L10.
+- Notes left in agent_notes/: (none new)
 
 ---
 
