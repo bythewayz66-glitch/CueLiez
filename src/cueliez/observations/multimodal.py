@@ -29,23 +29,41 @@ class CrossModalConvergenceObserver:
     def observe_observations(self, observations: Sequence[Mapping[str, Any]], *, min_categories: int = 2) -> ObservationResult:
         result = ObservationResult(method=self.method_id)
         by_turn: defaultdict[int, set[str]] = defaultdict(set)
+        source_by_turn: dict[int, Dict[str, Any]] = {}
         for o in observations:
             ti = o.get("turn_index")
             if ti is None:
                 continue
+            iti = int(ti)
             cat = str(o.get("category") or "")
             if cat and cat not in {"multimodal"}:
-                by_turn[int(ti)].add(cat)
+                by_turn[iti].add(cat)
+            if iti not in source_by_turn:
+                ev = o.get("evidence") if isinstance(o.get("evidence"), dict) else {}
+                if ev.get("source_text") or ev.get("source_texts"):
+                    source_by_turn[iti] = {
+                        k: ev[k] for k in ("source_text", "source_texts", "role", "turn_index") if k in ev
+                    }
+                elif o.get("cue") or ev:
+                    source_by_turn[iti] = {}
         for turn_index, cats in sorted(by_turn.items()):
             if len(cats) < min_categories:
                 continue
             score = clamp01(0.3 + 0.12 * min(len(cats), 5))
+            evidence: Dict[str, Any] = {"turn_index": turn_index, "categories": sorted(cats), "category_count": len(cats)}
+            if turn_index in source_by_turn and source_by_turn[turn_index]:
+                evidence.update(source_by_turn[turn_index])
+            elif turn_index in source_by_turn:
+                evidence["source_text"] = "[source text unavailable in contributing observations]"
+            else:
+                # Fallback for turn-anchored contract compliance when no source evidence is present.
+                evidence["source_text"] = "[source text unavailable]"
             result.observations.append(make_observation(
                 label="multi_indicator_convergence_observed",
                 score=score,
                 method_id=self.method_id,
                 category="multimodal",
-                evidence={"turn_index": turn_index, "categories": sorted(cats), "category_count": len(cats)},
+                evidence=evidence,
                 cue="Independent observation categories converged on the same turn; review context carefully. This is not a determination.",
                 turn_index=turn_index,
             ))

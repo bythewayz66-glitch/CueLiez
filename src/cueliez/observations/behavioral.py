@@ -10,7 +10,7 @@ import re
 import statistics
 from typing import Any, Mapping, Sequence
 
-from .base import ObservationResult, clamp01, is_subject_turn, make_observation, text_of
+from .base import ObservationResult, clamp01, is_subject_turn, make_observation, source_span, text_of, truncate_source
 from .thresholds import (
     BRIEF_RESPONSE_MAX_WORDS,
     BRIEF_RESPONSE_MEAN_MIN,
@@ -58,7 +58,7 @@ class ResponseLatencyObserver:
 
     def observe(self, transcript: Sequence[Mapping[str, Any]]) -> ObservationResult:
         result = ObservationResult(method=self.method_id)
-        latencies: list[tuple[int, float]] = []
+        latencies: list[tuple[int, float, Any]] = []
         for i, turn in enumerate(transcript):
             if not is_subject_turn(turn):
                 continue
@@ -68,30 +68,32 @@ class ResponseLatencyObserver:
                 if lat_s is not None:
                     lat = lat_s * 1000.0
             if lat is not None and lat >= 0:
-                latencies.append((i, lat))
+                latencies.append((i, lat, turn))
         if len(latencies) < LATENCY_MIN_SAMPLES:
             result.notes.append("insufficient_latency_data")
             return result
-        vals = [v for _, v in latencies]
+        vals = [v for _, v, _ in latencies]
         med = statistics.median(vals)
         mad = statistics.median([abs(v - med) for v in vals]) or 1.0
-        for i, v in latencies:
+        for i, v, turn in latencies:
             z = (v - med) / (1.4826 * mad)
             if abs(z) >= LATENCY_ANOMALY_Z and v >= LATENCY_MIN_MS:
                 score = clamp01(0.4 + min(abs(z), 6.0) * 0.08)
                 direction = "longer" if v > med else "shorter"
+                ev = {
+                    "latency_ms": round(v, 2),
+                    "baseline_median_ms": round(med, 2),
+                    "robust_z": round(z, 3),
+                    "direction": direction,
+                    "sample_count": len(latencies),
+                }
+                ev.update(source_span(turn, i))
                 result.observations.append(make_observation(
                     label="response_latency_anomaly_observed",
                     score=score,
                     method_id=self.method_id,
                     category="behavioral",
-                    evidence={
-                        "latency_ms": round(v, 2),
-                        "baseline_median_ms": round(med, 2),
-                        "robust_z": round(z, 3),
-                        "direction": direction,
-                        "sample_count": len(latencies),
-                    },
+                    evidence=ev,
                     cue=f"Response latency was notably {direction} than this session's baseline; consider context and question complexity.",
                     turn_index=i,
                 ))
@@ -134,6 +136,8 @@ class AnswerLengthVarianceObserver:
                             "z_score": round(z, 3),
                             "sample_count": len(lens),
                             "excerpt": ex,
+                            "turn_index": i,
+                            "source_text": truncate_source(ex),
                         },
                         cue="Response was markedly brief relative to the session; ask an open follow-up for detail.",
                         turn_index=i,
@@ -156,16 +160,18 @@ class EvasionMarkerObserver:
             if not found:
                 continue
             score = clamp01(0.42 + 0.09 * min(len(found), 4))
+            ev = {
+                "matched_pattern_count": len(found),
+                "patterns_matched": found[:8],
+                "excerpt": text[:180],
+            }
+            ev.update(source_span(turn, i))
             result.observations.append(make_observation(
                 label="question_deflection_markers_present",
                 score=score,
                 method_id=self.method_id,
                 category="behavioral",
-                evidence={
-                    "matched_pattern_count": len(found),
-                    "patterns_matched": found[:8],
-                    "excerpt": text[:180],
-                },
+                evidence=ev,
                 cue="Response includes deflection/avoidance phrasing; restate the question and request a direct answer.",
                 turn_index=i,
             ))
@@ -247,17 +253,19 @@ class FilledPauseMarkerObserver:
             score = clamp01(0.3 + total * 0.08 + rate * 2.0)
             if score < 0.36:
                 continue
+            ev = {
+                "filled_pause_count": total,
+                "word_count": words,
+                "disfluency_rate": round(rate, 4),
+                "source": "metadata" if meta_count is not None else "text_markers",
+            }
+            ev.update(source_span(turn, i))
             result.observations.append(make_observation(
                 label="filled_pause_markers_elevated",
                 score=score,
                 method_id=self.method_id,
                 category="behavioral",
-                evidence={
-                    "filled_pause_count": total,
-                    "word_count": words,
-                    "disfluency_rate": round(rate, 4),
-                    "source": "metadata" if meta_count is not None else "text_markers",
-                },
+                evidence=ev,
                 cue="Filled pauses/disfluency markers were elevated; allow time and ask clear, focused questions.",
                 turn_index=i,
             ))
@@ -281,6 +289,7 @@ class InterruptionOverlapObserver:
             ev: dict[str, Any] = {"interrupted": True, "source": "overlap_ms" if overlap is not None else "interrupted_flag"}
             if overlap is not None:
                 ev["overlap_ms"] = round(overlap, 2)
+            ev.update(source_span(turn, i))
             result.observations.append(make_observation(
                 label="turn_overlap_or_interruption_observed",
                 score=score,

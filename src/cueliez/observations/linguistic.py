@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from typing import Any, Mapping, Sequence
 
-from .base import ObservationResult, clamp01, is_subject_turn, make_observation, text_of
+from .base import ObservationResult, clamp01, is_subject_turn, make_observation, source_span, text_of
 
 _WORD_RE = re.compile(r"[A-Za-z']+")
 
@@ -116,18 +116,20 @@ class HedgingObserver:
             score = clamp01(0.30 + min(rate, 0.35) * 2.2 + min(count, 6) * 0.06)
             if score < 0.36:
                 continue
+            ev = {
+                "hedge_count": count,
+                "distinct_pattern_groups": len(found),
+                "word_count": len(words),
+                "hedge_rate": round(rate, 4),
+                "patterns_matched": found[:8],
+            }
+            ev.update(source_span(turn, i))
             result.observations.append(make_observation(
                 label="hedging_language_present",
                 score=score,
                 method_id=self.method_id,
                 category="linguistic",
-                evidence={
-                    "hedge_count": count,
-                    "distinct_pattern_groups": len(found),
-                    "word_count": len(words),
-                    "hedge_rate": round(rate, 4),
-                    "patterns_matched": found[:8],
-                },
+                evidence=ev,
                 cue="Response includes hedging/qualification language; consider asking for specific details.",
                 turn_index=i,
             ))
@@ -158,17 +160,19 @@ class PronounDistancingObserver:
             score = clamp01(0.22 + min(dist_count, 5) * 0.10 + ratio * 0.32)
             if score < 0.34:
                 continue
+            ev = {
+                "distancing_count": dist_count,
+                "first_person_count": i_count,
+                "distancing_ratio": round(ratio, 4),
+                "patterns_matched": found[:8],
+            }
+            ev.update(source_span(turn, i))
             result.observations.append(make_observation(
                 label="distancing_language_present",
                 score=score,
                 method_id=self.method_id,
                 category="linguistic",
-                evidence={
-                    "distancing_count": dist_count,
-                    "first_person_count": i_count,
-                    "distancing_ratio": round(ratio, 4),
-                    "patterns_matched": found[:8],
-                },
+                evidence=ev,
                 cue="Language shows distancing from people/objects/events; consider probing ownership and direct involvement.",
                 turn_index=i,
             ))
@@ -194,17 +198,19 @@ class NegationDensityObserver:
             score = clamp01(0.3 + count * 0.1 + rate * 5.0)
             if score < 0.35:
                 continue
+            ev = {
+                "marker_count": count,
+                "word_count": len(words),
+                "marker_rate": round(rate, 4),
+                "patterns_matched": found[:8],
+            }
+            ev.update(source_span(turn, i))
             result.observations.append(make_observation(
                 label="denial_or_emphatic_negation_present",
                 score=score,
                 method_id=self.method_id,
                 category="linguistic",
-                evidence={
-                    "marker_count": count,
-                    "word_count": len(words),
-                    "marker_rate": round(rate, 4),
-                    "patterns_matched": found[:8],
-                },
+                evidence=ev,
                 cue="Response contains emphatic negation/assurance language; focus on verifiable details rather than assurances.",
                 turn_index=i,
             ))
@@ -238,19 +244,21 @@ class DetailVaguenessObserver:
             score = clamp01(0.18 + effective_vague * 0.09 + rate * 4.0 - min(specificity, 5) * 0.07)
             if score < 0.36:
                 continue
+            ev = {
+                "vague_marker_count": vague_count,
+                "effective_vague_score": round(effective_vague, 2),
+                "strong_vague_patterns": strong_found[:8],
+                "specificity_proxy": round(specificity, 2),
+                "word_count": len(words),
+                "patterns_matched": found[:8],
+            }
+            ev.update(source_span(turn, i))
             result.observations.append(make_observation(
                 label="low_specificity_language_present",
                 score=score,
                 method_id=self.method_id,
                 category="linguistic",
-                evidence={
-                    "vague_marker_count": vague_count,
-                    "effective_vague_score": round(effective_vague, 2),
-                    "strong_vague_patterns": strong_found[:8],
-                    "specificity_proxy": round(specificity, 2),
-                    "word_count": len(words),
-                    "patterns_matched": found[:8],
-                },
+                evidence=ev,
                 cue="Account uses general/vague references; ask for who/what/when/where specifics.",
                 turn_index=i,
             ))
@@ -262,47 +270,50 @@ class CertaintySwingObserver:
 
     def observe(self, transcript: Sequence[Mapping[str, Any]]) -> ObservationResult:
         result = ObservationResult(method=self.method_id)
-        subject_turns = [(i, text_of(t)) for i, t in enumerate(transcript) if is_subject_turn(t) and text_of(t).strip()]
+        subject_turns = [(i, t) for i, t in enumerate(transcript) if is_subject_turn(t) and text_of(t).strip()]
         if len(subject_turns) < 2:
             return result
-        prev_mode = None
-        prev_hi = 0
-        prev_lo = 0
-        prev_i = None
-        for i, text in subject_turns:
+        prev = None  # (mode, hi, lo, i, turn)
+        for i, t in subject_turns:
+            text = text_of(t)
             hi, _ = _count_patterns(text, CERTAINTY_HIGH)
             lo, _ = _count_patterns(text, CERTAINTY_LOW)
             if hi == 0 and lo == 0:
                 continue
-            mode = "high" if hi > lo else ("low" if lo > hi else prev_mode or "high")
+            mode = "high" if hi > lo else ("low" if lo > hi else ((prev[0] if prev else "high")))
             if mode not in ("high", "low"):
                 mode = "high" if hi >= lo else "low"
-            if prev_mode and mode != prev_mode:
+            if prev and mode != prev[0]:
+                prev_mode, prev_hi, prev_lo, prev_i, prev_t = prev
                 # Precision: require some marker strength on at least one side of the swing.
                 if max(prev_hi, prev_lo, hi, lo) < 1 or (prev_hi + prev_lo + hi + lo) < 2:
-                    prev_mode, prev_hi, prev_lo, prev_i = mode, hi, lo, i
+                    prev = (mode, hi, lo, i, t)
                     continue
                 strength = min(prev_hi + prev_lo + hi + lo, 6)
                 score = clamp01(0.40 + 0.08 * strength)
+                ev = {
+                    "from_mode": prev_mode,
+                    "to_mode": mode,
+                    "from_turn_index": prev_i,
+                    "to_turn_index": i,
+                    "turn_indices": [prev_i, i],
+                    "from_high_markers": prev_hi,
+                    "from_low_markers": prev_lo,
+                    "to_high_markers": hi,
+                    "to_low_markers": lo,
+                    "source_texts": [source_span(prev_t, prev_i), source_span(t, i)],
+                }
+                ev.update(source_span(t, i))
                 result.observations.append(make_observation(
                     label="certainty_shift_across_turns",
                     score=score,
                     method_id=self.method_id,
                     category="linguistic",
-                    evidence={
-                        "from_mode": prev_mode,
-                        "to_mode": mode,
-                        "from_turn_index": prev_i,
-                        "to_turn_index": i,
-                        "from_high_markers": prev_hi,
-                        "from_low_markers": prev_lo,
-                        "to_high_markers": hi,
-                        "to_low_markers": lo,
-                    },
+                    evidence=ev,
                     cue="Certainty level shifted across responses; clarify what is known directly vs inferred.",
                     turn_index=i,
                 ))
-            prev_mode, prev_hi, prev_lo, prev_i = mode, hi, lo, i
+            prev = (mode, hi, lo, i, t)
         return result
 
 
@@ -326,17 +337,19 @@ class MinimizationObserver:
             score = clamp01(0.25 + count * 0.08 + rate * 3.5)
             if score < 0.35:
                 continue
+            ev = {
+                "minimizer_count": count,
+                "word_count": len(words),
+                "minimizer_rate": round(rate, 4),
+                "patterns_matched": found[:8],
+            }
+            ev.update(source_span(turn, i))
             result.observations.append(make_observation(
                 label="minimizing_language_present",
                 score=score,
                 method_id=self.method_id,
                 category="linguistic",
-                evidence={
-                    "minimizer_count": count,
-                    "word_count": len(words),
-                    "minimizer_rate": round(rate, 4),
-                    "patterns_matched": found[:8],
-                },
+                evidence=ev,
                 cue="Response uses minimizing language; probe the full scope and impact of events.",
                 turn_index=i,
             ))
@@ -360,17 +373,19 @@ class PassiveVoiceProxyObserver:
                 continue
             rate = count / max(1, len(words))
             score = clamp01(0.3 + count * 0.08 + rate * 3.0)
+            ev = {
+                "construction_count": count,
+                "word_count": len(words),
+                "construction_rate": round(rate, 4),
+                "patterns_matched": found[:6],
+            }
+            ev.update(source_span(turn, i))
             result.observations.append(make_observation(
                 label="agentless_or_passive_constructions_present",
                 score=score,
                 method_id=self.method_id,
                 category="linguistic",
-                evidence={
-                    "construction_count": count,
-                    "word_count": len(words),
-                    "construction_rate": round(rate, 4),
-                    "patterns_matched": found[:6],
-                },
+                evidence=ev,
                 cue="Account uses passive/agentless constructions; ask who performed key actions.",
                 turn_index=i,
             ))
@@ -397,16 +412,18 @@ class OverjustificationObserver:
             score = clamp01(0.25 + count * 0.18 + length_factor * 0.2)
             if score < 0.38:
                 continue
+            ev = {
+                "justification_marker_count": count,
+                "word_count": len(words),
+                "patterns_matched": found[:6],
+            }
+            ev.update(source_span(turn, i))
             result.observations.append(make_observation(
                 label="extended_justification_present",
                 score=score,
                 method_id=self.method_id,
                 category="linguistic",
-                evidence={
-                    "justification_marker_count": count,
-                    "word_count": len(words),
-                    "patterns_matched": found[:6],
-                },
+                evidence=ev,
                 cue="Response includes extended justification; separate core facts from explanations and verify key points.",
                 turn_index=i,
             ))
@@ -429,16 +446,18 @@ class MemoryQualifierObserver:
             if not count:
                 continue
             score = clamp01(0.4 + count * 0.15)
+            ev = {
+                "qualifier_count": count,
+                "word_count": len(words),
+                "patterns_matched": found[:6],
+            }
+            ev.update(source_span(turn, i))
             result.observations.append(make_observation(
                 label="memory_qualification_present",
                 score=score,
                 method_id=self.method_id,
                 category="linguistic",
-                evidence={
-                    "qualifier_count": count,
-                    "word_count": len(words),
-                    "patterns_matched": found[:6],
-                },
+                evidence=ev,
                 cue="Response qualifies memory/certainty; distinguish direct recall from reconstruction.",
                 turn_index=i,
             ))

@@ -10,7 +10,7 @@ from __future__ import annotations
 import statistics
 from typing import Any, Mapping, Sequence
 
-from .base import ObservationResult, clamp01, is_subject_turn, make_observation
+from .base import ObservationResult, clamp01, is_subject_turn, make_observation, source_span
 
 
 def _feat(turn: Any, *keys: str) -> float | None:
@@ -58,7 +58,7 @@ class GazePatternObserver:
                     score=score,
                     method_id=self.method_id,
                     category="visual",
-                    evidence={"gaze_aversion_ratio": v, "median": med, "robust_z": round(z, 3), "direction": direction},
+                    evidence={"gaze_aversion_ratio": v, "median": med, "robust_z": round(z, 3), "direction": direction, **source_span(turn, i)},
                     cue=f"Gaze aversion ratio was {direction} than baseline; consider cultural norms, comfort, and question context.",
                     turn_index=i,
                 ))
@@ -93,7 +93,7 @@ class BlinkRateObserver:
                     score=score,
                     method_id=self.method_id,
                     category="visual",
-                    evidence={"blink_rate_per_min": v, "median": med, "robust_z": round(z, 3), "direction": direction},
+                    evidence={"blink_rate_per_min": v, "median": med, "robust_z": round(z, 3), "direction": direction, **source_span(turn, i)},
                     cue=f"Blink rate was {direction} than baseline; interpret only alongside context and other observations.",
                     turn_index=i,
                 ))
@@ -131,7 +131,7 @@ class MotorActivityObserver:
                     score=score,
                     method_id=self.method_id,
                     category="visual",
-                    evidence={"activity_index": v, "median": med, "robust_z": round(z, 3), "direction": direction},
+                    evidence={"activity_index": v, "median": med, "robust_z": round(z, 3), "direction": direction, **source_span(turn, i)},
                     cue=f"Observed motor activity was {direction} than baseline; consider environment and individual baseline.",
                     turn_index=i,
                 ))

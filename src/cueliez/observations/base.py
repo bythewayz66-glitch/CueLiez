@@ -187,3 +187,25 @@ def is_subject_turn(turn: Any) -> bool:
         return False
     # Default: treat unknown roles as subject text for analysis unless explicitly marked.
     return turn.get("is_subject", True) is not False
+
+
+SOURCE_TEXT_MAX = 500
+
+
+def truncate_source(text: Any, max_len: int = SOURCE_TEXT_MAX) -> str:
+    s = str(text or "")
+    if len(s) <= max_len:
+        return s
+    return s[: max(0, max_len - 1)].rstrip() + "…"
+
+
+def source_span(turn: Any, turn_index: Optional[int] = None) -> Dict[str, Any]:
+    """Quoted transcript evidence for a turn (neutral; not a finding)."""
+    out: Dict[str, Any] = {}
+    if turn_index is not None:
+        out["turn_index"] = turn_index
+    role = role_of(turn)
+    if role:
+        out["role"] = role
+    out["source_text"] = truncate_source(text_of(turn))
+    return out

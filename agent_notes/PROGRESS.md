@@ -102,11 +102,18 @@ Format per update:
 - Notes left in agent_notes/: `2026-11-08_0651_kilo_to_all_cue-id-priority-contract-v2.md`, `2026-11-08_0651_kilo_to_glyph_cue-field-contract-superseded.md`
 
 ### 2026-11-08 LONG SPRINT
-- Done: Read `2026-11-08_2350_orchestrator_to_kilo_LONG_SPRINT.md`. L1: deterministic `cue_id`/`priority` + contract v2 notes. L2: `tests/fixtures/transcripts/` (5 fixtures) + golden fixture tests (runner/leg, contract fields, method families, zero forbidden labels, deterministic ids). L3: ClaimConflict overlap-based de-duplication (reduced overlapping weak cues). L4: null/invalid turn robustness + insufficient-data tests. L5: `docs/OBSERVER_INVENTORY.md`. L6: pack review (leg/gov/med/thrp text-only defaults, language-clean; gov dual-control process note clarified). L7: centralized `src/cueliez/observations/thresholds.py` and behavior-preserving wiring for key thresholds. L8: optional test-only Pollinations probe (`tests/test_pollinations_probe_optional.py`, skip-friendly, not in production path). L9: regression coverage via fixtures + observer tests; full suite green. Updated git remote to `https://github.com/bythewayz66-glitch/cueliez.git` (repo name note). Acknowledged `docs/OWNER_DECISIONS.md` read (`2026-11-08_0700_orchestrator_to_all_owner-decisions-locked.md`).
-- In progress: L10 ongoing — polling notes, responding to contract/renderer notes, keeping cue contract stable.
+- Done: Read `2026-11-08_2350_orchestrator_to_kilo_LONG_SPRINT.md`. L1: deterministic `cue_id`/`priority` + contract v2 notes. L2: `tests/fixtures/transcripts/` (5 fixtures) + golden fixture tests (runner/leg, contract fields, method families, zero forbidden labels, deterministic ids). L3: ClaimConflict overlap-based de-duplication (reduced overlapping weak cues). L4: null/invalid turn robustness + insufficient-data tests. L5: `docs/OBSERVER_INVENTORY.md`. L6: pack review (leg/gov/med/thrp text-only defaults, language-clean; gov dual-control process note clarified). L7: centralized `src/cueliez/observations/thresholds.py` and behavior-preserving wiring for key thresholds. L8: optional test-only Pollinations probe (`tests/test_pollinations_probe_optional.py`, skip-friendly, not in production path). L9: regression coverage via fixtures + observer tests; full suite green. Updated git remote to `https://github.com/bythewayz66-glitch/cueliez.git` (repo name note). Acknowledged `docs/OWNER_DECISIONS.md` read.
+- In progress: L10 ongoing — polling notes, keeping cue/source-evidence contracts stable.
 - Blocked: None.
 - Next: Continue polling agent notes for new work; maintain observer quality/tests and integration contracts.
 - Notes left in agent_notes/: (see Sprint 3/L1 notes). Checked owner demo transcripts (`docs/examples/owner_*`, `turns` wrapper): contract clean, no forbidden labels/missing cue_id/model_id when run via runners.
+
+### 2026-11-08 0720 source-text evidence (kilo)
+- Done: Read `2026-11-08_0720_orchestrator_to_kilo_source-span-text.md` / `to_all`. Added `source_text`/`source_texts` (+ role/turn refs, 500-char truncation) to turn-anchored observation evidence across consistency, linguistic, behavioral, modality, and convergence observers. Updated fixture tests to require source evidence when `turn_index` present. Full suite green (253 passed, 1 skipped at time of run).
+- In progress: None.
+- Blocked: None.
+- Next: Coordinate with glyph renderer/export display of source quotes; poll for follow-ups.
+- Notes left in agent_notes/: `2026-11-08_0725_kilo_to_all_source-text-evidence-contract.md`
 
 ---
 

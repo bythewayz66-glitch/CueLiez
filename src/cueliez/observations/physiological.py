@@ -11,7 +11,7 @@ from __future__ import annotations
 import statistics
 from typing import Any, Mapping, Sequence
 
-from .base import ObservationResult, clamp01, is_subject_turn, make_observation
+from .base import ObservationResult, clamp01, is_subject_turn, make_observation, source_span
 
 
 def _feat(turn: Any, *keys: str) -> float | None:
@@ -59,7 +59,7 @@ class HeartRateShiftObserver:
                     score=score,
                     method_id=self.method_id,
                     category="physiological",
-                    evidence={"heart_rate_bpm": v, "median_bpm": med, "robust_z": round(z, 3), "direction": direction},
+                    evidence={"heart_rate_bpm": v, "median_bpm": med, "robust_z": round(z, 3), "direction": direction, **source_span(turn, i)},
                     cue=f"Heart rate was {direction} than baseline (provided measurement). Activation indicators are not determinations of intent or truthfulness.",
                     turn_index=i,
                 ))
@@ -94,7 +94,7 @@ class HrvShiftObserver:
                     score=score,
                     method_id=self.method_id,
                     category="physiological",
-                    evidence={"hrv_ms": v, "median_ms": med, "robust_z": round(z, 3), "direction": direction},
+                    evidence={"hrv_ms": v, "median_ms": med, "robust_z": round(z, 3), "direction": direction, **source_span(turn, i)},
                     cue=f"HRV measure was {direction} than baseline (provided measurement). Not a medical finding or determination of intent.",
                     turn_index=i,
                 ))
@@ -128,7 +128,7 @@ class ElectrodermalShiftObserver:
                     score=score,
                     method_id=self.method_id,
                     category="physiological",
-                    evidence={"value": v, "median": med, "robust_z": round(z, 3)},
+                    evidence={"value": v, "median": med, "robust_z": round(z, 3), **source_span(turn, i)},
                     cue="Electrodermal activity shifted from baseline (provided measurement). Activation indicators are not determinations of intent or truthfulness.",
                     turn_index=i,
                 ))

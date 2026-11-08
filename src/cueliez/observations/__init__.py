@@ -5,7 +5,7 @@ officer review. They never produce deception verdicts, guilt findings, or
 definitive truth claims.
 """
 
-from .base import Observation, ObservationResult, make_observation
+from .base import Observation, ObservationResult, make_observation, source_span, truncate_source
 from .behavioral import (
     AnswerLengthVarianceObserver,
     EvasionMarkerObserver,

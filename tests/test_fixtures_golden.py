@@ -26,9 +26,16 @@ class TestGoldenFixtures(unittest.TestCase):
             self.assertTrue(str(conf.get("model_id") or "").strip())
             self.assertTrue(str(o.get("method") or "").strip())
             self.assertTrue(str(o.get("category") or "").strip())
-            self.assertIsInstance(o.get("evidence"), dict)
+            ev = o.get("evidence")
+            self.assertIsInstance(ev, dict)
             self.assertTrue(str(o.get("cue_id") or "").strip(), f"missing cue_id: {o}")
             self.assertIn(o.get("priority"), ("normal", "high"), f"invalid priority: {o}")
+            # 0720: turn-anchored observations must include source text evidence.
+            if o.get("turn_index") is not None:
+                self.assertTrue(
+                    ev.get("source_text") or ev.get("source_texts"),
+                    f"turn-anchored observation missing source_text/source_texts: {o.get('label')} {o.get('method')}",
+                )
 
     def test_clean_consistent_few_high_priority(self):
         t = load("clean_consistent.json")

@@ -10,7 +10,7 @@ from __future__ import annotations
 import statistics
 from typing import Any, Mapping, Sequence
 
-from .base import ObservationResult, clamp01, is_subject_turn, make_observation, text_of
+from .base import ObservationResult, clamp01, is_subject_turn, make_observation, source_span, source_span, text_of
 
 
 def _feat(turn: Any, *keys: str) -> float | None:
@@ -59,7 +59,7 @@ class ProsodicVariabilityObserver:
                     score=score,
                     method_id=self.method_id,
                     category="prosody",
-                    evidence={"value": v, "median": med, "robust_z": round(z, 3), "direction": direction, "feature": kind},
+                    evidence={"value": v, "median": med, "robust_z": round(z, 3), "direction": direction, "feature": kind, **source_span(turn, i)},
                     cue=f"Prosodic variability was {direction} than session baseline; review the corresponding question/context.",
                     turn_index=i,
                 ))
@@ -97,7 +97,7 @@ class PausePatternObserver:
                     score=score,
                     method_id=self.method_id,
                     category="prosody",
-                    evidence={"pause_proxy_ms": v, "median_ms": med, "robust_z": round(z, 3)},
+                    evidence={"pause_proxy_ms": v, "median_ms": med, "robust_z": round(z, 3), **source_span(turn, i)},
                     cue="Pause/silence duration was elevated relative to baseline; consider question difficulty and allow processing time.",
                     turn_index=i,
                 ))
@@ -136,7 +136,7 @@ class VoiceStressFeatureShiftObserver:
                         score=score,
                         method_id=self.method_id,
                         category="prosody",
-                        evidence={"feature": k, "value": v, "median": med, "robust_z": round((v - med) / (1.4826 * mad), 3)},
+                        evidence={"feature": k, "value": v, "median": med, "robust_z": round((v - med) / (1.4826 * mad), 3), **source_span(turn, i)},
                         cue="An acoustic feature shifted from baseline; treat as a contextual signal, not a determination.",
                         turn_index=i,
                     ))
