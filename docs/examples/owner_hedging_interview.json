@@ -1,0 +1,21 @@
+{
+  "id": "owner-demo-hedge-001",
+  "title": "Synthetic hedging and vague-detail interview (owner demo)",
+  "notes": "Fully synthetic. Linguistic caution and vague specifics without a hard timeline collision. Expect clarifying-style cues, not conflict-as-guilt language.",
+  "turns": [
+    {"speaker": "officer", "text": "Tell me about the conversation in the parking lot."},
+    {"speaker": "subject", "text": "I mean, it was kind of just a normal talk, I guess."},
+    {"speaker": "officer", "text": "What was said?"},
+    {"speaker": "subject", "text": "Stuff about work, probably. I don't remember the exact words."},
+    {"speaker": "officer", "text": "How long did it last?"},
+    {"speaker": "subject", "text": "Not long. A few minutes. Or maybe longer. I'm not sure."},
+    {"speaker": "officer", "text": "Who started the conversation?"},
+    {"speaker": "subject", "text": "They did, I think. Or I did. It sort of just happened."},
+    {"speaker": "officer", "text": "Was anyone else nearby?"},
+    {"speaker": "subject", "text": "There might have been people around. Parking lots are busy."},
+    {"speaker": "officer", "text": "Did you discuss the missing laptop?"},
+    {"speaker": "subject", "text": "We may have touched on office things. I wouldn't say it was about that specifically."},
+    {"speaker": "officer", "text": "What happened when the conversation ended?"},
+    {"speaker": "subject", "text": "I went to my car, more or less, and left."}
+  ]
+}
