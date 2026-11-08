@@ -194,8 +194,8 @@ class TestProhibitedUses(unittest.TestCase):
         check_prohibited_uses(["interview support", "supervisor_review"])
 
 
-def _valid_obs(label="hesitation_marker_present", score=0.5, model_id="m/v1"):
-    return {"label": label, "confidence": {"score": score, "model_id": model_id}, "evidence": {}}
+def _valid_obs(label="hesitation_marker_present", score=0.5, model_id="m/v1", method="m/v1", category="behavioral"):
+    return {"label": label, "confidence": {"score": score, "model_id": model_id}, "evidence": {}, "method": method, "category": category}
 
 
 class TestSealObservationPackage(unittest.TestCase):
@@ -244,10 +244,10 @@ class TestSealObservationPackage(unittest.TestCase):
 
     def test_seal_rejects_missing_confidence(self):
         with self.assertRaises(GateError) as ctx:
-            seal_observation_package({"observations": [{"label": "x"}]})
+            seal_observation_package({"observations": [{"label": "x", "method": "m", "category": "c"}]})
         self.assertEqual(ctx.exception.code, "missing_confidence")
         with self.assertRaises(GateError):
-            seal_observation_package({"observations": [{"label": "x", "confidence": {"model_id": "m"}}]})
+            seal_observation_package({"observations": [{"label": "x", "confidence": {"model_id": "m"}, "method": "m", "category": "c"}]})
 
     def test_seal_rejects_bad_score(self):
         with self.assertRaises(GateError) as ctx:
@@ -257,12 +257,12 @@ class TestSealObservationPackage(unittest.TestCase):
             seal_observation_package({"observations": [_valid_obs(score=-0.1)]})
         self.assertEqual(ctx.exception.code, "confidence_out_of_range")
         with self.assertRaises(GateError) as ctx:
-            seal_observation_package({"observations": [{"label": "x", "confidence": {"score": "no", "model_id": "m"}}]})
+            seal_observation_package({"observations": [{"label": "x", "confidence": {"score": "no", "model_id": "m"}, "method": "m", "category": "c"}]})
         self.assertEqual(ctx.exception.code, "invalid_confidence_score")
 
     def test_seal_rejects_missing_model_id(self):
         with self.assertRaises(GateError) as ctx:
-            seal_observation_package({"observations": [{"label": "x", "confidence": {"score": 0.5, "model_id": ""}}]})
+            seal_observation_package({"observations": [{"label": "x", "confidence": {"score": 0.5, "model_id": ""}, "method": "m", "category": "c"}]})
         self.assertEqual(ctx.exception.code, "missing_model_id")
 
     def test_seal_rejects_invalid_observation_shape(self):
@@ -310,6 +310,182 @@ class TestSealObservationPackage(unittest.TestCase):
         s = SessionGateState(mode="generic")
         out = seal_observation_package({"observations": [_valid_obs()]}, s)
         self.assertFalse(out["firewall"]["consent_rechecked"])
+
+
+class TestGateStateCapture(unittest.TestCase):
+    def test_full_gate_state_serialized_in_package(self):
+        s = SessionGateState(
+            mode="government",
+            intended_uses=["interview support", "supervisor_review"],
+            subject_id="sub-1",
+            jurisdiction="CA",
+            operator_id="op-1",
+        )
+        record_consent(s, attested_by="officer-1", subject_id="sub-1", jurisdiction="CA")
+        s.training_acknowledged = True
+        s.training_version = "train-2026.1"
+        record_dual_acknowledge(s, "cue-a", "off-a", "off-b", "reviewed")
+        out = seal_observation_package({"observations": [_valid_obs()]}, s, high_priority_cue_ids=["cue-a"])
+
+        self.assertIn("gate_state", out)
+        gs = out["gate_state"]
+        self.assertEqual(gs["mode"], "government")
+        self.assertTrue(gs["consent"])
+        self.assertEqual(gs["consent_attested_by"], "officer-1")
+        self.assertIsNotNone(gs["consent_recorded_at"])
+        self.assertEqual(gs["training_version"], "train-2026.1")
+        self.assertTrue(gs["training_acknowledged"])
+        self.assertEqual(gs["intended_uses"], ["interview support", "supervisor_review"])
+        self.assertEqual(gs["subject_id"], "sub-1")
+        self.assertEqual(gs["jurisdiction"], "CA")
+        self.assertEqual(gs["operator_id"], "op-1")
+        self.assertEqual(len(gs["dual_control_records"]), 1)
+        dcr = gs["dual_control_records"][0]
+        self.assertEqual(dcr["cue_id"], "cue-a")
+        self.assertEqual(dcr["first_officer_id"], "off-a")
+        self.assertEqual(dcr["second_officer_id"], "off-b")
+        self.assertIn("acknowledged_at", dcr)
+        self.assertEqual(dcr["notes"], "reviewed")
+        self.assertTrue(gs["requirements"]["consent_required"])
+        self.assertTrue(gs["requirements"]["training_required"])
+        self.assertTrue(gs["requirements"]["dual_control_required"])
+
+    def test_generic_state_captured_when_no_state_provided(self):
+        out = seal_observation_package({"observations": [_valid_obs()]})
+        gs = out["gate_state"]
+        self.assertEqual(gs["mode"], "generic")
+        self.assertFalse(gs["requirements"]["consent_required"])
+        self.assertFalse(gs["requirements"]["training_required"])
+        self.assertFalse(gs["requirements"]["dual_control_required"])
+        self.assertTrue(out["firewall"]["gate_state_captured"])
+
+    def test_session_gate_state_to_dict_is_self_describing(self):
+        s = SessionGateState(mode="interrogation", consent=True, consent_recorded_at=123.0,
+                             consent_attested_by="x", training_acknowledged=True, training_version="v")
+        d = s.to_dict()
+        for k in ("mode", "consent", "consent_recorded_at", "consent_attested_by", "dual_control_records",
+                  "intended_uses", "training_acknowledged", "training_version", "requirements"):
+            self.assertIn(k, d)
+
+
+class TestPackageIntegrity(unittest.TestCase):
+    def test_forced_epistemic_fields_and_disclaimer(self):
+        out = seal_observation_package({"observations": [_valid_obs()], "epistemic_status": "x", "is_definitive_finding": "y"})
+        self.assertEqual(out["epistemic_status"], "observed_indicator")
+        self.assertFalse(out["is_definitive_finding"])
+        self.assertEqual(out["origin"], "grounded")
+        self.assertEqual(out["product"], "CueLiez")
+        self.assertIn("product_version", out)
+        self.assertIn("schema_version", out)
+        self.assertEqual(out["disclaimer"], DISCLAIMER)
+        self.assertIn("sealed_at", out)
+
+    def test_hash_present_and_stable_for_identical_input(self):
+        state = SessionGateState(mode="interrogation", consent=True, consent_recorded_at=1000.0,
+                                 consent_attested_by="off", training_acknowledged=True, training_version="v1",
+                                 intended_uses=["interview support"])
+        pkg1 = {"observations": [_valid_obs(label="x", score=0.3, model_id="m/v1", method="m/v1", category="c")], "annotations": {"note": "ok"}}
+        pkg2 = {"observations": [_valid_obs(label="x", score=0.3, model_id="m/v1", method="m/v1", category="c")], "annotations": {"note": "ok"}}
+        out1 = seal_observation_package(pkg1, state)
+        out2 = seal_observation_package(pkg2, state)
+        self.assertIn("package_hash", out1)
+        self.assertRegex(out1["package_hash"], r"^[0-9a-f]{64}$")
+        self.assertEqual(out1["package_hash"], out2["package_hash"])
+        # sealed_at differs (time), hash must not
+        # (if test runs fast they might equal; hash stability is the requirement)
+        self.assertEqual(out1["package_hash"], out2["package_hash"])
+
+    def test_hash_changes_when_content_changes(self):
+        state = SessionGateState(mode="generic")
+        a = seal_observation_package({"observations": [_valid_obs(score=0.1)]}, state)
+        b = seal_observation_package({"observations": [_valid_obs(score=0.2)]}, state)
+        self.assertNotEqual(a["package_hash"], b["package_hash"])
+
+
+class TestObservationContractEnforcement(unittest.TestCase):
+    def test_missing_method_rejected(self):
+        obs = {"label": "x", "confidence": {"score": 0.5, "model_id": "m"}, "category": "c"}
+        with self.assertRaises(GateError) as ctx:
+            seal_observation_package({"observations": [obs]})
+        self.assertEqual(ctx.exception.code, "missing_method")
+
+    def test_missing_category_rejected(self):
+        obs = {"label": "x", "confidence": {"score": 0.5, "model_id": "m"}, "method": "m"}
+        with self.assertRaises(GateError) as ctx:
+            seal_observation_package({"observations": [obs]})
+        self.assertEqual(ctx.exception.code, "missing_category")
+
+    def test_missing_label_rejected(self):
+        obs = {"label": "", "confidence": {"score": 0.5, "model_id": "m"}, "method": "m", "category": "c"}
+        with self.assertRaises(GateError) as ctx:
+            seal_observation_package({"observations": [obs]})
+        self.assertEqual(ctx.exception.code, "missing_label")
+
+
+class TestFailClosedHighStakes(unittest.TestCase):
+    def _ready_state(self, mode):
+        s = SessionGateState(mode=mode, intended_uses=["interview support"])
+        record_consent(s, attested_by="attester")
+        s.training_acknowledged = True
+        s.training_version = "v1"
+        return s
+
+    def test_missing_consent_blocks_all_high_stakes_modes(self):
+        for mode in ("interrogation", "therapy", "clinical", "government"):
+            s = SessionGateState(mode=mode, training_acknowledged=True, training_version="v1")
+            with self.assertRaises(GateError) as ctx:
+                seal_observation_package({"observations": [_valid_obs()]}, s)
+            self.assertEqual(ctx.exception.code, "consent_required", mode)
+
+    def test_missing_training_blocks_all_high_stakes_modes(self):
+        for mode in ("interrogation", "therapy", "clinical", "government"):
+            s = SessionGateState(mode=mode)
+            record_consent(s, attested_by="a")
+            with self.assertRaises(GateError) as ctx:
+                seal_observation_package({"observations": [_valid_obs()]}, s)
+            self.assertEqual(ctx.exception.code, "training_required", mode)
+
+    def test_missing_dual_control_blocks_government_high_priority(self):
+        s = self._ready_state("government")
+        with self.assertRaises(GateError) as ctx:
+            seal_observation_package({"observations": [_valid_obs()]}, s, high_priority_cue_ids=["hp1"])
+        self.assertEqual(ctx.exception.code, "dual_control_incomplete")
+
+    def test_high_stakes_seals_when_all_gates_satisfied(self):
+        for mode in ("interrogation", "therapy", "clinical"):
+            s = self._ready_state(mode)
+            out = seal_observation_package({"observations": [_valid_obs()]}, s)
+            self.assertEqual(out["gate_state"]["mode"], mode)
+            self.assertTrue(out["gate_state"]["consent"])
+        s = self._ready_state("government")
+        record_dual_acknowledge(s, "hp1", "a", "b")
+        out = seal_observation_package({"observations": [_valid_obs()]}, s, high_priority_cue_ids=["hp1"])
+        self.assertEqual(out["gate_state"]["mode"], "government")
+
+
+class TestExportPath(unittest.TestCase):
+    def test_export_returns_structured_json_with_gates_and_observations(self):
+        import json
+        from cueliez.gates import export_sealed_package_json
+        s = self_ready = SessionGateState(mode="interrogation", intended_uses=["interview support"])
+        record_consent(s, attested_by="off")
+        s.training_acknowledged = True
+        s.training_version = "v1"
+        sealed = seal_observation_package({"observations": [_valid_obs()]}, s)
+        text = export_sealed_package_json(sealed)
+        data = json.loads(text)
+        self.assertIn("observations", data)
+        self.assertIn("gate_state", data)
+        self.assertEqual(data["gate_state"]["mode"], "interrogation")
+        self.assertEqual(data["epistemic_status"], "observed_indicator")
+        # no system-decided claims in structure keys we control
+        self.assertNotIn("lying", json.dumps(data).lower())
+
+    def test_export_rejects_unsealed(self):
+        from cueliez.gates import export_sealed_package_json
+        with self.assertRaises(GateError):
+            export_sealed_package_json({"epistemic_status": "draft"})
+
 
 
 class TestGateError(unittest.TestCase):

@@ -9,7 +9,7 @@ from cueliez.memory import ContaminationError, MemoryEngine, SealError
 
 def _valid_pkg():
     return seal_observation_package({
-        "observations": [{"label": "hedging_language_present", "confidence": {"score": 0.4, "model_id": "m/v1"}}],
+        "observations": [{"label": "hedging_language_present", "confidence": {"score": 0.4, "model_id": "m/v1"}, "method": "m/v1", "category": "linguistic"}],
         "annotations": {},
     })
 

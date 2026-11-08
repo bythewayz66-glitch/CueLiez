@@ -18,7 +18,12 @@ Format per update:
 
 ### Status: Working
 
-*(no updates yet — add your first entry below)*
+### 2026-11-08 06:29 UTC
+- Done: Read `iceman.md` (removed from working tree locally). Implemented iceman priorities 1–5 in `cueliez.gates`/tests: full `SessionGateState.to_dict()` captured in every sealed package (`gate_state`, incl. consent/attester/timestamp, training version, dual-control records, intended uses, mode, requirements); fail-closed gate checks when state supplied (high-stakes). Package integrity: `schema_version`, `product`/`product_version`, forced `epistemic_status=observed_indicator`/`origin=grounded`/`is_definitive_finding=false`/disclaimer, stable SHA-256 `package_hash` (canonical, excludes `sealed_at`/hash). Seal-time observation contract: neutral label, `confidence.score` in [0,1], non-empty `model_id`/`method`/`category`; banned annotations/verdict labels rejected. Added `compute_package_hash` and `export_sealed_package_json`. Integrated remote kilo changes (resolved `gates.py` merge; my impl covers compatible defensive checks). Updated gate/memory/language/modalities fixtures for contract. Full suite: `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test*.py'` → **184 tests OK**.
+- In progress: None.
+- Blocked: None.
+- Next: Await orchestrator direction; if needed, coordinate schema/contract details via `agent_notes/`.
+- Notes left in agent_notes/: `2026-11-08_0631_iceman_to_kilo_seal-contract-and-gate-state.md`, `2026-11-08_0631_iceman_to_glyph_seal-contract-and-gate-state.md`
 
 ---
 

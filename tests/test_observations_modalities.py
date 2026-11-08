@@ -82,8 +82,8 @@ class TestPhysiological(unittest.TestCase):
 class TestMultimodal(unittest.TestCase):
     def test_convergence(self):
         obs = [
-            {"label": "a", "confidence": {"score": 0.5, "model_id": "m"}, "category": "linguistic", "turn_index": 3},
-            {"label": "b", "confidence": {"score": 0.5, "model_id": "m"}, "category": "prosody", "turn_index": 3},
+            {"label": "a", "confidence": {"score": 0.5, "model_id": "m"}, "method": "m", "category": "linguistic", "turn_index": 3},
+            {"label": "b", "confidence": {"score": 0.5, "model_id": "m"}, "method": "m", "category": "prosody", "turn_index": 3},
         ]
         res = CrossModalConvergenceObserver().observe_observations(obs)
         dicts = res.to_dicts()
@@ -93,14 +93,14 @@ class TestMultimodal(unittest.TestCase):
 
     def test_no_convergence_when_different_turns(self):
         obs = [
-            {"label": "a", "confidence": {"score": 0.5, "model_id": "m"}, "category": "linguistic", "turn_index": 1},
-            {"label": "b", "confidence": {"score": 0.5, "model_id": "m"}, "category": "prosody", "turn_index": 2},
+            {"label": "a", "confidence": {"score": 0.5, "model_id": "m"}, "method": "m", "category": "linguistic", "turn_index": 1},
+            {"label": "b", "confidence": {"score": 0.5, "model_id": "m"}, "method": "m", "category": "prosody", "turn_index": 2},
         ]
         self.assertEqual(CrossModalConvergenceObserver().observe_observations(obs).to_dicts(), [])
 
     def test_add_convergence(self):
-        obs = [{"label": "a", "confidence": {"score": 0.5, "model_id": "m"}, "category": "linguistic", "turn_index": 1},
-               {"label": "b", "confidence": {"score": 0.5, "model_id": "m"}, "category": "visual", "turn_index": 1}]
+        obs = [{"label": "a", "confidence": {"score": 0.5, "model_id": "m"}, "method": "m", "category": "linguistic", "turn_index": 1},
+               {"label": "b", "confidence": {"score": 0.5, "model_id": "m"}, "method": "m", "category": "visual", "turn_index": 1}]
         out = add_convergence_observations(obs)
         self.assertGreater(len(out), 2)
         seal_observation_package({"observations": out})

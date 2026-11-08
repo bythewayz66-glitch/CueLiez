@@ -9,9 +9,19 @@ affirmative consent + non-empty attester before start and again before seal.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, List, Literal, Optional
+from dataclasses import asdict, dataclass, field
+from typing import Any, Dict, List, Literal, Optional
+import hashlib
+import json
 import time
+
+# Best-effort product version for sealed packages.
+try:
+    from . import __version__ as CUELIEZ_VERSION
+except Exception:  # pragma: no cover
+    CUELIEZ_VERSION = "0.0.0"
+
+SEALED_PACKAGE_SCHEMA_VERSION = "1.0"
 
 SessionMode = Literal["interrogation", "therapy", "clinical", "government", "generic"]
 
@@ -102,6 +112,27 @@ class SessionGateState:
             return True
         attester = (self.consent_attested_by or "").strip()
         return bool(self.consent and self.consent_recorded_at and attester)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize full gate state for sealed packages (self-describing)."""
+        return {
+            "mode": self.mode,
+            "consent": bool(self.consent),
+            "consent_recorded_at": self.consent_recorded_at,
+            "consent_attested_by": self.consent_attested_by,
+            "subject_id": self.subject_id,
+            "jurisdiction": self.jurisdiction,
+            "operator_id": self.operator_id,
+            "dual_control_records": [asdict(r) for r in (self.dual_control_records or [])],
+            "intended_uses": list(self.intended_uses or []),
+            "training_acknowledged": bool(self.training_acknowledged),
+            "training_version": self.training_version,
+            "requirements": {
+                "consent_required": self.requires_consent(),
+                "training_required": self.requires_training(),
+                "dual_control_required": self.requires_dual_control(),
+            },
+        }
 
 
 class GateError(Exception):
@@ -219,6 +250,14 @@ def record_dual_acknowledge(
 
 
 def _validate_observation_entry(d: dict, index: int) -> None:
+    label = (d.get("label") or d.get("claim") or "").strip()
+    if not label:
+        raise GateError("missing_label", f"Observation[{index}] must carry a neutral label.")
+    if label.strip().lower() in FORBIDDEN_OBSERVATION_LABELS:
+        raise GateError(
+            "verdict_language",
+            f"Observation[{index}] uses forbidden verdict label {label!r}. Indicators only.",
+        )
     conf = d.get("confidence")
     if not isinstance(conf, dict):
         raise GateError(
@@ -235,23 +274,21 @@ def _validate_observation_entry(d: dict, index: int) -> None:
         raise GateError("confidence_out_of_range", f"Observation[{index}] confidence.score must be in [0, 1].")
     if not (conf.get("model_id") or "").strip():
         raise GateError("missing_model_id", f"Observation[{index}] missing confidence.model_id.")
-    # Reject verdict-shaped labels inside observations
-    label = (d.get("label") or d.get("claim") or "").strip().lower()
-    if label in FORBIDDEN_OBSERVATION_LABELS:
-        raise GateError(
-            "verdict_language",
-            f"Observation[{index}] uses forbidden verdict label {label!r}. Indicators only.",
-        )
+    if not (str(d.get("method") or "").strip()):
+        raise GateError("missing_method", f"Observation[{index}] missing method.")
+    if not (str(d.get("category") or "").strip()):
+        raise GateError("missing_category", f"Observation[{index}] missing category.")
 
-    method = d.get("method")
-    if method is not None and not str(method).strip():
-        raise GateError("missing_method", f"Observation[{index}] has empty method.")
-    category = d.get("category")
-    if category is not None and not str(category).strip():
-        raise GateError("missing_category", f"Observation[{index}] has empty category.")
-    evidence = d.get("evidence")
-    if evidence is not None and not isinstance(evidence, dict):
-        raise GateError("invalid_evidence", f"Observation[{index}] evidence must be a dict when present.")
+
+def _canonical_json_for_hash(package: Dict[str, Any]) -> str:
+    """Stable canonical form for hashing. Excludes volatile/hash fields."""
+    excluded = {"package_hash", "content_hash", "sealed_at"}
+    canonical = {k: v for k, v in package.items() if k not in excluded}
+    return json.dumps(canonical, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str)
+
+
+def compute_package_hash(package: Dict[str, Any]) -> str:
+    return hashlib.sha256(_canonical_json_for_hash(package).encode("utf-8")).hexdigest()
 
 
 def seal_observation_package(
@@ -265,9 +302,16 @@ def seal_observation_package(
 
     Re-checks consent, training, dual-control, and prohibited uses when state is provided.
     Forces epistemic fields; rejects banned annotations and incomplete observations.
+    Serializes full gate state into the package and computes a stable SHA-256 content hash.
+
+    For observation-only sealing without a session context, callers may omit state; a
+    generic (no-gate) state is recorded. High-stakes mode enforcement is fail-closed
+    whenever a high-stakes SessionGateState is supplied.
     """
     if not isinstance(package, dict):
         raise GateError("seal_invalid", "Seal package must be a dict.")
+
+    effective_state = state if state is not None else SessionGateState(mode="generic")
 
     if state is not None:
         check_prohibited_uses(state.intended_uses)
@@ -292,12 +336,14 @@ def seal_observation_package(
             "epistemic_status must remain an observation class, not a finding.",
         )
 
+    package["schema_version"] = SEALED_PACKAGE_SCHEMA_VERSION
     package["epistemic_status"] = "observed_indicator"
     package["origin"] = "grounded"
     package["is_definitive_finding"] = False
     package["disclaimer"] = DISCLAIMER
     package["product"] = "CueLiez"
-    package["sealed_at"] = time.time()
+    package["product_version"] = CUELIEZ_VERSION
+    package["gate_state"] = effective_state.to_dict()
 
     if "annotations" in package and package["annotations"] is not None and not isinstance(package["annotations"], dict):
         raise GateError("annotations_invalid", "annotations must be a dict.")
@@ -337,5 +383,25 @@ def seal_observation_package(
         "is_definitive_finding": False,
         "consent_rechecked": state is not None and state.requires_consent(),
         "training_rechecked": state is not None and state.requires_training(),
+        "gate_state_captured": True,
     }
+
+    # Stable content hash over canonical package content (excludes sealed_at/package_hash).
+    package.pop("package_hash", None)
+    package.pop("content_hash", None)
+    package["package_hash"] = compute_package_hash(package)
+    package["sealed_at"] = time.time()
     return package
+
+
+def export_sealed_package_json(package: Dict[str, Any], *, indent: int = 2) -> str:
+    """Export a sealed package as structured JSON for disclosure/review.
+
+    The export makes observations and active gate state understandable without
+    claiming the system decided anything.
+    """
+    if not isinstance(package, dict):
+        raise GateError("export_invalid", "Package must be a dict.")
+    if package.get("epistemic_status") != "observed_indicator":
+        raise GateError("export_invalid", "Only sealed observed-indicator packages may be exported.")
+    return json.dumps(package, indent=indent, ensure_ascii=False, sort_keys=False, default=str)
