@@ -48,7 +48,7 @@ class OnscreenCueRenderer:
                 color = _ANSI.get(c.priority, "")
                 prefix = f"{color}{_ANSI['bold']}{prefix}{_ANSI['reset']}"
             turn = f"T{c.turn_index} " if c.turn_index is not None else ""
-            line = f"{prefix}{turn}{c.message} (score={c.score:.2f}, {c.category}, id={c.cue_id})"
+            line = f"{prefix}{turn}{c.message} (score={c.score:.2f}, {c.category}, id={c.cue_id}, method={c.method})"
             lines.append(line)
             if self.show_evidence and c.evidence_summary:
                 ev = json.dumps(c.evidence_summary, ensure_ascii=False)
@@ -117,15 +117,16 @@ class OnscreenCueRenderer:
                 f"<td>{html.escape(c.category)}</td>"
                 f"<td>{cue_cell}</td>"
                 f"<td>{c.score:.2f}</td>"
+                f"<td><code>{html.escape(c.method)}</code></td>"
                 f"<td><code>{ev}</code></td>"
                 "</tr>"
             )
-        body = "\n".join(rows) or "<tr><td colspan='6'>No observation cues at current thresholds.</td></tr>"
+        body = "\n".join(rows) or "<tr><td colspan='7'>No observation cues at current thresholds.</td></tr>"
         return (
             "<section class='cueliez-cues'>"
             f"<h2>{html.escape(title)}</h2>"
             "<p class='notice'>Observation cues for professional review; not findings.</p>"
-            "<table><thead><tr><th>Priority</th><th>Turn</th><th>Category</th><th>Cue / Source transcript</th><th>Score</th><th>Evidence</th></tr></thead>"
+            "<table><thead><tr><th>Priority</th><th>Turn</th><th>Category</th><th>Cue / Source transcript</th><th>Score</th><th>Method/Model</th><th>Evidence</th></tr></thead>"
             f"<tbody>{body}</tbody></table></section>"
         )
 
@@ -157,7 +158,7 @@ class OnscreenCueRenderer:
             source_html = "".join(quotes)
             cards.append(
                 f"<article class='cue {html.escape(c.priority)}' data-cue-id='{html.escape(c.cue_id)}' data-priority='{html.escape(c.priority)}' data-label='{html.escape(c.label)}' data-turn='{turn}'>"
-                f"<div class='meta'><span class='prio'>{html.escape(c.priority.upper())}</span> <span class='turn'>Turn {turn}</span> <span class='score'>{c.score:.2f}</span></div>"
+                f"<div class='meta'><span class='prio'>{html.escape(c.priority.upper())}</span> <span class='turn'>Turn {turn}</span> <span class='score'>score {c.score:.2f}</span> <span class='method'>{html.escape(c.method)}</span></div>"
                 f"<div class='msg'>{msg}</div>"
                 f"{source_html}"
                 f"<div class='id'><code>{html.escape(c.cue_id)}</code></div>"

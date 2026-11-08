@@ -35,9 +35,9 @@ Status key: `[ ]` not started · `[~]` in progress · `[x]` done
 - [ ] Keep feature / physiological / visual observers gated; do not enable by default in packs.
 - [ ] Build explicit consent + jurisdiction checks before enabling audio feature extraction or any camera/wearable input.
 - [ ] Prioritize audio-only real-time path first (prosody, speech rate, latency, pause patterns).
-- [x] Implement officer-facing delivery (onscreen overlay / tablet cues) that the subject does not see by default. (Minimal low-distraction officer HTML surface + structured officer-only panel with turn-linked/glanceable cues and acknowledge/dismiss/note capture; not a real-time streaming overlay yet.)
+- [x] Implement officer-facing delivery (onscreen overlay / tablet cues) that the subject does not see by default. (Low-distraction officer HTML surface + structured officer-only panel with turn-linked/glanceable cues, confidence/method provenance display, and acknowledge/dismiss/note capture; subject not shown this stream by default. Not a real-time streaming overlay yet.)
 - [x] Add optional officer response / note field for high-priority cues; include it in the sealed package. (Glyph capture/normalize/attach/export implemented; iceman confirmed seal preservation and canonical hash coverage; E2E verified.)
-- [ ] Target end-to-end latency < 1–2 seconds for text cues on local or private-cloud instance.
+- [x] Target end-to-end latency < 1–2 seconds for text cues on local or private-cloud instance. (Local 2026-11-08 reference: owner fixtures default text path ~2–5 ms in-process observe+cues+render; ~275–390 ms end-to-end CLI subprocess, `--no-seal`; environment-specific, not a guarantee. Documented in `docs/demo/VALIDATION_NOTES.md`.)
 
 ---
 

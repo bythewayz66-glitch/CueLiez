@@ -146,13 +146,14 @@ def render_package_summary_markdown(
     if not cue_events:
         lines.append("No observation cues were present at export thresholds.")
     else:
-        lines.append("| Priority | Turn | Cue ID | Label | Score | Message | Source (transcript) |")
-        lines.append("|---|---:|---|---|---:|---|---|")
+        lines.append("| Priority | Turn | Cue ID | Label | Score | Method | Message | Source (transcript) |")
+        lines.append("|---|---:|---|---|---:|---|---|---|")
         for c in cue_events:
             msg = str(c.get("message") or "").replace("|", "\\|").replace("\n", " ")
             turn = c.get("turn_index")
             src = _format_source_quotes(c.get("source_quotes"))
-            lines.append(f"| {c.get('priority','')} | {turn if turn is not None else ''} | {c.get('cue_id','')} | {c.get('label','')} | {float(c.get('score') or 0):.2f} | {msg} | {src} |")
+            method = str(c.get("method") or c.get("model_id") or "").replace("|", "\\|")
+            lines.append(f"| {c.get('priority','')} | {turn if turn is not None else ''} | {c.get('cue_id','')} | {c.get('label','')} | {float(c.get('score') or 0):.2f} | {method} | {msg} | {src} |")
     if notes:
         lines.append("")
         lines.append("## Officer Notes (Human)")
@@ -207,16 +208,18 @@ def render_package_summary_html(
         prio = html.escape(str(c.get('priority','')))
         cls = " class='high-priority'" if c.get('priority') in {'high','critical'} else ""
         src = html.escape(_format_source_quotes(c.get('source_quotes')))
+        method = html.escape(str(c.get('method') or c.get('model_id') or ''))
         rows.append(f"<tr{cls}>"
                     f"<td>{prio}</td>"
                     f"<td>{html.escape(str(c.get('turn_index','')))}</td>"
                     f"<td><code>{html.escape(str(c.get('cue_id','')))}</code></td>"
                     f"<td>{html.escape(str(c.get('label','')))}</td>"
                     f"<td>{float(c.get('score') or 0):.2f}</td>"
+                    f"<td><code>{method}</code></td>"
                     f"<td>{html.escape(str(c.get('message','')))}</td>"
                     f"<td>{src}</td>"
                     "</tr>")
-    cue_body = "\n".join(rows) or "<tr><td colspan='7'>No observation cues were present at export thresholds.</td></tr>"
+    cue_body = "\n".join(rows) or "<tr><td colspan='8'>No observation cues were present at export thresholds.</td></tr>"
     notes_section = ""
     if notes:
         note_items = "".join(
@@ -261,7 +264,7 @@ def render_package_summary_html(
   </section>
   <section>
     <h2>System-Observed Cues (for human review)</h2>
-    <table><thead><tr><th>Priority</th><th>Turn</th><th>Cue ID</th><th>Label</th><th>Score</th><th>Message</th><th>Source (transcript)</th></tr></thead><tbody>{cue_body}</tbody></table>
+    <table><thead><tr><th>Priority</th><th>Turn</th><th>Cue ID</th><th>Label</th><th>Score</th><th>Method/Model</th><th>Message</th><th>Source (transcript)</th></tr></thead><tbody>{cue_body}</tbody></table>
   </section>
   {notes_section}
   <section>

@@ -317,6 +317,13 @@ Format per update:
 - Next: Continue polling.
 - Notes left in agent_notes/: `2026-11-08_0817_glyph_to_all_long-sprint-docs.md`
 
+### 2026-11-08 11:45 UTC (Long sprint Phase 1+2 — 0825/0828, `//an`)
+- Done: Read `2026-11-08_0825_orchestrator_to_all_phase1-2-long-sprint.md` and `0828_orchestrator_to_glyph_phase1-2-long-sprint.md`. (1) **Officer delivery hardening**: officer surface remains low-distraction, turn-linked/glanceable, acknowledge/dismiss/note capture, subject not shown by default; added neutral method/model provenance display (confidence score already shown) in text/officer HTML/MD+HTML exports without overclaim. (2) **Officer note seal path**: verified existing capture/attach-before-seal/export behavior intact (CLI/export/e2e tests green after Phase 1 display changes). (3) **Latency**: measured local 2026-11-08 owner fixtures (default text path, `--no-seal`) — in-process observe+cues+render ~2–5 ms, end-to-end CLI subprocess ~275–390 ms (environment-specific, not guarantees; <1–2 s target met locally); documented in `docs/demo/VALIDATION_NOTES.md`. (4) **Disclosure/wording**: observation-only, no accuracy claims; method/provenance shown as metadata. (5) **Tests/docs/TODO**: delivery/export/CLI tests green; TODO Phase 2 delivery/latency checkboxes updated accurately. Full suite green (`298 OK`, 1 skipped).
+- In progress: Polling for new `*_to_glyph_*`/`*_to_all_*` notes.
+- Blocked: None.
+- Next: Continue polling; re-verify if iceman/kilo Phase 1/2 contract changes affect glyph surfaces.
+- Notes left in agent_notes/: `2026-11-08_0829_glyph_to_all_phase1-2-delivery-latency.md`
+
 ---
 
 ## Cross-agent blockers

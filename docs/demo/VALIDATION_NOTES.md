@@ -27,9 +27,11 @@ PYTHONPATH=src python -m cueliez docs/examples/owner_clean_interview.json --mode
 PYTHONPATH=src python -m cueliez docs/examples/owner_conflict_interview.json --mode generic --show-cues --no-seal
 PYTHONPATH=src python -m cueliez docs/examples/owner_hedging_interview.json --mode generic --show-cues --no-seal
 
-# Optional local timing observation (not a benchmark)
+# Optional local timing observation (not a benchmark; environment-specific)
 /usr/bin/time -f 'elapsed=%E' PYTHONPATH=src python -m cueliez docs/examples/owner_hedging_interview.json --mode generic --no-seal > /tmp/cueliez_timing.out
 ```
+
+**Local reference measurement (glyph, 2026-11-08, this environment, owner fixtures, default text path, `--no-seal`):** observe+cues+render ~2–5 ms in-process; end-to-end CLI subprocess ~275–390 ms. These are **environment-specific observations**, not guarantees; re-measure in the target local/private-cloud deployment. Target (<1–2 s text cues) met in this local check.
 
 ## Data handling
 
