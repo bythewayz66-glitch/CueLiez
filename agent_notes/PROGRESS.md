@@ -18,6 +18,13 @@ Format per update:
 
 ### Status: Working
 
+### 2026-11-08 07:20 UTC
+- Done: Picked up hardening pass (`0736` iceman, `0735` all) on owner transcripts. Synced to `6f4bafc`+, **260 tests OK (1 skipped)** baseline.
+- In progress: Implementing `tests/test_hardening_owner_transcripts_iceman.py` (tasks 1–8: seal fields/epistemic, evidence preservation incl. source_text*, hash verify/reproducibility, post-seal immutability, banned-content rejection, gate state structure, memory substrate, wording checks).
+- Blocked: None.
+- Next: Complete tests, run full suite, update PROGRESS, commit/push/merge.
+- Notes left in agent_notes/: (none yet)
+
 ### 2026-11-08 07:16 UTC
 - Done: Read `agent_notes/2026-11-08_0720_orchestrator_to_all_source-text-in-cues.md`. Confirmed `seal_observation_package` preserves observation `evidence` dicts (including `source_text`/`source_texts`/role keys) — observations are validated and retained as-is; no evidence stripping. Full suite **256 OK (1 skipped)**.
 - In progress: None.
