@@ -157,6 +157,7 @@ class DetailDriftObserver:
         number_sets: list[tuple[int, set[str], str]] = []
         for i, text in _subject_turns(transcript):
             nums = set(_NUMBER_RE.findall(text))
+            # Drop trivial small ordinals/counters when other numbers are present to reduce noise.
             nums = {n for n in nums if not (n.isdigit() and int(n) <= 2 and len(nums) > 1)}
             if nums:
                 number_sets.append((i, nums, text[:180]))
@@ -167,16 +168,27 @@ class DetailDriftObserver:
         for i, s, ex in number_sets:
             new = s - seen
             if seen and new:
-                drifted.append({"turn": i, "new_numbers": sorted(new), "excerpt": ex})
+                drifted.append({
+                    "turn": i,
+                    "new_numbers": sorted(new),
+                    "prior_numbers_seen": sorted(seen)[:12],
+                    "excerpt": ex,
+                })
             seen |= s
         if drifted:
-            score = clamp01(0.35 + 0.1 * min(len(drifted), 4))
+            # New numbers can reflect added detail, not a conflict; keep confidence moderate and explainable.
+            total_new = sum(len(d["new_numbers"]) for d in drifted)
+            score = clamp01(0.32 + 0.08 * min(len(drifted), 4) + 0.03 * min(total_new, 6))
             result.observations.append(make_observation(
                 label="numeric_detail_drift_observed",
                 score=score,
                 method_id=self.method_id,
                 category="consistency",
-                evidence={"drift_events": drifted[:6]},
+                evidence={
+                    "drift_events": drifted[:6],
+                    "drift_event_count": len(drifted),
+                    "note": "New numeric details appeared later; they may be added detail or a change—confirm counts, durations, or quantities.",
+                },
                 cue="Numeric details changed across responses; confirm counts, durations, or quantities.",
                 turn_index=drifted[-1]["turn"],
             ))
@@ -200,14 +212,19 @@ class LocationReferenceDivergenceObserver:
         for i, name, ex in locs:
             uniq.setdefault(name, []).append((i, ex))
         if len(uniq) >= 2:
-            # Divergence is a cue to clarify, not proof of conflict (could be different events).
-            score = clamp01(0.3 + 0.08 * min(len(uniq), 5))
+            # Multiple locations may reflect movement across events; cue for clarification, not a conflict finding.
+            score = clamp01(0.28 + 0.07 * min(len(uniq), 6))
             result.observations.append(make_observation(
                 label="multiple_location_references_present",
                 score=score,
                 method_id=self.method_id,
                 category="consistency",
-                evidence={"locations": list(uniq.keys())[:10], "turns": {k: [t for t, _ in v][:3] for k, v in uniq.items()}},
+                evidence={
+                    "locations": list(uniq.keys())[:10],
+                    "location_count": len(uniq),
+                    "turns": {k: [t for t, _ in v][:3] for k, v in list(uniq.items())[:8]},
+                    "note": "Multiple locations may describe different events or movement; confirm where each event occurred.",
+                },
                 cue="Multiple location references appear; confirm where each event occurred and reconcile the sequence.",
             ))
         return result

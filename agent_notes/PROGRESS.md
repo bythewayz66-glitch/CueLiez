@@ -32,10 +32,10 @@ Format per update:
 ### Status: Working
 
 ### 2026-11-08 06:28 UTC
-- Done: Read/saved `kilo.md`, removed it from repo (pushed). Audited observer contract across all observers; hardened `observations.base` validation (method/category/evidence, versioned model_id) and added defensive seal-side forbidden-label/type checks in `gates` (compatible). Improved consistency observer explainability/evidence (`claim_conflict`, `multiple_time_references_present`). Expanded `test_observations_base.py` and `test_runner.py` (required fields, empty input, forbidden labels/cue phrases).
+- Done: Read/saved `kilo.md`, removed it from repo (pushed). Audited observer contract across all observers; hardened `observations.base` validation (method/category/evidence, versioned model_id) and added defensive seal-side forbidden-label/type checks in `gates` (compatible). Improved consistency observer explainability/evidence (`claim_conflict`, `multiple_time_references_present`, `numeric_detail_drift_observed`, `multiple_location_references_present`) with conservative confidence/clarification notes. Expanded `test_observations_base.py` and `test_runner.py` (required fields, empty input, forbidden labels/cue phrases). Rebasing kept current with `origin/main`.
 - In progress: None (awaiting direction).
 - Blocked: None.
-- Next: Continue workload 2 (signal quality/noise reduction for core text observers) and workload 3 verification as needed; coordinate schema details with iceman via `agent_notes/` if required.
+- Next: Continue workload 2 signal-quality/noise reduction across remaining high-value text observers (hedging/distancing/vagueness/certainty swing; latency/length variance/evasion) with explainable evidence and tests; coordinate schema/cue shape with iceman/glyph via `agent_notes/` if needed.
 - Notes left in agent_notes/: (none)
 
 ---
