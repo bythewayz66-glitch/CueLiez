@@ -51,9 +51,10 @@ def seal(
     state: Optional[SessionGateState] = None,
     *,
     high_priority_cue_ids: Optional[List[str]] = None,
+    signer: Any = None,
 ) -> Dict[str, Any]:
     """Seal an observation package through the gate-hardened seal path."""
-    return seal_observation_package(package, state, high_priority_cue_ids=high_priority_cue_ids)
+    return seal_observation_package(package, state, high_priority_cue_ids=high_priority_cue_ids, signer=signer)
 
 
 __all__ = [

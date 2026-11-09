@@ -7,6 +7,7 @@ This folder contains canonical operational templates:
 - `TRAINING_*.md` - domain-specific training modules (gov, leg, med, thrp)
 - `DISCLAIMERS.md` - general and domain-specific disclaimers
 - `CONSENT_SYSTEM.md` - consent workflow/system overview
+- `TRAINING_CERT_SCOPE.md` - boundary between training/gate integration and a full certification program; minimal records model notes
 
 These materials support CueLiez's observation/cue-only model. They are not legal
 or clinical advice. Review and adapt for applicable law, policy, jurisdiction,

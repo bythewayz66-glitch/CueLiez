@@ -37,3 +37,23 @@ class TestDashboard(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+    def test_token_required_when_configured(self):
+        with LiveDashboardServer(host="127.0.0.1", port=0, token="secret123") as srv:
+            url = srv.url
+            try:
+                urllib.request.urlopen(url)
+                self.fail("expected 401")
+            except urllib.error.HTTPError as e:
+                self.assertEqual(e.code, 401)
+            req = urllib.request.Request(url, headers={"Authorization": "Bearer secret123"})
+            with urllib.request.urlopen(req) as r:
+                self.assertEqual(r.status, 200)
+
+    def test_origin_rejected_when_not_allowed(self):
+        with LiveDashboardServer(host="127.0.0.1", port=0) as srv:
+            req = urllib.request.Request(srv.url, headers={"Origin": "https://evil.example"})
+            try:
+                urllib.request.urlopen(req)
+                self.fail("expected 403")
+            except urllib.error.HTTPError as e:
+                self.assertEqual(e.code, 403)

@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import threading
 import time
+import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Dict, List, Optional, Sequence
 from urllib.parse import urlparse
@@ -71,16 +72,38 @@ refresh();
 """
 
 
+class _RateLimiter:
+    def __init__(self, limit: int = 120, window_s: float = 60.0):
+        self.limit = limit
+        self.window_s = window_s
+        self._hits: Dict[str, List[float]] = {}
+        self._lock = threading.Lock()
+
+    def allow(self, key: str) -> bool:
+        now = time.time()
+        with self._lock:
+            q = [t for t in self._hits.get(key, []) if now - t < self.window_s]
+            if len(q) >= self.limit:
+                self._hits[key] = q
+                return False
+            q.append(now)
+            self._hits[key] = q
+            return True
+
+
 class LiveDashboardServer:
     """Threaded HTTP server exposing a live officer-only cue dashboard."""
 
-    def __init__(self, host: str = "127.0.0.1", port: int = 0):
+    def __init__(self, host: str = "127.0.0.1", port: int = 0, *, token: Optional[str] = None, rate_limit: int = 120):
         self.host = host
         self.port = port
+        self.token = (token if token is not None else __import__("os").environ.get("CUELIEZ_DASHBOARD_TOKEN", "")).strip() or None
+        self._allowed_origins = [o.strip() for o in __import__("os").environ.get("CUELIEZ_DASHBOARD_ALLOWED_ORIGINS", "").split(",") if o.strip()]
         self._lock = threading.Lock()
         self._cues: List[Dict[str, Any]] = []
         self._server: Optional[ThreadingHTTPServer] = None
         self._thread: Optional[threading.Thread] = None
+        self._rate = _RateLimiter(limit=max(1, int(rate_limit)))
 
     def start(self) -> None:
         if self._server is not None:
@@ -88,8 +111,64 @@ class LiveDashboardServer:
         outer = self
 
         class Handler(BaseHTTPRequestHandler):
+            def _authorized(self) -> bool:
+                if not outer.token:
+                    return True
+                auth = self.headers.get("Authorization", "")
+                if auth == f"Bearer {outer.token}":
+                    return True
+                if self.headers.get("X-CueLiez-Token") == outer.token:
+                    return True
+                parsed = urlparse(self.path)
+                q = urllib.parse.parse_qs(parsed.query)
+                return (q.get("token") or [None])[0] == outer.token
+
+            def _origin_ok(self) -> bool:
+                origin = self.headers.get("Origin")
+                if not origin:
+                    return True  # non-browser/programmatic clients
+                allowed = list(outer._allowed_origins)
+                # allow localhost origins by default
+                if origin.startswith("http://127.0.0.1") or origin.startswith("http://localhost") or origin.startswith("https://127.0.0.1") or origin.startswith("https://localhost"):
+                    return True
+                return origin in allowed
+
+            def _rate_ok(self) -> bool:
+                key = self.client_address[0] if self.client_address else "unknown"
+                return outer._rate.allow(key)
+
+            def _unauthorized(self) -> None:
+                body = b'{"ok":false,"error":"unauthorized"}'
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def _forbidden(self, msg: str = "forbidden") -> None:
+                body = json.dumps({"ok": False, "error": msg}).encode("utf-8")
+                self.send_response(403)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def _rate_limited(self) -> None:
+                body = b'{"ok":false,"error":"rate_limited"}'
+                self.send_response(429)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
             def do_GET(self):  # noqa: N802
                 parsed = urlparse(self.path)
+                if not self._rate_ok():
+                    self._rate_limited(); return
+                if not self._authorized():
+                    self._unauthorized(); return
+                if not self._origin_ok():
+                    self._forbidden("origin_not_allowed"); return
                 if parsed.path == "/":
                     body = _DASHBOARD_HTML.encode("utf-8")
                     self.send_response(200)
@@ -113,6 +192,12 @@ class LiveDashboardServer:
 
             def do_POST(self):  # noqa: N802
                 parsed = urlparse(self.path)
+                if not self._rate_ok():
+                    self._rate_limited(); return
+                if not self._authorized():
+                    self._unauthorized(); return
+                if not self._origin_ok():
+                    self._forbidden("origin_not_allowed"); return
                 if parsed.path == "/cues":
                     length = int(self.headers.get("Content-Length", "0"))
                     raw = self.rfile.read(length) if length else b""

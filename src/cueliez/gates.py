@@ -15,6 +15,12 @@ import hashlib
 import json
 import time
 
+try:
+    from .audit import audit_event
+except Exception:  # pragma: no cover
+    def audit_event(*args: Any, **kwargs: Any) -> dict:  # type: ignore[no-redef]
+        return {}
+
 # Best-effort product version for sealed packages.
 try:
     from . import __version__ as CUELIEZ_VERSION
@@ -652,6 +658,10 @@ def seal_observation_package(
         package = sign_package(package, signer=signer)
     elif package.get("package_signature") is None:
         package["package_signature"] = None
+    try:
+        audit_event("gate.seal", details={"mode": effective_state.mode, "observation_count": len(observations), "has_signature": bool(package.get("package_signature")), "schema_version": package.get("schema_version")})
+    except Exception:
+        pass
     return package
 
 

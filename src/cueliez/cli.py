@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -23,11 +24,13 @@ from .delivery import OnscreenCueRenderer, cues_from_observations
 from .delivery.notes import attach_officer_cue_notes
 from .export import export_sealed_package
 from .connectors import ConnectorError, push_endpoint, pull_endpoint, push_package, pull_package
-from .gates import GateError, SessionGateState, record_consent
+from .audit import set_audit_correlation_id
+from .gates import GateError, SessionGateState, record_consent, verify_package_hash
 from .session import assert_can_observe, seal
 from .observations import default_runner, full_runner
 from .observations.assisted import make_multi_signal_assisted_adapter, register_assisted_observer, merge_assisted_observations, clear_assisted_registry
 from .packs import get_pack
+from .signing import hmac_signer, load_signing_key, verify_hmac_signature
 
 HONEST_NOTICE = (
     "CueLiez observes transcript/text signals and produces observation cues for human review. "
@@ -109,6 +112,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--enable-assisted", action="store_true", help="Enable feature-flagged assisted (multi-signal) observers. Off by default; no external ML. Requires approved deployment.")
     p.add_argument("--no-seal", action="store_true", help="Build observations/cues only; do not apply seal.")
     p.add_argument("--print-json", action="store_true", help="Print final package JSON to stdout.")
+    p.add_argument("--sign", action="store_true", help="Sign the sealed package using HMAC-SHA256 when CUELIEZ_SIGNING_KEY/CUELIEZ_SIGNING_KEY_FILE is configured.")
+    p.add_argument("--verify-package", help="Verify a sealed package JSON file (hash + optional HMAC signature when key configured) and exit.")
     p.add_argument("--stream-turns", action="store_true", help="Real-time mode: read NDJSON turns (one JSON object per line) from transcript/stdin, emit newly surfaced observation cues as turns arrive (subject not shown). Final package/seal runs after stream ends unless --no-seal.")
     p.add_argument("--push-endpoint", help="HTTP endpoint to POST the final sealed package to after a successful run (overrides CUELIEZ_PUSH_ENDPOINT). Env-based auth: CUELIEZ_CONNECTOR_TOKEN / CUELIEZ_CONNECTOR_AUTH_HEADER. No hardcoded credentials.")
     p.add_argument("--pull-endpoint", help="HTTP endpoint to GET a sealed package from (supports {id} placeholder or ?id=; overrides CUELIEZ_PULL_ENDPOINT).")
@@ -207,7 +212,20 @@ def _run_stream_turns(args, state, pack, annotations):
 def run_cli(argv: Optional[List[str]] = None) -> int:
     parser = build_arg_parser()
     args = parser.parse_args(argv)
+    set_audit_correlation_id(str(uuid.uuid4()))
     try:
+        if getattr(args, "verify_package", None):
+            pkg = json.loads(Path(args.verify_package).read_text(encoding="utf-8"))
+            if not isinstance(pkg, dict):
+                raise ValueError("verify_package must contain a JSON object")
+            hash_ok = verify_package_hash(pkg)
+            sig = verify_hmac_signature(pkg) if pkg.get("package_signature") else {"ok": None, "reason": "no_signature"}
+            if isinstance(sig, dict) and sig.get("reason") == "signing_key_missing" and load_signing_key() is None:
+                sig = {"ok": None, "reason": "signing_key_not_configured"}
+            result = {"ok": bool(hash_ok) and (sig.get("ok") is not False), "action": "verify", "notice": HONEST_NOTICE, "hash_ok": bool(hash_ok), "signature": sig, "package_hash": pkg.get("package_hash")}
+            print(json.dumps(result, ensure_ascii=False, default=str))
+            return 0 if result["ok"] else 2
+
         # Connector pull path: fetch an existing sealed package, then export/render (no observation).
         if args.pull_id:
             pend = pull_endpoint(args.pull_endpoint)
@@ -305,7 +323,10 @@ def run_cli(argv: Optional[List[str]] = None) -> int:
 
         if not args.no_seal:
             dual_ids = list(args.high_priority_cue_ids) or (hi_ids if state.mode == "government" else [])
-            package = seal(package, state, high_priority_cue_ids=dual_ids)
+            signer = hmac_signer() if getattr(args, "sign", False) else None
+            if getattr(args, "sign", False) and load_signing_key() is None:
+                raise GateError("signing_key_missing", "--sign requires CUELIEZ_SIGNING_KEY or CUELIEZ_SIGNING_KEY_FILE.")
+            package = seal(package, state, high_priority_cue_ids=dual_ids, signer=signer)
 
         formats = args.formats or ["json", "md", "html"]
         pend = push_endpoint(args.push_endpoint)

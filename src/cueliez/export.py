@@ -9,10 +9,13 @@ from __future__ import annotations
 
 import html
 import json
+import os
+import re
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence
 
+from .audit import audit_event
 from .delivery.events import CueEvent, cues_from_observations
 from .delivery.notes import OFFICER_CUE_NOTES_KEY, normalize_officer_cue_notes
 
@@ -20,6 +23,36 @@ EXPORT_NOTICE = (
     "This export contains observed indicators and interview-support cues only. "
     "It does not contain findings, diagnoses, or determinations about credibility."
 )
+
+_SAFE_BASENAME_RE = re.compile(r"[^A-Za-z0-9._-]+")
+MAX_BASENAME_LEN = 120
+
+
+def safe_export_basename(basename: str, default: str = "sealed_package") -> str:
+    """Sanitize export basename to prevent path traversal and unsafe filenames."""
+    name = Path(str(basename or "")).name  # drop any directory components
+    name = name.replace("\x00", "").strip().strip(".")
+    name = _SAFE_BASENAME_RE.sub("_", name)
+    name = name[:MAX_BASENAME_LEN].strip("._")
+    if not name or name in {".", ".."}:
+        return default
+    return name
+
+
+def _resolve_under(root: Path, filename: str) -> Path:
+    root = root.resolve()
+    target = (root / filename).resolve()
+    if target != root and root not in target.parents:
+        raise ValueError(f"Export path escapes output directory: {filename!r}")
+    return target
+
+
+def _write_export_text(path: Path, content: str) -> None:
+    path.write_text(content, encoding="utf-8")
+    try:
+        os.chmod(path, 0o600)
+    except OSError:
+        pass
 
 
 def _display_value(value: Any) -> str:
@@ -58,11 +91,14 @@ def _gate_summary(package: Mapping[str, Any]) -> Dict[str, Any]:
 def export_package_json(package: Mapping[str, Any], path: str | Path) -> str:
     """Write canonical structured JSON export."""
     out = Path(path)
-    out.parent.mkdir(parents=True, exist_ok=True)
+    safe_name = safe_export_basename(out.name, default="sealed_package.json")
+    root = out.parent.resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    out = _resolve_under(root, safe_name)
     payload = dict(package)
     payload.setdefault("export_notice", EXPORT_NOTICE)
     payload.setdefault("exported_at", time.time())
-    out.write_text(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=False, default=str) + "\n", encoding="utf-8")
+    _write_export_text(out, json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=False, default=str) + "\n")
     return str(out)
 
 
@@ -295,17 +331,19 @@ def export_sealed_package(
     transcript: Optional[Sequence[Mapping[str, Any]]] = None,
 ) -> Dict[str, str]:
     """Export a package to requested formats. Returns paths by format."""
-    root = Path(out_dir)
+    root = Path(out_dir).resolve()
     root.mkdir(parents=True, exist_ok=True)
+    safe_base = safe_export_basename(basename)
     paths: Dict[str, str] = {}
     if "json" in formats:
-        paths["json"] = export_package_json(package, root / f"{basename}.json")
+        paths["json"] = export_package_json(package, root / f"{safe_base}.json")
     if "md" in formats or "markdown" in formats:
-        p = root / f"{basename}.summary.md"
-        p.write_text(render_package_summary_markdown(package, cues=cues, observations=observations, transcript=transcript) + "\n", encoding="utf-8")
+        p = _resolve_under(root, f"{safe_base}.summary.md")
+        _write_export_text(p, render_package_summary_markdown(package, cues=cues, observations=observations, transcript=transcript) + "\n")
         paths["md"] = str(p)
     if "html" in formats:
-        p = root / f"{basename}.summary.html"
-        p.write_text(render_package_summary_html(package, cues=cues, observations=observations, transcript=transcript) + "\n", encoding="utf-8")
+        p = _resolve_under(root, f"{safe_base}.summary.html")
+        _write_export_text(p, render_package_summary_html(package, cues=cues, observations=observations, transcript=transcript) + "\n")
         paths["html"] = str(p)
+    audit_event("export.package", details={"formats": sorted(paths.keys()), "basename": safe_base, "file_count": len(paths)})
     return paths

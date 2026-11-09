@@ -15,6 +15,7 @@ from .training import (
     render_training_module,
     validate_training_ack,
 )
+from .records import TrainingCredentialRecord, TrainingRecordStore
 
 __all__ = [
     "domain_disclaimer",
@@ -28,4 +29,6 @@ __all__ = [
     "get_training_bundle",
     "render_training_module",
     "validate_training_ack",
+    "TrainingCredentialRecord",
+    "TrainingRecordStore",
 ]

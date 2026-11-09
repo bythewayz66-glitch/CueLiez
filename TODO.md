@@ -182,3 +182,79 @@ Copy of the living checklist — expand into formal acceptance criteria as items
 ---
 
 **Source of this list:** Consolidated from product evaluation, market context, next-steps plan, game plan to remove current limitations, and the Admissibility Requirements discussion (2026-11-07).
+
+---
+
+## Phase 9 — Path to A+ (Deep Scan Remediation, appended 2026-11-09)
+
+**Source:** Deep scan report card (Glyph Cluster session, 2026-11-09). All work must obey `AGENTS.md` and `docs/LANGUAGE_RULES.md`. No fake code, no placeholders, no stubs. Observation/cue-only framing; no verdict, diagnosis, or deception-determination features.
+
+Status key: `[ ]` not started · `[~]` in progress · `[x]` done
+
+### 9.1 Fake coding / stubs / placeholder impls (current A- → A+)
+- [x] Add/maintain a CI/static check that fails on `TODO|FIXME|XXX|NotImplementedError|raise NotImplemented|pass  # stub|implement later` in `src/` (allow explicit, reviewed exceptions only with documented rationale). (Sprint 2 - 2026-11-09: `scripts/check_no_fake_code.py` + `tests/test_hygiene_phase9.py`; wired in `.github/workflows/ci.yml`. Reviewed-exception allowlist mechanism remains minimal and should be expanded only with documented rationale.)
+- [ ] Keep `assisted.py` prototype behavior explicitly fail-closed and non-fabricating; add a contract test asserting disabled/unwired assisted observers never emit verdict-shaped data or external calls without explicit opt-in/config.
+- [ ] Audit any future `return None/[]/{}` paths: require comments/tests distinguishing legitimate “no data / insufficient data / disabled” guards from incomplete behavior.
+- [ ] Remove or clearly label non-runtime “placeholder” UI/help strings only where they could be misread as implementation gaps (current hits like `{id}` endpoint templates and HTML input placeholders are acceptable if documented).
+
+### 9.2 Drift (current B+ → A+)
+- [x] Remove local/committed drift artifacts: ensure `build/`, `dist/`, `*.egg-info` build outputs, and `__pycache__`/`*.pyc` are never tracked; add CI check (`git ls-files`/clean-tree guards) for ignored build/bytecode artifacts. (Sprint 2 - 2026-11-09: `scripts/check_no_tracked_artifacts.py` + CI; local untracked artifact cleanup done.)
+- [x] Add release/version consistency checks: `pyproject.toml` version, `src/cueliez/__init__.__version__`, changelog/tag (if adopted), and schema/package metadata must match; fail CI on skew. (Sprint 2 - 2026-11-09: `scripts/check_version_consistency.py` + CI; changelog/tag/schema metadata checks can be expanded.)
+- [~] Add a “docs vs implementation” verification pass in CI for critical surfaces (CLI flags/help snapshots or tests, gate error codes, schema fields, export formats, disclaimer/version references). (Sprint 2 + follow-ups 2026-11-09: CI includes help smoke, `scripts/check_cli_contract.py` (required flags), and `scripts/check_contracts_phase9.py` (sealed schema/epistemic/hash, export formats, disclaimer/observed-indicator framing, key gate-code presence). Follow-up: full gate-error code registry snapshots, schema version migrations, and richer docs snapshot tests.)
+- [ ] Keep `TODO.md` status claims evidence-backed; for any `[x]` item that is docs/operator-only (not technically enforced), append “(docs/operator guidance; technical enforcement pending)” or split into separate enforced/documented items.
+
+### 9.3 Documentation (current A- → A+)
+- [ ] Add/verify operator-facing docs for every shipped CLI flag, export format, connector env var, and gate error code; generate or test-help snapshots to prevent drift.
+- [ ] Add a production operations runbook: deployment modes (on-prem/air-gapped/private cloud), secure config, backup/restore of sealed artifacts, incident handling, and explicit non-certification/non-legal-opinion boundaries.
+- [ ] Document cryptographic integrity model precisely: what `package_hash` covers, canonicalization rules, signature hook status, and verification procedure; add examples.
+- [ ] Add API/module reference docs (or docstring coverage checks) for `gates`, `session`, `ingest`, `connectors`, `export`, `delivery`, and `observations` contracts.
+- [ ] Add a “known limitations / not production-certified” doc section aligned with current reality (SSRF hardening pending, no bundled signer, no live vendor connectors, retention enforcement operator-controlled, training/cert framework only).
+
+### 9.4 Training & certification program (current C → A+)
+- [x] Define scope explicitly (Sprint 4 - 2026-11-09): added `docs/compliance/TRAINING_CERT_SCOPE.md` and referenced it from `docs/compliance/README.md`; clarifies training/gate integration vs full certification/LMS and observation-only scope boundaries.
+- [~] Build a **training records system** (Sprint 4 + follow-up 2026-11-09): added minimal persistent technical record support `src/cueliez/compliance/records.py` (`TrainingCredentialRecord`, `TrainingRecordStore` JSONL append-only events, record hashes, issue/verify/revoke/get, expiry/status, gate-compatible ack) with minimal RBAC controls (`enforce_rbac`, `admin_actors`, actor checks; `CUELIEZ_TRAINING_ENFORCE_RBAC`/`CUELIEZ_TRAINING_ADMIN_ACTORS`) and admin audit events. Tests: `tests/test_training_records_phase9.py`. Not a full LMS/access-controlled enterprise system; follow-up: secure storage/encryption, jurisdiction/org linkage, richer governance/workflows, and external identity integration.
+- [~] Implement **credential/certificate issuance** (Sprint 4 + follow-up 2026-11-09, minimal): unique credential IDs, verify/status/expiry/revocation in `TrainingRecordStore`, actor/RBAC checks and admin audit hooks; observation-safe scope documented. Follow-up: formal certificate artifacts/export, suspended workflow, verification API/service, and governance.
+- [ ] Implement **renewal/expiry/recertification**: policy-driven validity windows, version-change triggers, reminders/workflows (or interfaces), and gate behavior when training is expired (fail closed for required modes).
+- [ ] Implement **assessment delivery/governance**: structured assessments (not caller-declared only), scoring/rubric, trainer/proctor authorization, approval workflow, and auditable admin actions.
+- [ ] Add **governance/RBAC and audit trails** for training administration: roles, separation of duties where appropriate, immutable event log for issuance/revocation/updates, and identity/HR integration interfaces (with privacy controls).
+- [ ] Add **privacy/records handling** for training data consistent with deployment policy; document retention/access and provide technical controls where feasible.
+- [ ] Add end-to-end tests: valid/invalid ack, expired/renewed training, revoked credential, version mismatch, and gate enforcement in all training-required modes.
+
+### 9.5 Functionality & domain completeness (current B+ → A+)
+- [ ] Complete a domain-by-domain acceptance matrix (gates, consent, memory/seal, observations, session, ingest, connectors, delivery, export, packs, CLI) with explicit “production-ready / gated / framework / operator-dependent” status and tests.
+- [ ] Harden `memory`/seal lifecycle docs+tests for contamination controls, partition behavior, and post-seal immutability across all APIs/exports.
+- [ ] Formalize observation contracts: required fields (`score`, `model_id`, neutral label, evidence/provenance as applicable), insufficient-data behavior, and calibration documentation per observer.
+- [ ] Make assisted/ML/LLM observer integration fully policy-gated with provenance, model/version pinning, offline/local options where required, and explicit opt-in; never default-enable in high-stakes modes without approvals.
+- [ ] Validate real-time/audio-stream semantics end-to-end (derived features only, consent/jurisdiction/modality gates, latency/error behavior, cue deduplication) with documented limits.
+- [ ] Ensure every domain pack (gov/leg/med/thrp) has reviewed observer sets, guidance, gate defaults, and tests; keep out-of-scope packs clearly marked in product messaging.
+
+### 9.6 Feature coverage (current B → A+)
+- [x] Implement cryptographic **signing and verification** workflow (Sprint 5 + follow-ups 2026-11-09, HMAC-SHA256, stdlib): added `src/cueliez/signing.py` (`load_signing_key`/`load_verification_keys`, `hmac_sign_package`, `verify_hmac_signature` with `key`/`keys` rotation support via `CUELIEZ_SIGNING_VERIFY_KEYS`, `hmac_signer`) over canonical `package_hash`; `package_signature` remains excluded from hash (stable). Key custody documented in `docs/deployment/KEY_CUSTODY.md`. CLI: `--sign` (requires configured key) and `--verify-package <file>` (hash + optional signature verification); `session.seal` passes `signer`. Tests: `tests/test_signing_phase9.py`, `tests/test_cli_verify_sign_phase9.py`. Follow-up: asymmetric/KMS options if needed, formal key-rotation/overlap policy docs per deployment, and default signing policy decisions.
+- [ ] Add durable, reproducible export verification tooling (hash/signature check, schema validation, completeness report) as CLI/library commands.
+- [ ] Improve real-time officer UI options: authenticated local dashboard mode, configurable polling/WebSocket (if added), accessibility basics, and explicit subject-not-shown controls; preserve observation-only framing.
+- [ ] Add structured officer workflow features only where human-led: cue acknowledgement/notes disposition metadata, review queues, and export of human actions separately labeled from system observations.
+- [ ] Expand modality support only behind explicit consent+jursdiction+policy gates with clear data minimization (derived features preferred; raw sensor handling only if explicitly designed and approved).
+
+### 9.7 Integration coverage (current B- → A+)
+- [ ] Evolve connectors from generic HTTP to **hardened integration adapters**: per-integration config schemas, endpoint/credential validation, idempotency keys, retries/backoff policies, payload size limits, and audit events.
+- [ ] Add vendor-specific integration adapters only when partner contracts/scope exist (Axon, CaseCracker, RMS, case/evidence systems), with mocked conformance tests and live-integration test plans run only in approved environments.
+- [ ] Define and test RMS/case/evidence attachment workflows as first-class flows: canonical sealed package + hash/signature + disclosure summary + chain-of-custody metadata mapping (observation-only).
+- [ ] Add streaming ingest integration contracts (real-time transcript/audio-derived feature hooks) with backpressure, ordering/timestamp rules, replay protection, and fail-closed behavior on gate failures.
+- [ ] Provide stable machine-readable integration contracts (OpenAPI/JSON Schema where appropriate) for push/pull/export payloads and version them.
+
+### 9.8 Production readiness / gaps (current C+ → A+)
+- [x] **SSRF/egress hardening (priority, Sprint 1 - 2026-11-09):** `src/cueliez/connectors.py` validates connector URLs (http/https only, no embedded credentials), resolves hostnames, allows loopback for local/on-host tooling, blocks link-local/metadata always, blocks multicast/unspecified/reserved, blocks RFC1918/CGNAT/private ranges by default with explicit opt-in `CUELIEZ_CONNECTOR_ALLOW_PRIVATE_NETWORK=1` for approved on-prem targets; supports `CUELIEZ_CONNECTOR_HOST_ALLOWLIST` (hostnames/CIDRs); revalidates redirects with hop limit; enforces request/response size caps. Tests: `tests/test_connectors_security_phase9.py`; existing connector tests still pass. Follow-up: service-context threat-model review and optional stricter default `https` policy mode.
+- [x] **Path/output hardening (Sprint 1 - 2026-11-09, export layer):** `src/cueliez/export.py` sanitizes export basenames, prevents path traversal/escape from output dir, resolves outputs safely, and sets restrictive file permissions (`0600`) where supported. Tests: `tests/test_export_security_phase9.py`; existing export/e2e tests still pass. Follow-up: apply same hardening to any remaining CLI/service file-input paths and configurable permission policy.
+- [~] **Structured observability (Sprint 3 + follow-ups 2026-11-09):** added `src/cueliez/audit.py` (stdlib JSON-line audit events, redaction/truncation, best-effort, optional `CUELIEZ_AUDIT_LOG`/`CUELIEZ_AUDIT_STDERR`, thread-local correlation context); integrated redacted events for connector URL/egress validation, requests/responses (host/status/bytes, no tokens/full content), export operations, and `gate.seal` summary events. CLI sets per-run correlation ID; connector `push_package`/`pull_package`/request path accept optional `correlation_id`. Follow-up: propagate correlation/session IDs through all service contexts, centralized audit sink/levels, and retention/access controls per policy.
+- [ ] **Technical data controls (where feasible):** configurable retention hooks/policies, encryption-at-rest guidance/integration points, access control integration for stored packages, and secure deletion workflows; keep operator/legal policy boundaries explicit.
+- [~] **Dashboard/service hardening (Sprint 3 + follow-up 2026-11-09):** `LiveDashboardServer` defaults to localhost; optional token auth; rejects non-allowed `Origin` headers (localhost allowed by default, `CUELIEZ_DASHBOARD_ALLOWED_ORIGINS` configurable; missing Origin allowed for programmatic clients) with 403; in-memory per-IP rate limiting (429). Tests: `tests/test_dashboard.py`. Follow-up: TLS/reverse-proxy guidance, authenticated browser UI flow, distributed rate limiting, and stronger CSRF/session controls for exposed deployments.
+- [ ] **Supply chain & CI/CD:** add CI (pytest, language/site checks, packaging, schema/contract tests, security/static checks), dependency review (even with minimal runtime deps), SBOM/release process, and signed release artifacts if distributed.
+- [ ] **Deployment packaging:** provide reproducible deployment artifacts (container/non-container as appropriate), config schema/examples, health/readiness checks for service modes, and backup/restore procedures.
+- [ ] **Security review:** threat model (STRIDE-style or equivalent), penetration checklist for connectors/dashboard/CLI service wrappers, and remediation tracking; avoid any feature that enables prohibited surveillance or automated findings.
+
+### 9.9 Mega-polish / hygiene (current B → A+)
+- [~] Clean working tree hygiene in dev/release process: remove local `build/` and `__pycache__`; enforce via CI/pre-commit. (2026-11-09: removed untracked local `build/`/`__pycache__` artifacts in working tree; CI/pre-commit enforcement pending.)
+- [ ] Add repo quality gates: formatting/lint/type checks as adopted by project style, pre-commit hooks, and consistent import/module organization; keep changes minimal and aligned with existing style.
+- [ ] Add/confirm license header policy (if desired) and third-party notice handling; keep Apache-2.0 compliance clear.
+- [ ] Add coverage for edge cases discovered by scans: connector URL abuse cases, malformed transcripts, gate-state serialization/immutability, export hash/signature verification, and dashboard endpoint misuse.
+- [ ] Run periodic “mega polish” audits (fake-code scan, drift scan, language-rule audit, security checklist, docs-contract checks) and record findings in `DIARY.md`/issue tracker with evidence.
