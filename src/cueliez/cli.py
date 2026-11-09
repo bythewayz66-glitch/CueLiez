@@ -120,6 +120,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--pull-id", help="Sealed package ID to pull via --pull-endpoint/CUELIEZ_PULL_ENDPOINT, then export/render locally (skips transcript observation).")
     p.add_argument("--connector-timeout", type=float, default=15.0, help="Connector HTTP timeout in seconds.")
     p.add_argument("--connector-retries", type=int, default=2, help="Connector retry count for transient/offline errors.")
+    p.add_argument("--training-gui", action="store_true", help="Launch the web-based Training GUI (modules, media, interactive quizzes, sandbox, records). Not a CLI training workflow.")
+    p.add_argument("--training-gui-host", default="127.0.0.1", help="Training GUI host.")
+    p.add_argument("--training-gui-port", type=int, default=8765, help="Training GUI port.")
     return p
 
 
@@ -225,6 +228,20 @@ def run_cli(argv: Optional[List[str]] = None) -> int:
             result = {"ok": bool(hash_ok) and (sig.get("ok") is not False), "action": "verify", "notice": HONEST_NOTICE, "hash_ok": bool(hash_ok), "signature": sig, "package_hash": pkg.get("package_hash")}
             print(json.dumps(result, ensure_ascii=False, default=str))
             return 0 if result["ok"] else 2
+
+        if getattr(args, "training_gui", False):
+            from .training_gui import TrainingGUIServer
+            srv = TrainingGUIServer(host=args.training_gui_host, port=args.training_gui_port)
+            srv.start()
+            print(json.dumps({"ok": True, "action": "training_gui", "url": srv.url, "notice": HONEST_NOTICE + " Training GUI is observation/cue-only."}, ensure_ascii=False))
+            try:
+                while True:
+                    __import__("time").sleep(1)
+            except KeyboardInterrupt:
+                pass
+            finally:
+                srv.stop()
+            return 0
 
         # Connector pull path: fetch an existing sealed package, then export/render (no observation).
         if args.pull_id:

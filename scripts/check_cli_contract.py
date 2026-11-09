@@ -3,7 +3,7 @@
 from __future__ import annotations
 import subprocess, sys
 
-REQUIRED_FLAGS = ["--verify-package", "--sign", "--push-endpoint", "--pull-endpoint", "--pull-id", "--no-seal", "--mode"]
+REQUIRED_FLAGS = ["--verify-package", "--sign", "--push-endpoint", "--pull-endpoint", "--pull-id", "--no-seal", "--mode", "--training-gui"]
 
 def main() -> int:
     r = subprocess.run([sys.executable, "-m", "cueliez", "--help"], capture_output=True, text=True)
