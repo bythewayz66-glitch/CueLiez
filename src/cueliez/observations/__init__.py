@@ -37,6 +37,12 @@ from .physiological import ElectrodermalShiftObserver, HeartRateShiftObserver, H
 from .prosody import PausePatternObserver, ProsodicVariabilityObserver, VoiceStressFeatureShiftObserver
 from .runner import ObservationRunner, default_runner, full_runner
 from .visual import BlinkRateObserver, GazePatternObserver, MotorActivityObserver
+from .narrative import (
+    TemporalStructureObserver,
+    SensoryDetailObserver,
+    AgencyFramingObserver,
+    SpecificityShiftObserver,
+)
 
 __all__ = [
     "Observation",
@@ -73,6 +79,10 @@ __all__ = [
     "BlinkRateObserver",
     "GazePatternObserver",
     "MotorActivityObserver",
+    "TemporalStructureObserver",
+    "SensoryDetailObserver",
+    "AgencyFramingObserver",
+    "SpecificityShiftObserver",
     "ObservationRunner",
     "default_runner",
     "full_runner",
