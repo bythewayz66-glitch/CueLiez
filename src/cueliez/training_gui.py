@@ -31,6 +31,37 @@ from .delivery.events import cues_from_observations
 from .observations import default_runner
 
 DEFAULT_MEDIA_DIR = Path(__file__).resolve().parents[2] / "docs" / "training" / "media"
+DEFAULT_CONFIG_PATH = Path("cueliez_training_gui_config.json")
+
+def _default_config():
+    return {"operator_id": "", "preferred_domain": "leg", "records_path": "cueliez_training_records.jsonl", "media_dir": "", "sandbox_min_score": 0.0, "notes": ""}
+
+def _load_config(path: Path):
+    cfg = _default_config()
+    try:
+        if path.exists():
+            data = __import__("json").loads(path.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                cfg.update({k: data[k] for k in cfg if k in data})
+    except Exception:
+        pass
+    return cfg
+
+def _save_config(path: Path, data):
+    import json
+    cfg = _default_config()
+    if isinstance(data, dict):
+        for k in cfg:
+            if k in data:
+                cfg[k] = data[k]
+    try:
+        cfg["sandbox_min_score"] = float(cfg.get("sandbox_min_score") or 0.0)
+    except (TypeError, ValueError):
+        cfg["sandbox_min_score"] = 0.0
+    for k in ("operator_id", "preferred_domain", "records_path", "media_dir", "notes"):
+        cfg[k] = str(cfg.get(k) or "").strip()
+    path.write_text(json.dumps(cfg, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return cfg
 
 
 def _quizzes() -> Dict[str, List[Dict[str, Any]]]:
@@ -111,7 +142,7 @@ img,video{{max-width:100%;border-radius:8px;border:1px solid #26325f}}
 nav a{{margin-right:10px}}
 </style></head><body>
 <header><strong>CueLiez Training Portal (GUI)</strong> <span class='muted'>— observation/cue training only; not a lie detector; not CLI training.</span>
-<nav><a href='/'>Home</a><a href='/sandbox'>Self-Training Sandbox</a><a href='/records'>Credentials/Records</a></nav></header>
+<nav><a href='/'>Home</a><a href='/sandbox'>Self-Training Sandbox</a><a href='/records'>Credentials/Records</a><a href='/config'>Config</a></nav></header>
 <main>{body}</main></body></html>"""
     return doc.encode("utf-8")
 
@@ -120,8 +151,12 @@ class TrainingGUIServer:
     def __init__(self, host: str = "127.0.0.1", port: int = 911, *, media_dir: Optional[Path] = None, records_path: Optional[Path] = None):
         self.host = host
         self.port = port
-        self.media_dir = Path(media_dir) if media_dir else DEFAULT_MEDIA_DIR
-        self.records = TrainingRecordStore(records_path or Path("cueliez_training_records.jsonl"))
+        self.config_path = DEFAULT_CONFIG_PATH
+        self.config = _load_config(self.config_path)
+        md = media_dir or (self.config.get("media_dir") or None)
+        self.media_dir = Path(md) if md else DEFAULT_MEDIA_DIR
+        rp = records_path or self.config.get("records_path") or "cueliez_training_records.jsonl"
+        self.records = TrainingRecordStore(Path(rp))
         self._server: Optional[ThreadingHTTPServer] = None
         self._thread: Optional[threading.Thread] = None
 
@@ -223,6 +258,41 @@ class TrainingGUIServer:
 <script>async function verify(){const id=document.getElementById('cid').value;const res=await fetch('/api/records/verify?id='+encodeURIComponent(id));document.getElementById('out').innerHTML='<div class="card"><pre>'+JSON.stringify(await res.json(),null,2)+'</pre></div>';}</script>
 <p class='muted'>Issuance via GUI/API uses the minimal record store; configure RBAC env vars for enforced admin controls. Not a full LMS/cert authority.</p>"""
                     return self._send(200, _html_page("Records", body))
+
+                if path == "/config":
+                    cfg = _load_config(outer.config_path)
+                    opts = []
+                    for d in ("gov", "leg", "med", "thrp"):
+                        sel = " selected" if cfg.get("preferred_domain") == d else ""
+                        opts.append(f"<option value='{d}'{sel}>{d}</option>")
+                    domains = "".join(opts)
+                    body = (
+                        "<h2>Training GUI Config</h2><div class='card'>"
+                        "<p class='muted'>Save operator preferences to a local JSON config file. Observation/cue-only — no verdicts.</p>"
+                        f"<label>Operator ID</label><input id='operator_id' value='{html.escape(str(cfg.get('operator_id') or ''))}'>"
+                        f"<label>Preferred domain</label><select id='preferred_domain'>{domains}</select>"
+                        f"<label>Records path</label><input id='records_path' value='{html.escape(str(cfg.get('records_path') or ''))}'>"
+                        f"<label>Media directory (optional)</label><input id='media_dir' value='{html.escape(str(cfg.get('media_dir') or ''))}'>"
+                        f"<label>Sandbox min score</label><input id='sandbox_min_score' type='number' step='0.01' min='0' max='1' value='{html.escape(str(cfg.get('sandbox_min_score') if cfg.get('sandbox_min_score') is not None else 0.0))}'>"
+                        f"<label>Notes</label><textarea id='notes' rows='3'>{html.escape(str(cfg.get('notes') or ''))}</textarea>"
+                        "<div style='margin-top:12px'><button class='btn primary' type='button' onclick='saveConfig()'>Save config file</button>"
+                        "<span class='muted' id='cfg_status' style='margin-left:10px'></span></div>"
+                        f"<p class='muted' style='margin-top:12px'>Config file: <code>{html.escape(str(outer.config_path.resolve()))}</code></p></div>"
+                        "<script>async function saveConfig(){const payload={operator_id:document.getElementById('operator_id').value,"
+                        "preferred_domain:document.getElementById('preferred_domain').value,"
+                        "records_path:document.getElementById('records_path').value,"
+                        "media_dir:document.getElementById('media_dir').value,"
+                        "sandbox_min_score:Number(document.getElementById('sandbox_min_score').value||0),"
+                        "notes:document.getElementById('notes').value};"
+                        "const res=await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});"
+                        "const j=await res.json();const el=document.getElementById('cfg_status');"
+                        "if(j.ok){el.className='ok';el.textContent='Saved to '+(j.path||'config file');}"
+                        "else{el.className='bad';el.textContent=j.error||'Save failed';}}</script>"
+                    )
+                    return self._send(200, _html_page("Config", body))
+                if path == "/api/config":
+                    return self._json({"ok": True, "config": _load_config(outer.config_path), "path": str(outer.config_path.resolve())})
+
                 if path.startswith("/media/"):
                     rel = urllib.parse.unquote(path[len("/media/"):])
                     target = (outer.media_dir / rel).resolve()
@@ -278,6 +348,20 @@ class TrainingGUIServer:
                     observations = default_runner().run(transcript)
                     cues = [c.to_dict() for c in cues_from_observations(observations, transcript=transcript)]
                     return self._json({"ok": True, "notice": "Observation/cue-only sandbox output for self-training. No verdicts.", "observation_count": len(observations), "cue_count": len(cues), "cues": cues, "observations": observations[:50]})
+                if path == "/api/config":
+                    try:
+                        saved = _save_config(outer.config_path, data)
+                        outer.config = saved
+                        rp = (saved.get("records_path") or "").strip()
+                        if rp:
+                            outer.records = TrainingRecordStore(Path(rp))
+                        md = (saved.get("media_dir") or "").strip()
+                        if md:
+                            outer.media_dir = Path(md)
+                        audit_event("training.config_save", details={"path": str(outer.config_path)})
+                        return self._json({"ok": True, "config": saved, "path": str(outer.config_path.resolve())})
+                    except Exception as e:
+                        return self._json({"ok": False, "error": str(e)}, 500)
                 return self._json({"ok": False, "error": "not_found"}, 404)
 
         self._server = ThreadingHTTPServer((self.host, self.port), Handler)
