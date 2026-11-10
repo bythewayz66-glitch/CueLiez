@@ -124,3 +124,258 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--training-gui-host", default="127.0.0.1", help="Training GUI host.")
     p.add_argument("--training-gui-port", type=int, default=911, help="Training GUI port.")
     return p
+
+
+def _iter_ndjson_turns(path: Optional[str]):
+    fh = open(path, "r", encoding="utf-8") if path and path != "-" else sys.stdin
+    try:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            obj = json.loads(line)
+            if isinstance(obj, dict):
+                yield _normalize_transcript_turn(obj)
+            elif isinstance(obj, list):
+                for t in obj:
+                    yield _normalize_transcript_turn(t)
+    finally:
+        if fh is not sys.stdin:
+            fh.close()
+
+
+def _run_stream_turns(args, state, pack, annotations):
+    transcript: List[Dict[str, Any]] = []
+    seen_cue_ids = set()
+    renderer = OnscreenCueRenderer()
+    print(json.dumps({"event": "stream_start", "notice": HONEST_NOTICE, "streaming": True, "subject_visible": False}, ensure_ascii=False), flush=True)
+    runner = None if pack is not None else (full_runner() if args.runner == "full" else default_runner())
+    for turn in _iter_ndjson_turns(args.transcript):
+        transcript.append(turn)
+        if pack is not None:
+            raw_package = pack.build_package(transcript, annotations=annotations)
+            observations = raw_package.get("observations") or []
+        else:
+            observations = runner.run(transcript)
+            raw_package = {"observations": observations, "annotations": annotations}
+        cues = cues_from_observations(observations, min_score=args.min_score, max_cues=args.max_cues, transcript=transcript)
+        new_cues = [c for c in cues if c.cue_id not in seen_cue_ids]
+        for c in new_cues:
+            seen_cue_ids.add(c.cue_id)
+        if new_cues:
+            print(json.dumps({"event": "new_cues", "turn_count": len(transcript), "cues": [c.to_dict() for c in new_cues], "notice": HONEST_NOTICE}, ensure_ascii=False), flush=True)
+        else:
+            print(json.dumps({"event": "turn", "turn_count": len(transcript), "new_cue_count": 0}, ensure_ascii=False), flush=True)
+
+    # Final result over full accumulated transcript
+    if pack is not None:
+        raw_package = pack.build_package(transcript, annotations=annotations)
+        observations = raw_package.get("observations") or []
+    else:
+        runner = full_runner() if args.runner == "full" else default_runner()
+        raw_package = runner.build_package(transcript, annotations=annotations)
+        observations = raw_package.get("observations") or []
+    cues = cues_from_observations(observations, min_score=args.min_score, max_cues=args.max_cues, transcript=transcript)
+    hi_ids = _high_priority_cue_ids(cues)
+    if args.show_cues:
+        print(renderer.render_text(cues, header="CueLiez Observation Cues (final)"), flush=True)
+    package = dict(raw_package)
+    officer_notes = _load_json_file(args.officer_notes)
+    if officer_notes is not None:
+        if isinstance(officer_notes, dict) and "officer_cue_notes" in officer_notes:
+            officer_notes = officer_notes["officer_cue_notes"]
+        if _package_is_sealed(package):
+            raise GateError("sealed_package_immutable", "Officer notes must be attached before seal; package is already sealed.")
+        package = attach_officer_cue_notes(package, officer_notes)
+    if not args.no_seal:
+        dual_ids = list(args.high_priority_cue_ids) or (hi_ids if state.mode == "government" else [])
+        package = seal(package, state, high_priority_cue_ids=dual_ids)
+    formats = args.formats or ["json", "md", "html"]
+    pend = push_endpoint(args.push_endpoint)
+    push_result = None
+    if pend:
+        push_result = push_package(pend, package, timeout=args.connector_timeout, retries=args.connector_retries)
+    exported = None
+    if args.out_dir:
+        exported = export_sealed_package(package, args.out_dir, basename=args.basename, formats=formats, cues=cues, observations=observations, transcript=transcript)
+    if exported or push_result or args.out_dir:
+        ev = {"ok": True, "event": "stream_end", "notice": HONEST_NOTICE, "cue_count": len(cues), "observation_count": len(observations), "high_priority_cue_ids": hi_ids, "sealed": not args.no_seal}
+        if push_result:
+            ev["push"] = {"status": push_result.get("status"), "endpoint": push_result.get("endpoint")}
+        if exported:
+            ev["exports"] = exported
+        print(json.dumps(ev, ensure_ascii=False), flush=True)
+    if args.print_json or (not args.out_dir and not push_result):
+        print(json.dumps(package, indent=2, ensure_ascii=False, default=str), flush=True)
+    elif not exported and not push_result and args.out_dir:
+        print(json.dumps({"event": "stream_end", "ok": True, "cue_count": len(cues), "notice": HONEST_NOTICE}, ensure_ascii=False), flush=True)
+    return 0
+
+
+def run_cli(argv: Optional[List[str]] = None) -> int:
+    parser = build_arg_parser()
+    args = parser.parse_args(argv)
+    set_audit_correlation_id(str(uuid.uuid4()))
+    try:
+        if getattr(args, "verify_package", None):
+            pkg = json.loads(Path(args.verify_package).read_text(encoding="utf-8"))
+            if not isinstance(pkg, dict):
+                raise ValueError("verify_package must contain a JSON object")
+            hash_ok = verify_package_hash(pkg)
+            sig = verify_hmac_signature(pkg) if pkg.get("package_signature") else {"ok": None, "reason": "no_signature"}
+            if isinstance(sig, dict) and sig.get("reason") == "signing_key_missing" and load_signing_key() is None:
+                sig = {"ok": None, "reason": "signing_key_not_configured"}
+            result = {"ok": bool(hash_ok) and (sig.get("ok") is not False), "action": "verify", "notice": HONEST_NOTICE, "hash_ok": bool(hash_ok), "signature": sig, "package_hash": pkg.get("package_hash")}
+            print(json.dumps(result, ensure_ascii=False, default=str))
+            return 0 if result["ok"] else 2
+
+        if getattr(args, "training_gui", False):
+            from .training_gui import TrainingGUIServer
+            srv = TrainingGUIServer(host=args.training_gui_host, port=args.training_gui_port)
+            srv.start()
+            print(json.dumps({"ok": True, "action": "training_gui", "url": srv.url, "notice": HONEST_NOTICE + " Training GUI is observation/cue-only."}, ensure_ascii=False))
+            try:
+                while True:
+                    __import__("time").sleep(1)
+            except KeyboardInterrupt:
+                pass
+            finally:
+                srv.stop()
+            return 0
+
+        # Connector pull path: fetch an existing sealed package, then export/render (no observation).
+        if args.pull_id:
+            pend = pull_endpoint(args.pull_endpoint)
+            if not pend:
+                raise ConnectorError("connector_config_missing", "Pull requires --pull-endpoint or CUELIEZ_PULL_ENDPOINT.")
+            pulled = pull_package(pend, args.pull_id, timeout=args.connector_timeout, retries=args.connector_retries)
+            package = pulled.get("package") if isinstance(pulled.get("package"), dict) else pulled.get("response")
+            if not isinstance(package, dict):
+                raise ConnectorError("connector_invalid_response", "Pulled response did not contain a sealed package object.")
+            observations = package.get("observations") if isinstance(package.get("observations"), list) else []
+            cues = cues_from_observations(observations, min_score=args.min_score, max_cues=args.max_cues)
+            if args.show_cues:
+                print(OnscreenCueRenderer().render_text(cues, header="CueLiez Observation Cues (pulled)"))
+                print()
+            formats = args.formats or ["json", "md", "html"]
+            result = {"ok": True, "action": "pull", "notice": HONEST_NOTICE, "package_id": args.pull_id, "endpoint": pulled.get("endpoint")}
+            if args.out_dir:
+                result["exports"] = export_sealed_package(package, args.out_dir, basename=args.basename, formats=formats, cues=cues, observations=observations)
+            print(json.dumps(result, ensure_ascii=False))
+            if args.print_json or not args.out_dir:
+                print(json.dumps(package, indent=2, ensure_ascii=False, default=str))
+            return 0
+
+        annotations: Dict[str, Any] = {
+            "mode": args.mode,
+            "intended_uses": list(args.intended_uses),
+            "operator_notice": HONEST_NOTICE,
+        }
+        if args.pack:
+            pack = get_pack(args.pack)
+            state = pack.make_gate_state(intended_uses=list(args.intended_uses), jurisdiction=args.jurisdiction, subject_id=args.subject_id)
+            annotations["cue_pack"] = pack.id
+            annotations["cue_pack_mode"] = pack.mode
+            if args.mode != "generic":
+                state.mode = args.mode
+            else:
+                args.mode = state.mode
+                annotations["mode"] = state.mode
+        else:
+            pack = None
+            state = SessionGateState(mode=args.mode, intended_uses=list(args.intended_uses), jurisdiction=args.jurisdiction, subject_id=args.subject_id)
+
+        if args.consent:
+            if not args.attested_by:
+                raise GateError("consent_attester_required", "--consent requires --consent-attester/--attested-by.")
+            record_consent(state, attested_by=args.attested_by, subject_id=args.subject_id, jurisdiction=args.jurisdiction)
+        if args.training_ack or args.training_version:
+            state.training_acknowledged = True
+            if args.training_version:
+                state.training_version = args.training_version
+
+        # Session lifecycle (iceman API): fail closed before observation.
+        assert_can_observe(state)
+
+        if args.stream_turns:
+            return _run_stream_turns(args, state, pack, annotations)
+
+        transcript = _load_transcript(args.transcript)
+
+        if pack is not None:
+            raw_package = pack.build_package(transcript, annotations=annotations)
+            observations = raw_package.get("observations") or []
+        else:
+            runner = full_runner() if args.runner == "full" else default_runner()
+            raw_package = runner.build_package(transcript, annotations=annotations)
+            observations = raw_package.get("observations") or []
+
+        if getattr(args, "enable_assisted", False):
+            clear_assisted_registry()
+            register_assisted_observer("multi_signal", make_multi_signal_assisted_adapter())
+            observations = merge_assisted_observations(observations, transcript, enabled=True)
+            if isinstance(raw_package, dict):
+                raw_package["observations"] = observations
+
+        cues = cues_from_observations(observations, min_score=args.min_score, max_cues=args.max_cues, transcript=transcript)
+        hi_ids = _high_priority_cue_ids(cues)
+
+        if args.show_cues:
+            print(OnscreenCueRenderer().render_text(cues, header="CueLiez Observation Cues"))
+            print()
+
+        if args.print_high_priority_cue_ids:
+            print(json.dumps({"high_priority_cue_ids": hi_ids, "notice": HONEST_NOTICE}, ensure_ascii=False))
+            if not args.continue_after_print:
+                return 0
+
+        package = dict(raw_package)
+        officer_notes = _load_json_file(args.officer_notes)
+        if officer_notes is not None:
+            if isinstance(officer_notes, dict) and "officer_cue_notes" in officer_notes:
+                officer_notes = officer_notes["officer_cue_notes"]
+            if _package_is_sealed(package):
+                raise GateError("sealed_package_immutable", "Officer notes must be attached before seal; package is already sealed.")
+            package = attach_officer_cue_notes(package, officer_notes)
+
+        if not args.no_seal:
+            dual_ids = list(args.high_priority_cue_ids) or (hi_ids if state.mode == "government" else [])
+            signer = hmac_signer() if getattr(args, "sign", False) else None
+            if getattr(args, "sign", False) and load_signing_key() is None:
+                raise GateError("signing_key_missing", "--sign requires CUELIEZ_SIGNING_KEY or CUELIEZ_SIGNING_KEY_FILE.")
+            package = seal(package, state, high_priority_cue_ids=dual_ids, signer=signer)
+
+        formats = args.formats or ["json", "md", "html"]
+        pend = push_endpoint(args.push_endpoint)
+        push_result = None
+        if pend:
+            push_result = push_package(pend, package, timeout=args.connector_timeout, retries=args.connector_retries)
+        exported = None
+        # Evidence/package export can be triggered after a successful push when --out-dir is set.
+        if args.out_dir:
+            exported = export_sealed_package(package, args.out_dir, basename=args.basename, formats=formats, cues=cues, observations=observations, transcript=transcript)
+        result = {"ok": True, "notice": HONEST_NOTICE, "cue_count": len(cues), "observation_count": len(observations), "high_priority_cue_ids": hi_ids, "sealed": not args.no_seal}
+        if push_result:
+            result["push"] = {"status": push_result.get("status"), "endpoint": push_result.get("endpoint")}
+        if exported:
+            result["exports"] = exported
+        if args.out_dir or push_result:
+            print(json.dumps(result, ensure_ascii=False))
+        if args.print_json or (not args.out_dir and not push_result):
+            print(json.dumps(package, indent=2, ensure_ascii=False, default=str))
+
+        return 0
+    except Exception as e:
+        payload = {"ok": False, "error": str(e), "notice": HONEST_NOTICE}
+        if hasattr(e, "code"):
+            payload["error_code"] = getattr(e, "code")
+        print(json.dumps(payload, ensure_ascii=False), file=sys.stderr)
+        return 2
+
+
+def main() -> None:
+    raise SystemExit(run_cli())
+
+
+if __name__ == "__main__":
+    main()
