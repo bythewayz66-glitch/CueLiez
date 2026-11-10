@@ -301,6 +301,16 @@ class TrainingGUIServer:
                         return self._send(404, b"not found", "text/plain")
                     ctype = mimetypes.guess_type(str(target))[0] or "application/octet-stream"
                     return self._send(200, target.read_bytes(), ctype)
+                if path.startswith("/api/records/verify"):
+                    qs = urllib.parse.parse_qs(parsed.query)
+                    cid = (qs.get("id") or [""])[0].strip()
+                    if not cid:
+                        return self._json({"ok": False, "error": "missing_id"}, 400)
+                    result = outer.records.verify(cid)
+                    out = dict(result) if isinstance(result, dict) else {"result": result}
+                    out.setdefault("ok", bool(result.get("ok") if isinstance(result, dict) else False))
+                    out.setdefault("credential_id", cid)
+                    return self._json(out)
                 if path.startswith("/api/modules"):
                     return self._json([m.to_dict() for m in get_training_bundle()])
                 return self._send(404, b"not found", "text/plain")
