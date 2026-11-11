@@ -1,7 +1,7 @@
 # Owner Decisions — CueLiez
 
 **Authority:** Product owner (human). Agents must not invent conflicting policy.
-**Last updated:** 2026-11-08
+**Last updated:** 2026-11-11
 
 ---
 
@@ -20,15 +20,25 @@ Use this paragraph (or a strict paraphrase that does not soften it) in README, d
 | **Primary modes for first pilot** | `generic` + `interrogation` only |
 | **Government mode** | Implemented and tested, but **not** the first external pilot unless a specific partner demands it |
 | **Clinical / therapy packs** | Present in code; **out of scope** for first pilot messaging and deployment |
-| **Physiological / visual / wearable** | Remain **off by default**; not in pilot |
+| **Physiological / visual / wearable** | Remain **off by default**; not in pilot. **Superseded in part for visual input by section 2a (2026-11-11).** Wearable and physiological input stay out. |
 | **First user profile** | Internal demo → one investigative interviewing training context or a single detective unit that already records interviews |
 | **Success for pilot** | Officers find cues useful for follow-up questions; packages seal with gates; no one describes the tool as a lie detector |
+
+## 2a. Live audio and video input (owner decision, 2026-11-11)
+
+**Decision (relayed by the lead dev, from the product owner):** "CueLiez will give cues during a LIVE interview from live AUDIO and live VIDEO inputs, not only text transcripts."
+
+**What it supersedes:** the section 2 row that kept visual/physiological input out of the first pilot and off by default, for audio and video input only. Before this decision CueLiez took text turns only (`--stream-turns` over NDJSON); there was no capture, speech-to-text or video feature extraction.
+
+**What stays locked, unchanged:** the never-claim paragraph (section 1); observation-and-cue only; consent, jurisdiction and training gates; nothing enabled by default without explicit policy support (`AGENTS.md` section 5); no verdict language and no accuracy claims; wearable and physiological input stay out; on-prem or private-cloud processing (section 3).
+
+**Product scope and phasing:** `docs/design/LIVE_AV_PRODUCT_SCOPE.md` (live audio first, then live video as derived features only, each separately consented and separately switchable; frames never stored or transmitted by default; kill switch and a visible live-inputs indicator). Phase A and Phase B are not built; Phase B has an entry gate in that document. Items in that document marked as open questions are not owner decisions until the owner answers them.
 
 ---
 
 ## 3. Deploy posture (v1)
 
-- Prefer **on-prem or private-cloud** processing of interview text/transcripts.
+- Prefer **on-prem or private-cloud** processing of interview text/transcripts. Live audio and video (section 2a) follow the same rule: speech-to-text and video feature extraction run locally or in the customer's own environment; no cloud transcription by default.
 - No requirement for public SaaS in v1.
 - Sealed packages treated as **artifacts that attach to a case/evidence workflow**, not as automated decisions.
 - Live Axon / CaseCracker / RMS **integrations are post-pilot** unless a pilot partner already supplies transcript export only.
