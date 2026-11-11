@@ -55,7 +55,7 @@ async function refresh() {
       html += '<div>' + (c.message || '') + '</div>';
       html += '<div class="meta">score=' + (c.score!=null?c.score.toFixed(2):'') + ' · ' + (c.category||'') + ' · ' + (c.cue_id||'') + '</div>';
       if (c.source_quotes && c.source_quotes.length) {
-        html += '<div class="src">Source: ' + c.source_quotes.map(q => '"' + (q.quote||'') + '" (T' + (q.turn_index!=null?q.turn_index:'?') + ')').join(' ; ') + '</div>';
+        html += '<div class="src">Source: ' + c.source_quotes.map(q => '"' + (q.quote||q.text||'') + '" (T' + (q.turn_index!=null?q.turn_index:'?') + ')').join(' ; ') + '</div>';
       }
       html += '</div>';
       return html;
