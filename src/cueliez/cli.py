@@ -14,6 +14,7 @@ Dry demo (sample fixture):
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import sys
 import uuid
@@ -86,6 +87,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
         epilog=(
             "Sample fixtures: docs/examples/sample_transcript.json, docs/examples/conflict_transcript.json. "
             "For non-generic modes, provide required consent/training flags before observation."
+            + (" Subcommands (run `cueliez <name> --help`): " + ", ".join(sorted(SUBCOMMANDS)) + "." if SUBCOMMANDS else "")
         ),
     )
     p.add_argument("transcript", nargs="?", default="-", help="Transcript JSON file, or '-' for stdin.")
@@ -212,9 +214,36 @@ def _run_stream_turns(args, state, pack, annotations):
     return 0
 
 
+SUBCOMMANDS: Dict[str, str] = {}
+
+
+def _error_exit(e: Exception) -> int:
+    payload = {"ok": False, "error": str(e), "notice": HONEST_NOTICE}
+    if hasattr(e, "code"):
+        payload["error_code"] = getattr(e, "code")
+    print(json.dumps(payload, ensure_ascii=False), file=sys.stderr)
+    return 2
+
+
+def _run_subcommand(argv: List[str]) -> Optional[int]:
+    if not argv or argv[0] not in SUBCOMMANDS or Path(argv[0]).exists():
+        return None
+    set_audit_correlation_id(str(uuid.uuid4()))
+    module_name, _, func_name = SUBCOMMANDS[argv[0]].partition(":")
+    try:
+        handler = getattr(importlib.import_module(module_name, __package__), func_name)
+        return int(handler(argv[1:]))
+    except Exception as e:
+        return _error_exit(e)
+
+
 def run_cli(argv: Optional[List[str]] = None) -> int:
+    argv_list = list(sys.argv[1:] if argv is None else argv)
+    sub_rc = _run_subcommand(argv_list)
+    if sub_rc is not None:
+        return sub_rc
     parser = build_arg_parser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args(argv_list)
     set_audit_correlation_id(str(uuid.uuid4()))
     try:
         if getattr(args, "verify_package", None):
@@ -366,11 +395,7 @@ def run_cli(argv: Optional[List[str]] = None) -> int:
 
         return 0
     except Exception as e:
-        payload = {"ok": False, "error": str(e), "notice": HONEST_NOTICE}
-        if hasattr(e, "code"):
-            payload["error_code"] = getattr(e, "code")
-        print(json.dumps(payload, ensure_ascii=False), file=sys.stderr)
-        return 2
+        return _error_exit(e)
 
 
 def main() -> None:
