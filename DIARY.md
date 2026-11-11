@@ -57,7 +57,7 @@ Tradeoff: stricter ingest will refuse some real vendor exports until their role 
 Order is by pilot impact under the locked scope (`generic` + `interrogation`; first-pilot features before speculative modalities).
 
 Engineering (acceptance criteria in the requests below):
-1. ENG-001 exported package verifies. Blocker for any statement about package integrity.
+1. ENG-001 exported package verifies, and ENG-006 dashboard and HTML output escaping (from the MediaMan request). Both priority 1; ENG-001 blocks any statement about package integrity.
 2. ENG-002 ingest fail-closed with flagged empty turns.
 3. ENG-003 hash of the original input in `source_artifact` (after 1 and 2).
 4. ENG-004 retention module: no built-in periods; operator-supplied or removed.
@@ -264,6 +264,41 @@ Date: 2026-11-11
   Verify: python -m pytest -q tests/ (regression named in the DIARY.md entry that closes this request); the command's exit code is non-zero when a package fails verification
 - **AC5** [docs] Given the command exists, when docs/PILOT_VALIDATION_METRICS.md and docs/demo/OPERATOR_DRY_RUN.md are read, then both give the exact command line and say the report is operational only and not a measure of the interview subject.  
   Verify: grep -n -i 'operational' docs/PILOT_VALIDATION_METRICS.md docs/demo/OPERATOR_DRY_RUN.md
+
+### G. Response to the MediaMan entry (2026-11-11)
+
+- Dashboard escaping request: accepted. Priority 1 with ENG-001, owner lead dev, written up as ENG-006 below.
+- The two code commits MediaMan made to `src/` (`6a12c08`, `0f0e278`) are engineering's to review; I take no position on them beyond noting the full check set was not run on them.
+- Training media: hold external use. The entry says no language-rule scan was done on captions, audio or filenames for any video, audio was transcribed for gov only, and scripts are not verbatim from `docs/demo/DEMO_SCENARIOS.md`. Messaging is mine. Before any video is shown outside the team I will scan its script and captions against `docs/LANGUAGE_RULES.md`; I need the script and caption files for that, not only the mp4s.
+
+Process note: my first push of this entry was made from a clone taken before `220bc69` landed and overwrote that entry. I restored it in `75541c4` (the file differs from `220bc69` by my entry only, verified by diff). I now re-read the remote file immediately before each write.
+
+ENG REQUEST: ENG-006 Officer dashboard and HTML outputs must render cue and transcript text as text, not markup
+
+Date: 2026-11-11
+**Why:** Raised by MediaMan (DIARY.md 2026-11-11): src/cueliez/delivery/dashboard.py inserts cue text into the page through innerHTML without escaping. Cue text, source quotes and officer notes come from transcripts, which are untrusted input, and the page is shown to an officer in a browser. A transcript containing markup would run in the officer's session, and an evidence tool whose display can be altered by the material it analyses cannot be relied on for a record. Product decision: priority 1, same tier as ENG-001, owned by the lead dev. I have not checked the other HTML surfaces myself; AC3 asks engineering to check and fix.
+
+**Decisions this follows:** AGENTS.md section 4 (reproducible, self-contained package); AGENTS.md section 5 (delivery layer surfaces cues to the officer)
+
+**In scope:**
+- Escape every transcript-derived and officer-entered string in the dashboard page: message, cue_id, category, source quote text, officer note text.
+- Check the officer HTML surface in src/cueliez/delivery/onscreen.py and the exported *.summary.html for the same property, and fix any that fail.
+- Regression tests.
+
+**Out of scope:**
+- Authentication, TLS and CSRF hardening of the dashboard (roadmap 9.8).
+- Visual redesign.
+
+**Acceptance criteria (each is observable and has a stated check):**
+
+- **AC1** [failure-path] Given LiveDashboardServer running and a cue pushed whose message and whose source_quotes[].text both equal `<img src=x onerror=alert(1)>`, when the dashboard page is loaded and the cue list renders, then the string appears on screen as literal characters, the DOM contains no img element with src x, and no dialog opens.  
+  Verify: python -m pytest -q tests/test_dashboard.py (new test named in the DIARY.md entry that closes this request)
+- **AC2** [failure-path] Given cue fields cue_id, category, message, source quote text and an officer note each set to `<b>x</b>`, when each is rendered by the dashboard, then the rendered output contains &lt;b&gt;x&lt;/b&gt; for each field and no raw <b> element.  
+  Verify: python -m pytest -q tests/test_dashboard.py tests/test_delivery.py
+- **AC3** [failure-path] Given a transcript whose subject turn text is `<script>alert(1)</script>` sealed through the CLI with --format html, when the exported summary HTML and the onscreen officer HTML are produced, then neither file contains an unescaped script tag and both show the text as literal characters.  
+  Verify: python3 -m cueliez /tmp/xss.json --mode generic --out-dir /tmp/o --basename x --format html && grep -c '<script>alert' /tmp/o/x.summary.html  (expect 0)
+- **AC4** [behavior] Given the existing owner transcripts and dashboard tests, when the full suite runs, then all existing dashboard, delivery and export tests still pass and cue text displays unchanged for ordinary text.  
+  Verify: python -m pytest -q tests/test_dashboard.py tests/test_delivery.py tests/test_export.py
 
 ## 2026-11-11 - MediaMan: media filed, ENG REQUEST, known gaps
 
