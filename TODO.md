@@ -110,10 +110,10 @@ Status key: `[ ]` not started · `[~]` in progress · `[x]` done
 Added per owner direction after faster-than-expected completion of Phases 0–5. Do not start by default; enable only on explicit partner demand and consent/policy support.
 
 - [x] Live Axon / CaseCracker / RMS integration (transcript ingest → sealed package attachment) when a pilot partner supplies transcript export. (Phase 7: iceman ingest validation + kilo normalizer + glyph CLI push/pull with mocked endpoints; env-based config, no hardcoded creds.)
-- [ ] Real-time audio stream hooks (prosody, speech rate, latency, pause patterns) behind explicit consent + jurisdiction checks.
+- [ ] Real-time audio stream hooks (prosody, speech rate, latency, pause patterns) behind explicit consent + jurisdiction checks. Not started: the observers exist, nothing feeds them from a live source. Superseded and scheduled by Phase 10 (Phase A0/A1), per owner decision 2026-11-11; prosody/voice-quality features are excluded from the live path in `docs/design/LIVE_AV_PRODUCT_SCOPE.md`.
 - [x] Officer UI (tablet overlay or simple web dashboard) for real-time cues, subject not shown by default. (Glyph: officer HTML subject-hidden with ack/dismiss/note; real CLI `--stream-turns` live cue updates; `LiveDashboardServer` stdlib HTTP dashboard with polling + subject-not-shown notice. Full websocket/live-audio dashboard optional.)
 - [x] Export into RMS / case / evidence management systems as original artifacts (not derivative interpretations). (Glyph docs: canonical `sealed_package.json`+`package_hash` attachable as original artifact; summaries observation-only aids; no live RMS connector.)
-- [ ] Enable physiological / visual / wearable observers only with consent-governed policy support and clinical/therapy messaging kept out of pilot scope.
+- [ ] Enable physiological / visual / wearable observers only with consent-governed policy support and clinical/therapy messaging kept out of pilot scope. Split by owner decision 2026-11-11: visual (video-derived) is scheduled as Phase 10 Phase B with an entry gate; physiological and wearable stay out.
 - [ ] Government mode external pilot only if a specific partner demands it (dual-control enforced).
 - [ ] Clinical / therapy packs remain present in code but out of pilot messaging unless explicitly scoped.
 
@@ -124,8 +124,8 @@ Added per owner direction after faster-than-expected completion of Phases 0–5.
 Added per owner direction. Turns currently gated/off-by-default modalities and features to **on by default** only after policy/consent frameworks are approved. Do not enable without consent + jurisdiction checks and training acknowledgement.
 
 - [ ] Enable feature/physiological/visual observers by default in packs (currently gated/off).
-- [ ] Enable audio feature extraction (prosody, speech rate, latency, pause patterns) by default where consent + jurisdiction checks pass.
-- [ ] Enable camera/wearable input by default where consent + jurisdiction checks pass.
+- [ ] Enable audio feature extraction (prosody, speech rate, latency, pause patterns) by default where consent + jurisdiction checks pass. Not started; same note as camera: the 2026-11-11 decision does not make this default.
+- [ ] Enable camera/wearable input by default where consent + jurisdiction checks pass. Not started and not implied by the 2026-11-11 live AV decision, which makes live inputs available per session after consent, never default. Needs its own owner decision.
 - [ ] Enable real-time streaming officer UI by default (currently batch/CLI-first).
 - [ ] Enable government mode external pilot by default (dual-control enforced).
 - [ ] Enable clinical/therapy packs in pilot messaging where explicitly scoped.
@@ -258,3 +258,16 @@ Status key: `[ ]` not started · `[~]` in progress · `[x]` done
 - [ ] Add/confirm license header policy (if desired) and third-party notice handling; keep Apache-2.0 compliance clear.
 - [ ] Add coverage for edge cases discovered by scans: connector URL abuse cases, malformed transcripts, gate-state serialization/immutability, export hash/signature verification, and dashboard endpoint misuse.
 - [ ] Run periodic “mega polish” audits (fake-code scan, drift scan, language-rule audit, security checklist, docs-contract checks) and record findings in `DIARY.md`/issue tracker with evidence.
+
+---
+
+## Phase 10 — Live Audio and Video Cues (owner decision 2026-11-11)
+
+**Owner decision, 2026-11-11** (relayed by the lead dev): "CueLiez will give cues during a LIVE interview from live AUDIO and live VIDEO inputs, not only text transcripts." Supersedes the `docs/OWNER_DECISIONS.md` section 2 row that kept visual input out of the first pilot, for audio and video only. Never-claim paragraph and all gates unchanged. Scope, hard rules, wording and acceptance criteria: `docs/design/LIVE_AV_PRODUCT_SCOPE.md`. Engineering design: `docs/design/LIVE_AV_DESIGN.md`. All items below are not started as of 2026-11-11; mark done only after the lead dev verifies the acceptance criteria in the scope document.
+
+- [ ] Phase A0: live microphone to local speech-to-text to finalised turns into the stream path; per-modality consent (`audio_capture`); officer live-inputs strip and kill switch; modality record and state timeline in the sealed package.
+- [ ] Phase A1: derived audio-timing cues (latency, speech rate, pauses), separately consented and switchable, baseline-relative wording with fixed caveats.
+- [ ] Phase B entry gate: counsel answers, cited literature review, Phase A over-cue report reviewed by the owner.
+- [ ] Phase B: live video as derived features only (off-camera gaze, blink rate, movement); frames in memory only; lowest-priority cues; separate `camera` consent.
+- [ ] Live-input cue wording gate at seal and in the observers (no inner-state words; `gaze aversion` renamed).
+- [ ] Live AV training addendum and counsel-approved consent form text (PM drafts; counsel approves).
