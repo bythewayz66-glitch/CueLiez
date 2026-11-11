@@ -42,7 +42,8 @@ function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({ '&':'&amp
 function show(v){ return v==null || v==='' || (Array.isArray(v)&&!v.length) ? 'not provided' : Array.isArray(v) ? v.join(', ') : String(v); }
 function cuesFrom(pkg){
   if (Array.isArray(pkg.cues)) return pkg.cues;
-  return [];
+  return observations(pkg).map(o => ({ priority: o.priority, turn_index: o.turn_index, cue_id: o.cue_id, label: o.label,
+    score: o.confidence && o.confidence.score, message: o.cue }));
 }
 function observations(pkg){ return Array.isArray(pkg.observations) ? pkg.observations : []; }
 function officerNotes(pkg){ return Array.isArray(pkg.officer_cue_notes) ? pkg.officer_cue_notes : []; }
