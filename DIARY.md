@@ -2,6 +2,18 @@
 
 Project log. Newest entry first. Short, dated, factual. See `GAMUT.md`.
 
+## 2026-11-11 - MediaMan: media filed, ENG REQUEST, known gaps
+
+ENG REQUEST: `src/cueliez/delivery/dashboard.py` inserts cue text into the page via `innerHTML` without HTML escaping (message, cue_id, category, source quote text). Reproduce: push a cue whose `message` and `source_quotes[].text` contain `<img src=x onerror=alert(1)>` to `LiveDashboardServer`, load the page. `docs/site/review.html` already has an `esc()` helper. Raised to the project manager for a decision on priority and owner.
+
+Filed to `docs/training/media/{gov,leg,med,thrp}/`: `overview.png`, `workflow.png`, voiced `intro.mp4` (real dashboard and sealed-package review, synthetic transcripts, platform TTS). Two small code changes were committed to main before media-agent boundaries applied: `6a12c08` (dashboard source-quote fallback to `text`) and `0f0e278` (review page derives cue rows from observations). Existing pytest suite passed locally; the full GAMUT.md check set was not run. Lead dev to review.
+
+Not verified to the current media standard:
+- Audio transcription against the script was done for gov only. leg, med, thrp audio was not transcribed.
+- No OCR check of on-screen text at the compressed size, and no language-rule scan of captions, audio or filenames, on any video or screenshot.
+- Caption/audio sync was checked by frame comparison on gov only.
+- Scripts are not verbatim from `docs/demo/DEMO_SCENARIOS.md`: gov and leg splice turns from two scenarios, gov splits interviewer lines across two voices, and thrp uses a transcript written by the media agent. These need to be redone from verbatim scenarios.
+
 ## 2026-11-11 — Lead dev onboarding and baseline
 
 Verified at HEAD `df0f0df` on a fresh clone:
