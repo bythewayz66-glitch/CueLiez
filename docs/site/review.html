@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-QQvvy3awE2x1zItIFYDkoNTzUyG08NT/Lx76BVh4AAc='; style-src 'sha256-PeO6iZnbh+eZl8unikPOh2W51DIeTdJC8ywwjeTks/Y='; base-uri 'none'; form-action 'none'"/>
   <title>CueLiez Sealed Package Review</title>
   <style>
     :root { color-scheme: light dark; }
@@ -38,65 +39,100 @@
   <div id="out"></div>
 
 <script>
-function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
-function show(v){ return v==null || v==='' || (Array.isArray(v)&&!v.length) ? 'not provided' : Array.isArray(v) ? v.join(', ') : String(v); }
+const CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u200e\u200f\u061c\u2028\u2029\u202a-\u202e\u2066-\u2069]/g;
+function vis(v){
+  if (v == null) return '';
+  const s = typeof v === 'object' ? JSON.stringify(v) : String(v);
+  return s.replace(CONTROL, ch => '[U+' + ch.charCodeAt(0).toString(16).toUpperCase().padStart(4, '0') + ']');
+}
+function h(tag, cls, ...kids){
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  e.append(...kids);
+  return e;
+}
+function cell(tag, text, colspan){
+  const e = h(tag, null, text);
+  if (colspan) e.setAttribute('colspan', String(colspan));
+  return e;
+}
+function obj(v){ return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; }
+function show(v){ return v==null || v==='' || (Array.isArray(v)&&!v.length) ? 'not provided' : Array.isArray(v) ? v.map(vis).join(', ') : vis(v); }
+function scoreText(s){
+  if (s == null || s === '') return '';
+  const n = Number(s);
+  return isFinite(n) ? n.toFixed(2) : vis(s);
+}
 function cuesFrom(pkg){
-  if (Array.isArray(pkg.cues)) return pkg.cues;
+  if (Array.isArray(pkg.cues)) return pkg.cues.map(obj);
   return observations(pkg).map(o => ({ priority: o.priority, turn_index: o.turn_index, cue_id: o.cue_id, label: o.label,
-    score: o.confidence && o.confidence.score, message: o.cue }));
+    score: obj(o.confidence).score, message: o.cue }));
 }
-function observations(pkg){ return Array.isArray(pkg.observations) ? pkg.observations : []; }
-function officerNotes(pkg){ return Array.isArray(pkg.officer_cue_notes) ? pkg.officer_cue_notes : []; }
+function observations(pkg){ return Array.isArray(pkg.observations) ? pkg.observations.map(obj) : []; }
+function officerNotes(pkg){ return Array.isArray(pkg.officer_cue_notes) ? pkg.officer_cue_notes.map(obj) : []; }
 function gateSummary(pkg){
-  const fw = pkg.firewall && typeof pkg.firewall==='object' ? pkg.firewall : {};
-  const gs = pkg.gate_state && typeof pkg.gate_state==='object' ? pkg.gate_state : {};
-  return { mode: gs.mode || (pkg.annotations||{}).mode || (pkg.annotations||{}).cue_pack_mode,
+  const fw = obj(pkg.firewall);
+  const gs = obj(pkg.gate_state);
+  const an = obj(pkg.annotations);
+  return { mode: gs.mode || an.mode || an.cue_pack_mode,
     gateState: Object.keys(gs).length ? 'present' : 'not provided',
-    consent: fw.consent_rechecked, training: fw.training_rechecked,
-    intended: gs.intended_uses, dual: gs.dual_control_records };
+    consent: fw.consent_rechecked, training: fw.training_rechecked };
 }
+function item(label, ...rest){ return h('li', null, h('strong', null, label), ' ', ...rest); }
 function render(pkg){
+  pkg = obj(pkg);
   const cues = cuesFrom(pkg);
   const obs = observations(pkg);
   const notes = officerNotes(pkg);
   const g = gateSummary(pkg);
-  const hi = cues.filter(c=>c && (c.priority==='high'||c.priority==='critical') && c.cue_id).map(c=>c.cue_id);
-  const rows = cues.length ? cues.map(c=>`<tr><td>${esc(c.priority||'')}</td><td>${esc(c.turn_index)}</td><td><code>${esc(c.cue_id||'')}</code></td><td>${esc(c.label||'')}</td><td>${esc(c.score==null?'':Number(c.score).toFixed(2))}</td><td>${esc(c.message||c.cue||'')}</td></tr>`).join('') : '<tr><td colspan="6">No cues present in package.</td></tr>';
-  const noteSec = notes.length ? `<section><h2>Officer Notes (Human)</h2><p>Human-authored context recorded by the reviewing officer. These notes are not system findings.</p><ul>${notes.map(n=>`<li><strong>${esc(n.cue_id)}</strong> [${esc(n.action||'noted')}]: ${esc(n.note||'(no text)')}</li>`).join('')}</ul></section>` : '';
-  document.getElementById('out').innerHTML = `
-    <section><h2>Disclaimer</h2>
-      <div class="notice"><p><strong>Notice:</strong> This export contains observed indicators and interview-support cues only. It does not contain findings, diagnoses, or determinations about credibility.</p>
-      <p><strong>Disclaimer:</strong> ${esc(pkg.disclaimer||'not provided')}</p></div>
-      <p><strong>Package type:</strong> ${esc(show(pkg.epistemic_status))} (observed indicators and cues only) &nbsp;|&nbsp; <strong>Definitive finding:</strong> ${esc(pkg.is_definitive_finding)}</p>
-    </section>
-    <section><h2>Gate / Process Status</h2>
-      <ul>
-        <li>Mode/context: ${esc(show(g.mode))}</li>
-        <li>Gate state: ${esc(g.gateState)}</li>
-        <li>Consent rechecked at seal: ${esc(show(g.consent))}</li>
-        <li>Training rechecked at seal: ${esc(show(g.training))}</li>
-        ${hi.length?`<li>High-priority cue IDs (dual-control workflow reference): <code>${esc(hi.join(', '))}</code></li>`:''}
-      </ul>
-    </section>
-    <section><h2>System-Observed Cues (for human review)</h2>
-      <table><thead><tr><th>Priority</th><th>Turn</th><th>Cue ID</th><th>Label</th><th>Score</th><th>Message</th></tr></thead><tbody>${rows}</tbody></table>
-      <p class="muted">Observations in package: ${obs.length}. If the package stores cues separately, they are shown above; otherwise cues may be derived by external tools.</p>
-    </section>
-    ${noteSec}
-    <section><h2>Hash / Metadata</h2>
-      <ul>
-        <li><strong>Product:</strong> ${esc(pkg.product||'CueLiez')}</li>
-        <li><strong>Product version:</strong> <code>${esc(show(pkg.product_version))}</code></li>
-        <li><strong>Schema version:</strong> <code>${esc(show(pkg.schema_version))}</code></li>
-        <li><strong>Package hash:</strong> <code>${esc(show(pkg.package_hash))}</code></li>
-        <li><strong>Sealed at (unix):</strong> ${esc(show(pkg.sealed_at))}</li>
-      </ul>
-    </section>`;
+  const hi = cues.filter(c => (c.priority === 'high' || c.priority === 'critical') && c.cue_id).map(c => vis(c.cue_id));
+  const tbody = h('tbody', null);
+  if (cues.length) {
+    for (const c of cues) {
+      tbody.append(h('tr', null, cell('td', vis(c.priority)), cell('td', vis(c.turn_index)), h('td', null, h('code', null, vis(c.cue_id))),
+        cell('td', vis(c.label)), cell('td', scoreText(c.score)), cell('td', vis(c.message || c.cue))));
+    }
+  } else {
+    tbody.append(h('tr', null, cell('td', 'No cues present in package.', 6)));
+  }
+  const gateList = h('ul', null,
+    h('li', null, 'Mode/context: ' + show(g.mode)),
+    h('li', null, 'Gate state: ' + g.gateState),
+    h('li', null, 'Consent rechecked at seal: ' + show(g.consent)),
+    h('li', null, 'Training rechecked at seal: ' + show(g.training)));
+  if (hi.length) gateList.append(h('li', null, 'High-priority cue IDs (dual-control workflow reference): ', h('code', null, hi.join(', '))));
+  const sections = [
+    h('section', null, h('h2', null, 'Disclaimer'),
+      h('div', 'notice',
+        h('p', null, h('strong', null, 'Notice:'), ' This export contains observed indicators and interview-support cues only. It does not contain findings, diagnoses, or determinations about credibility.'),
+        h('p', null, h('strong', null, 'Disclaimer:'), ' ' + vis(pkg.disclaimer || 'not provided'))),
+      h('p', null, h('strong', null, 'Package type:'), ' ' + show(pkg.epistemic_status) + ' (observed indicators and cues only)  |  ',
+        h('strong', null, 'Definitive finding:'), ' ' + vis(pkg.is_definitive_finding))),
+    h('section', null, h('h2', null, 'Gate / Process Status'), gateList),
+    h('section', null, h('h2', null, 'System-Observed Cues (for human review)'),
+      h('table', null,
+        h('thead', null, h('tr', null, ...['Priority', 'Turn', 'Cue ID', 'Label', 'Score', 'Message'].map(t => cell('th', t)))),
+        tbody),
+      h('p', 'muted', 'Observations in package: ' + obs.length + '. If the package stores cues separately, they are shown above; otherwise cues may be derived by external tools.')),
+  ];
+  if (notes.length) {
+    sections.push(h('section', null, h('h2', null, 'Officer Notes (Human)'),
+      h('p', null, 'Human-authored context recorded by the reviewing officer. These notes are not system findings.'),
+      h('ul', null, ...notes.map(n => h('li', null, h('strong', null, vis(n.cue_id)), ' [' + vis(n.action || 'noted') + ']: ' + vis(n.note || '(no text)'))))));
+  }
+  sections.push(h('section', null, h('h2', null, 'Hash / Metadata'),
+    h('ul', null,
+      item('Product:', vis(pkg.product || 'CueLiez')),
+      item('Product version:', h('code', null, show(pkg.product_version))),
+      item('Schema version:', h('code', null, show(pkg.schema_version))),
+      item('Package hash:', h('code', null, show(pkg.package_hash))),
+      item('Sealed at (unix):', show(pkg.sealed_at)))));
+  document.getElementById('out').replaceChildren(...sections);
 }
 document.getElementById('render').onclick = () => {
   document.getElementById('error').textContent = '';
   try { render(JSON.parse(document.getElementById('input').value)); }
-  catch(e){ document.getElementById('error').textContent = 'Could not parse JSON: ' + e.message; }
+  catch(e){ document.getElementById('error').textContent = 'Could not parse JSON: ' + vis(e.message); }
 };
 const drop = document.getElementById('drop');
 drop.ondragover = e => { e.preventDefault(); };

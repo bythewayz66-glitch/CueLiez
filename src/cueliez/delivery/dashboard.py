@@ -7,7 +7,10 @@ dependencies.
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
+import re
 import threading
 import time
 import urllib.parse
@@ -15,7 +18,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Dict, List, Optional, Sequence
 from urllib.parse import urlparse
 
-_DASHBOARD_HTML = """<!DOCTYPE html>
+_DASHBOARD_HTML = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -38,30 +41,51 @@ h1 { font-size:1.1rem; }
 <div id="status" class="meta">Connecting…</div>
 <div id="cues"></div>
 <script>
+const CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u200e\u200f\u061c\u2028\u2029\u202a-\u202e\u2066-\u2069]/g;
+const PRIORITIES = ['low', 'medium', 'high', 'critical'];
+const ICONS = {low: '·', medium: '▲', high: '◆', critical: '●'};
+function vis(v) {
+  if (v == null) return '';
+  const s = typeof v === 'object' ? JSON.stringify(v) : String(v);
+  return s.replace(CONTROL, ch => '[U+' + ch.charCodeAt(0).toString(16).toUpperCase().padStart(4, '0') + ']');
+}
+function node(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+function quoteText(q) {
+  if (q == null || typeof q !== 'object') return '"' + vis(q) + '" (T?)';
+  return '"' + vis(q.quote || q.text || '') + '" (T' + (q.turn_index != null ? vis(q.turn_index) : '?') + ')';
+}
+function cueNode(c) {
+  c = c && typeof c === 'object' ? c : {};
+  const prio = vis(c.priority || 'medium').toLowerCase();
+  const known = PRIORITIES.indexOf(prio) >= 0;
+  const card = node('div', 'cue');
+  card.append(node('div', 'prio' + (known ? ' ' + prio : ''), (ICONS[prio] || '·') + ' ' + prio.toUpperCase()));
+  if (c.turn_index != null) card.append(node('div', 'meta', 'Turn ' + vis(c.turn_index)));
+  card.append(node('div', null, vis(c.message)));
+  const score = typeof c.score === 'number' && isFinite(c.score) ? c.score.toFixed(2) : '';
+  card.append(node('div', 'meta', 'score=' + score + ' · ' + vis(c.category) + ' · ' + vis(c.cue_id)));
+  if (Array.isArray(c.source_quotes) && c.source_quotes.length) {
+    card.append(node('div', 'src', 'Source: ' + c.source_quotes.map(quoteText).join(' ; ')));
+  }
+  return card;
+}
 async function refresh() {
   try {
     const r = await fetch('/cues');
     const data = await r.json();
-    const cues = data.cues || [];
+    const cues = Array.isArray(data.cues) ? data.cues : [];
     const status = document.getElementById('status');
     status.textContent = 'Cues: ' + cues.length + ' (updated ' + new Date().toLocaleTimeString() + ')';
     const container = document.getElementById('cues');
-    if (!cues.length) { container.innerHTML = '<p class="empty">No observation cues at current thresholds.</p>'; return; }
-    container.innerHTML = cues.map(c => {
-      const prio = (c.priority || 'medium').toLowerCase();
-      const icon = {low:'·',medium:'▲',high:'◆',critical:'●'}[prio] || '·';
-      let html = '<div class="cue"><div class="prio ' + prio + '">' + icon + ' ' + prio.toUpperCase() + '</div>';
-      if (c.turn_index != null) html += '<div class="meta">Turn ' + c.turn_index + '</div>';
-      html += '<div>' + (c.message || '') + '</div>';
-      html += '<div class="meta">score=' + (c.score!=null?c.score.toFixed(2):'') + ' · ' + (c.category||'') + ' · ' + (c.cue_id||'') + '</div>';
-      if (c.source_quotes && c.source_quotes.length) {
-        html += '<div class="src">Source: ' + c.source_quotes.map(q => '"' + (q.quote||q.text||'') + '" (T' + (q.turn_index!=null?q.turn_index:'?') + ')').join(' ; ') + '</div>';
-      }
-      html += '</div>';
-      return html;
-    }).join('');
+    if (!cues.length) { container.replaceChildren(node('p', 'empty', 'No observation cues at current thresholds.')); return; }
+    container.replaceChildren(...cues.map(cueNode));
   } catch (e) {
-    document.getElementById('status').textContent = 'Error: ' + e;
+    document.getElementById('status').textContent = 'Error: ' + vis(e);
   }
 }
 setInterval(refresh, 1000);
@@ -70,6 +94,22 @@ refresh();
 </body>
 </html>
 """
+
+
+def _csp_for(page: str) -> str:
+    def digest(body: str) -> str:
+        return "'sha256-" + base64.b64encode(hashlib.sha256(body.encode("utf-8")).digest()).decode("ascii") + "'"
+
+    scripts = " ".join(digest(m) for m in re.findall(r"<script[^>]*>(.*?)</script>", page, re.S))
+    styles = " ".join(digest(m) for m in re.findall(r"<style[^>]*>(.*?)</style>", page, re.S))
+    return (
+        f"default-src 'none'; script-src {scripts}; style-src {styles}; connect-src 'self'; "
+        "base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    )
+
+
+_DASHBOARD_CSP = _csp_for(_DASHBOARD_HTML)
+_LOCAL_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 
 
 class _RateLimiter:
@@ -127,39 +167,42 @@ class LiveDashboardServer:
                 origin = self.headers.get("Origin")
                 if not origin:
                     return True  # non-browser/programmatic clients
-                allowed = list(outer._allowed_origins)
-                # allow localhost origins by default
-                if origin.startswith("http://127.0.0.1") or origin.startswith("http://localhost") or origin.startswith("https://127.0.0.1") or origin.startswith("https://localhost"):
+                if origin in outer._allowed_origins:
                     return True
-                return origin in allowed
+                try:
+                    u = urlparse(origin)
+                    return u.scheme in ("http", "https") and u.hostname in _LOCAL_HOSTS and not u.path.strip("/")
+                except ValueError:
+                    return False
 
             def _rate_ok(self) -> bool:
                 key = self.client_address[0] if self.client_address else "unknown"
                 return outer._rate.allow(key)
 
-            def _unauthorized(self) -> None:
-                body = b'{"ok":false,"error":"unauthorized"}'
-                self.send_response(401)
-                self.send_header("Content-Type", "application/json")
+            def _respond(self, code: int, body: bytes = b"", content_type: Optional[str] = None, csp: Optional[str] = None) -> None:
+                self.send_response(code)
+                if content_type:
+                    self.send_header("Content-Type", content_type)
                 self.send_header("Content-Length", str(len(body)))
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("Referrer-Policy", "no-referrer")
+                if csp:
+                    self.send_header("Content-Security-Policy", csp)
                 self.end_headers()
                 self.wfile.write(body)
+
+            def _json(self, code: int, payload: Any) -> None:
+                self._respond(code, json.dumps(payload).encode("utf-8"), "application/json")
+
+            def _unauthorized(self) -> None:
+                self._json(401, {"ok": False, "error": "unauthorized"})
 
             def _forbidden(self, msg: str = "forbidden") -> None:
-                body = json.dumps({"ok": False, "error": msg}).encode("utf-8")
-                self.send_response(403)
-                self.send_header("Content-Type", "application/json")
-                self.send_header("Content-Length", str(len(body)))
-                self.end_headers()
-                self.wfile.write(body)
+                self._json(403, {"ok": False, "error": msg})
 
             def _rate_limited(self) -> None:
-                body = b'{"ok":false,"error":"rate_limited"}'
-                self.send_response(429)
-                self.send_header("Content-Type", "application/json")
-                self.send_header("Content-Length", str(len(body)))
-                self.end_headers()
-                self.wfile.write(body)
+                self._json(429, {"ok": False, "error": "rate_limited"})
 
             def do_GET(self):  # noqa: N802
                 parsed = urlparse(self.path)
@@ -170,25 +213,14 @@ class LiveDashboardServer:
                 if not self._origin_ok():
                     self._forbidden("origin_not_allowed"); return
                 if parsed.path == "/":
-                    body = _DASHBOARD_HTML.encode("utf-8")
-                    self.send_response(200)
-                    self.send_header("Content-Type", "text/html; charset=utf-8")
-                    self.send_header("Content-Length", str(len(body)))
-                    self.end_headers()
-                    self.wfile.write(body)
+                    self._respond(200, _DASHBOARD_HTML.encode("utf-8"), "text/html; charset=utf-8", csp=_DASHBOARD_CSP)
                     return
                 if parsed.path == "/cues":
                     with outer._lock:
                         payload = {"cues": list(outer._cues)}
-                    body = json.dumps(payload).encode("utf-8")
-                    self.send_response(200)
-                    self.send_header("Content-Type", "application/json")
-                    self.send_header("Content-Length", str(len(body)))
-                    self.end_headers()
-                    self.wfile.write(body)
+                    self._json(200, payload)
                     return
-                self.send_response(404)
-                self.end_headers()
+                self._respond(404)
 
             def do_POST(self):  # noqa: N802
                 parsed = urlparse(self.path)
@@ -210,15 +242,10 @@ class LiveDashboardServer:
                         cues = []
                     with outer._lock:
                         outer._cues = [c for c in cues if isinstance(c, dict)]
-                    body = json.dumps({"ok": True, "count": len(outer._cues)}).encode("utf-8")
-                    self.send_response(200)
-                    self.send_header("Content-Type", "application/json")
-                    self.send_header("Content-Length", str(len(body)))
-                    self.end_headers()
-                    self.wfile.write(body)
+                        count = len(outer._cues)
+                    self._json(200, {"ok": True, "count": count})
                     return
-                self.send_response(404)
-                self.end_headers()
+                self._respond(404)
 
             def log_message(self, *args):  # noqa: D401
                 return

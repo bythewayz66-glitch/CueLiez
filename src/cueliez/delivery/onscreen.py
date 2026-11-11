@@ -6,13 +6,13 @@ remain non-verdict and cue-oriented.
 
 from __future__ import annotations
 
-import html
 import json
 import time
 from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 from .events import CueEvent, cues_from_observations
 from .notes import notes_by_cue_id
+from .safe import csp_policy_for, escape_html as _esc, json_for_script, visible_text
 
 _PRIORITY_ICON = {"low": "·", "medium": "▲", "high": "◆", "critical": "●"}
 _ANSI = {
@@ -36,7 +36,7 @@ class OnscreenCueRenderer:
     def render_text(self, cues: Sequence[CueEvent], *, header: Optional[str] = None) -> str:
         lines: List[str] = []
         if header:
-            lines.append(header)
+            lines.append(visible_text(header))
         if not cues:
             lines.append("No observation cues at current thresholds.")
             return "\n".join(lines)
@@ -48,18 +48,18 @@ class OnscreenCueRenderer:
                 color = _ANSI.get(c.priority, "")
                 prefix = f"{color}{_ANSI['bold']}{prefix}{_ANSI['reset']}"
             turn = f"T{c.turn_index} " if c.turn_index is not None else ""
-            line = f"{prefix}{turn}{c.message} (score={c.score:.2f}, {c.category}, id={c.cue_id}, method={c.method})"
+            line = f"{prefix}{turn}{visible_text(c.message)} (score={c.score:.2f}, {visible_text(c.category)}, id={visible_text(c.cue_id)}, method={visible_text(c.method)})"
             lines.append(line)
             if self.show_evidence and c.evidence_summary:
-                ev = json.dumps(c.evidence_summary, ensure_ascii=False)
+                ev = visible_text(json.dumps(c.evidence_summary, ensure_ascii=False))
                 dim = _ANSI["dim"] if self.use_color else ""
                 rst = _ANSI["reset"] if self.use_color else ""
                 lines.append(f"           {dim}evidence: {ev}{rst}")
             for q in getattr(c, "source_quotes", []) or []:
                 ti = q.get("turn_index")
-                role = f"{q.get('role')} " if q.get("role") else ""
-                where = f"T{ti}" if ti is not None else "source"
-                lines.append(f"           Source ({where}, {role}transcript): \"{q.get('text','')}\"")
+                role = f"{visible_text(q.get('role'))} " if q.get("role") else ""
+                where = f"T{visible_text(ti)}" if ti is not None else "source"
+                lines.append(f"           Source ({where}, {role}transcript): \"{visible_text(q.get('text',''))}\"")
         lines.append("Notice: cues are probabilistic observations for professional judgment, not determinations.")
         return "\n".join(lines)
 
@@ -102,29 +102,29 @@ class OnscreenCueRenderer:
     def render_html(self, cues: Sequence[CueEvent], *, title: str = "CueLiez Observation Cues") -> str:
         rows = []
         for c in cues:
-            ev = html.escape(json.dumps(c.evidence_summary, ensure_ascii=False)) if c.evidence_summary else ""
+            ev = _esc(json.dumps(c.evidence_summary, ensure_ascii=False)) if c.evidence_summary else ""
             quotes = []
             for q in getattr(c, "source_quotes", []) or []:
                 ti = q.get("turn_index")
                 role = f"{q.get('role')} " if q.get("role") else ""
                 where = f"T{ti}" if ti is not None else "source"
-                quotes.append(f"<div class='source'><strong>Source ({html.escape(where)}, {html.escape(role)}transcript):</strong> “{html.escape(str(q.get('text','')))}”</div>")
-            cue_cell = html.escape(c.message) + ("".join(quotes) if quotes else "")
+                quotes.append(f"<div class='source'><strong>Source ({_esc(where)}, {_esc(role)}transcript):</strong> “{_esc(str(q.get('text','')))}”</div>")
+            cue_cell = _esc(c.message) + ("".join(quotes) if quotes else "")
             rows.append(
                 "<tr>"
-                f"<td class='p {html.escape(c.priority)}'>{html.escape(c.priority.upper())}</td>"
-                f"<td>{html.escape(str(c.turn_index) if c.turn_index is not None else '—')}</td>"
-                f"<td>{html.escape(c.category)}</td>"
+                f"<td class='p {_esc(c.priority)}'>{_esc(c.priority.upper())}</td>"
+                f"<td>{_esc(str(c.turn_index) if c.turn_index is not None else '—')}</td>"
+                f"<td>{_esc(c.category)}</td>"
                 f"<td>{cue_cell}</td>"
                 f"<td>{c.score:.2f}</td>"
-                f"<td><code>{html.escape(c.method)}</code></td>"
+                f"<td><code>{_esc(c.method)}</code></td>"
                 f"<td><code>{ev}</code></td>"
                 "</tr>"
             )
         body = "\n".join(rows) or "<tr><td colspan='7'>No observation cues at current thresholds.</td></tr>"
         return (
             "<section class='cueliez-cues'>"
-            f"<h2>{html.escape(title)}</h2>"
+            f"<h2>{_esc(title)}</h2>"
             "<p class='notice'>Observation cues for professional review; not findings.</p>"
             "<table><thead><tr><th>Priority</th><th>Turn</th><th>Category</th><th>Cue / Source transcript</th><th>Score</th><th>Method/Model</th><th>Evidence</th></tr></thead>"
             f"<tbody>{body}</tbody></table></section>"
@@ -147,21 +147,21 @@ class OnscreenCueRenderer:
         cues = cues_from_observations(observations, transcript=transcript, min_score=min_score, max_cues=max_cues)
         cards = []
         for c in cues:
-            turn = html.escape(str(c.turn_index)) if c.turn_index is not None else "—"
-            msg = html.escape(c.message)
+            turn = _esc(str(c.turn_index)) if c.turn_index is not None else "—"
+            msg = _esc(c.message)
             quotes = []
             for q in getattr(c, "source_quotes", []) or []:
                 ti = q.get("turn_index")
                 role = f"{q.get('role')} " if q.get("role") else ""
                 where = f"T{ti}" if ti is not None else "source"
-                quotes.append(f"<div class='source'><strong>Source ({html.escape(where)}, {html.escape(role)}transcript):</strong> “{html.escape(str(q.get('text','')))}”</div>")
+                quotes.append(f"<div class='source'><strong>Source ({_esc(where)}, {_esc(role)}transcript):</strong> “{_esc(str(q.get('text','')))}”</div>")
             source_html = "".join(quotes)
             cards.append(
-                f"<article class='cue {html.escape(c.priority)}' data-cue-id='{html.escape(c.cue_id)}' data-priority='{html.escape(c.priority)}' data-label='{html.escape(c.label)}' data-turn='{turn}'>"
-                f"<div class='meta'><span class='prio'>{html.escape(c.priority.upper())}</span> <span class='turn'>Turn {turn}</span> <span class='score'>score {c.score:.2f}</span> <span class='method'>{html.escape(c.method)}</span></div>"
+                f"<article class='cue {_esc(c.priority)}' data-cue-id='{_esc(c.cue_id)}' data-priority='{_esc(c.priority)}' data-label='{_esc(c.label)}' data-turn='{turn}'>"
+                f"<div class='meta'><span class='prio'>{_esc(c.priority.upper())}</span> <span class='turn'>Turn {turn}</span> <span class='score'>score {c.score:.2f}</span> <span class='method'>{_esc(c.method)}</span></div>"
                 f"<div class='msg'>{msg}</div>"
                 f"{source_html}"
-                f"<div class='id'><code>{html.escape(c.cue_id)}</code></div>"
+                f"<div class='id'><code>{_esc(c.cue_id)}</code></div>"
                 "<div class='actions'>"
                 "<button data-action='acknowledged'>Acknowledge</button>"
                 "<button data-action='dismissed'>Dismiss</button>"
@@ -172,13 +172,14 @@ class OnscreenCueRenderer:
                 "</article>"
             )
         body = "\n".join(cards) or "<p class='empty'>No observation cues at current thresholds.</p>"
-        cues_json = html.escape(json.dumps([c.to_dict() for c in cues], ensure_ascii=False))
-        return f"""<!doctype html>
+        cues_json = json_for_script([c.to_dict() for c in cues])
+        page = f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>{html.escape(title)}</title>
+  <meta http-equiv="Content-Security-Policy" content="__CSP__">
+  <title>{_esc(title)}</title>
   <style>
     :root {{ color-scheme: light dark; }}
     body {{ font-family: system-ui, sans-serif; margin: 12px; background: #111; color: #eee; }}
@@ -202,7 +203,7 @@ class OnscreenCueRenderer:
 </head>
 <body>
   <header>
-    <h1>{html.escape(title)}</h1>
+    <h1>{_esc(title)}</h1>
     <p class="notice"><strong>Officer-only view.</strong> Subject is not shown this stream by default. Observation cues for professional review only; not findings, diagnoses, or determinations.</p>
     <p class="notice">Officer surface (not shown to subject by default). Observation cues for professional review; not findings.</p>
     <div class="toolbar">
@@ -248,3 +249,4 @@ class OnscreenCueRenderer:
   </script>
 </body>
 </html>"""
+        return page.replace("__CSP__", csp_policy_for(page), 1)

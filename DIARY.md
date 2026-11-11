@@ -2,6 +2,39 @@
 
 Project log. Newest entry first. Short, dated, factual. See `GAMUT.md`.
 
+## 2026-11-11 — Officer UI sprint 1: output escaping across delivery surfaces (officer UI engineer)
+
+Labels: [ran] executed and observed, [read] read the code. Scope: `src/cueliez/delivery/*`, `docs/site/review.html`, their tests and docs. Closes ENG-006 for the delivery modules.
+
+**Reproduced [ran]:** the live dashboard did run transcript-derived markup. In Chromium, with the pre-fix code, a pushed cue whose `message` and `source_quotes[].quote` held `<img src=x onerror=...>` set `window.__pwned` to `message` and `quote` (the `q.text` fallback payload from `6a12c08` went through the same sink; its `<svg onload>` handler did not set its flag in my single read, cause not investigated). Cause: `dashboard.py` built the card with string concatenation into `innerHTML`. MediaMan's report was correct. `0f0e278` (review page rows from observations) was not exploitable: the review page already ran every value through `esc()`; I rewrote it anyway to build nodes with `textContent`.
+
+**Every place transcript, cue or officer text reaches output [read], and status:**
+1. Live dashboard client JS: cue `message`, `priority` (also a class name), `category`, `cue_id`, `turn_index`, `score`, `source_quotes[].quote/.text/.turn_index`, fetch error text. Was `innerHTML`; now `createElement`/`textContent`, `priority` allow-listed for the class, non-object cues/quotes and non-numeric scores tolerated (a string `priority` used to throw and blank the page).
+2. `/cues` JSON endpoint: JSON only; now `nosniff`, `no-store`, `no-referrer`.
+3. `render_officer_html`: title (x2), `priority`, `cue_id`, `label`, `turn`, `message`, `method`, quote `role`/`turn`/`text`, and `data-*` attributes (already `html.escape`d, now via `escape_html`), plus the inline `<script type="application/json">` cue block. That block was `html.escape`d, which is wrong context for a script: a payload could not break out, but the JSON was mangled for any reader. Now `json_for_script` (ASCII JSON, `<`, `>`, `&` as `\uXXXX`), round-trip tested.
+4. `render_html`: title, priority, turn, category, message, method, evidence JSON, quotes. Already escaped; now through `escape_html`.
+5. `render_text` (terminal): message, category, cue_id, method, evidence, quote role/text, header. Terminal escape sequences (OSC/CSI), bidi overrides and C1 controls passed through raw; now shown as `[U+XXXX]`.
+6. `docs/site/review.html`: priority, turn, cue_id, label, score, message, officer note `cue_id`/`action`/`note`, disclaimer, epistemic status, definitive-finding flag, product, versions, hash, sealed_at, mode, consent/training, error text. Was escaped `innerHTML`; now DOM nodes. Rendered text compared old vs new in Chromium for all three owner packages: identical.
+7. Not in my modules, observed only: `export.py` `render_package_summary_html` (CLI `.summary.html`). Sealed a hostile transcript through the CLI and parsed the output: no script/img/`on*` attributes, payload shown as `&lt;img`. Looks safe [ran]. `training_gui.py` writes `JSON.stringify(...)` into `innerHTML` inside `<pre>` (sandbox, records pages) with the sandbox cue text, which comes from a transcript: see ENG REQUEST.
+
+**Tests [ran]:** `tests/test_delivery_escaping.py` (28 test methods, many subtests) and `tests/js_dom_harness.py`. The harness runs the real inline scripts under Node against a recording fake DOM (records every `innerHTML` write and every created element/attribute), and parses server HTML with the stdlib parser. Payloads: `<script>`, `"><img onerror>`, `</script><script>`, attribute-breaking quotes, `javascript:`, svg/iframe srcdoc/mXSS, entity-encoded and fullwidth lookalikes, ANSI, bidi, line separators, NUL, C1. Before the fix: 52 failures (incl. subtests) on this file; after: all pass. Client-side tests skip locally without Node and fail in CI (`CI` env var) if Node is missing. I did not verify that the CI runner image has Node; if it does not, CI will fail on these tests and Node must be added to the workflow (`.github/` is not my module: lead dev).
+
+**Also changed:**
+- CSP. Dashboard: response header on `/`, hash-pinned inline script and style, `default-src 'none'`, `connect-src 'self'`, `frame-ancestors 'none'`, no `unsafe-inline`. Officer HTML and review page: meta CSP with hashes (meta cannot carry `frame-ancestors`). Observed in Chromium that the review page policy blocks even a same-page `fetch`.
+- Dashboard origin check: was `startswith("http://127.0.0.1")`, so `http://127.0.0.1.evil.example` and `http://localhost.evil.example` were accepted (and a cross-origin POST could replace the cue list). Now exact parsed-host match on `127.0.0.1`, `localhost`, `[::1]`; tested, including a cross-origin POST that must leave cues unchanged. Token auth and rate limit untouched and their existing tests pass.
+- New `delivery/safe.py`, `docs/DELIVERY_OUTPUT_SAFETY.md`.
+
+**Browser results [ran, bundled Chromium]:** old code + hostile cues: `window.__pwned` set, 3 injected `img/svg` elements. New code: hostile transcript (4 payloads in subject turns, sealed through the CLI) on the live dashboard: 8 cues, 0 injected elements, `__pwned` unset, payload text visible literally. Review page: hostile package (cue ids, notes, disclaimer) and the three owner packages: 0 injected elements, `__pwned` null, owner output text byte-identical to the old page. Officer HTML with a hostile title and notes: 0 injected, acknowledge button works under the CSP, notes JSON correct. I did not test Firefox/Safari. I did not test the dashboard page with the token enabled in the browser.
+
+**Checks [ran, merged tree on main 2f9d3a2]:** `check_no_fake_code` FAKE_CODE_SCAN_OK; `check_no_tracked_artifacts` ARTIFACT_CHECK_OK; `check_version_consistency` VERSION_CHECK_OK 0.2.0; `python -m cueliez --help` exit 0; `check_cli_contract` CLI_CONTRACT_OK; `check_contracts_phase9` CONTRACTS_OK; `pytest -q` all passed, 1 skipped (pre-existing). Delivery tests also run on Python 3.10 and 3.13 earlier in the session; the last 3.10/3.13 rerun was interrupted, so treat those as unconfirmed for the final tree.
+
+**Open:**
+- Officer notes: acknowledge/dismiss/note are still not labelled as human actions in the live dashboard (it has no actions). Not started this sprint.
+- Accessibility pass, explicit subject-not-shown control: not started.
+- Dashboard has no token-in-browser flow tested.
+
+ENG REQUEST: training_gui.py owner. `/sandbox` and `/records` pages put `JSON.stringify(response)` into `innerHTML` inside `<pre>`; the sandbox response contains cue text and quotes from the pasted transcript, so `</pre><img onerror=...>` in a transcript executes. Use `textContent`. I have not reproduced this in a browser.
+
 ## 2026-11-11 — Independent review, first pass (Reviewer)
 
 Basis: clean clones in fresh venvs. Full GAMUT.md check set run on each of 6a12c08, 0f0e278, b50ea6d, df0f0df and HEAD 75541c4: fake-code scan, tracked-artifact scan, version check, `--help`, CLI contract, contracts phase 9 all OK; `pytest` 394 passed, 1 skipped (opt-in Pollinations probe), 99 subtests, on every commit. Also pytest on Python 3.10.12 and 3.13.17 at 75541c4: same result. I did not run 3.12. I wrote no code; no reviewed file was changed.
