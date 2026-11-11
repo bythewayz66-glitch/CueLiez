@@ -2,6 +2,35 @@
 
 Project log. Newest entry first. Short, dated, factual. See `GAMUT.md`.
 
+## 2026-11-11 — Live AV design and measurements (Realtime and Audio Engineer)
+
+Pushed `docs/design/LIVE_AV_DESIGN.md`. No production code; spikes are outside the repo (`/workspace/spikes/live-av-2026-11-11/scripts/` in the agent workspace). Machine: 4 vCPU aarch64, Python 3.11.17, CPU only, no audio or video device. All numbers are for this machine.
+
+**Measured:**
+- Vosk 0.3.45 small-en-us: RTF 0.032 to 0.045, about 200 MB, own endpointer final about 0.9 to 1.0 s after last word. faster-whisper 1.2.1 int8, 11 s utterance at 4 threads: tiny.en 0.46 s, base.en 0.76 s, small.en 2.3 s. Whisper default temperature fallback made decode 6 to 12 times slower on a repeated-sentence file (small.en 72.5 s against 5.95 s with fallback off); the live path must turn it off.
+- MediaPipe Face Landmarker 0.10.18: 10.8 ms per frame p50 (about 92 fps one stream), 180 MB; 800 MB install with default dependencies, 263 MB with `--no-deps` recipe. No cp313 wheel. 1.2.2 fails here on missing `libEGL.so.1`. OpenCV motion only: 0.04 ms (frame diff), 2.6 ms (Farneback 160x120). Synthetic cartoon face only; real faces untested.
+- stdlib energy VAD: real-time factor 0.0009. Stdlib HTTP ingest plus SSE: POST 0.37 ms p50, SSE push 0.19 ms; back-to-back POSTs 20 per second by default and 8,392 per second with TCP_NODELAY.
+- Paced real-time end-to-end run (two-channel TTS fixture of the owner conflict script, Vosk, existing default observers): cue 0.84 to 0.87 s after utterance end (3 cues, 16 turns), turn final median 0.847 s. Plumbing proof only.
+- Existing stream path observer pass: 16 ms (76 turns), 64 ms (300), 146 ms (676); grows with length.
+
+**Defects found in existing code (verified by run):**
+- `require_gated_modality` lets state-wide `jurisdiction_approved` override a per-modality record with `jurisdiction_approved=False`; `record_modality_consent` sets that flag. A camera record marked not approved was allowed after audio was approved.
+- `--stream-turns` in `generic` mode emits response-latency, speech-rate (default runner) and pause (full runner) cues from turn fields with no modality consent.
+- A malformed NDJSON line ends `--stream-turns` with exit 2, no seal, accumulated turns lost.
+- Dashboard limiter returns 429 on the 121st POST in a minute; page polls every 1 s; no SSE.
+- CLI has no flag to record modality consent.
+
+ENG REQUEST: Gates and Seal Engineer: (1) per-modality jurisdiction approval must not be overridden by the state-wide flag, and `record_modality_consent` must not set it; (2) a revocation function with a record (needed for `subject_withdrew`), (3) require modality consent at seal when audio or video-derived observations are present, (4) the `live_inputs` block and timeline (ENG-008). Details: `LIVE_AV_DESIGN.md` sections 2.7, 2.8, 6.1.
+ENG REQUEST: Lead dev (runner and CLI contract): runner-level modality gating so timing, prosody and visual observers do not run without their consent; CLI flags to record modality consent; extras block in `pyproject.toml` (design section 3.2).
+ENG REQUEST: Officer UI Engineer: SSE channel and live-inputs strip, kill control and shortcut, ingest rate-limit rule, CSP and Permissions-Policy for an AudioWorklet capture script (design sections 2.3, 6.1 items 9 and 10).
+PRODUCT QUESTION: Split deployment: does audio carried over TLS inside the customer network between the officer browser and the CueLiez server count as inside the customer environment?
+PRODUCT QUESTION: When two-channel capture is not available, is officer-confirmed role on a single channel acceptable for Phase A0?
+PRODUCT QUESTION: Machine transcripts may drop fillers; I propose `FilledPauseMarkerObserver` stays off for machine transcripts until a disfluent recording shows what survives. Agreed?
+
+**Checks run on the repo with the design doc added (main at 94f6181 plus this change):** `check_no_fake_code.py` FAKE_CODE_SCAN_OK; `check_no_tracked_artifacts.py` ARTIFACT_CHECK_OK; `check_version_consistency.py` VERSION_CHECK_OK 0.2.0; `python -m cueliez --help` rc 0; `check_cli_contract.py` CLI_CONTRACT_OK; `check_contracts_phase9.py` CONTRACTS_OK; `python -m pytest -q` 460 passed, 1 skipped. Language-compliance skill not available to me; `tests/test_language.py` is in the pytest run above.
+
+**Not done:** real-device testing, real-speech word error, disfluency behaviour, real-face video, kill-switch latency, Python 3.13 video wheel, whisper.cpp and sherpa-onnx evaluation, an end-to-end Whisper run.
+
 ## 2026-11-11 — Live audio and video scope (PM)
 
 Owner decision relayed by the lead dev: live AUDIO and live VIDEO cues in a live interview. Pushed `docs/design/LIVE_AV_PRODUCT_SCOPE.md`, `docs/OWNER_DECISIONS.md` section 2a (dated entry, supersedes the visual-input row of section 2 for audio/video only; never-claim paragraph untouched), `TODO.md` (Phase 7/8 items reworded, still `[ ]`; new Phase 10, all `[ ]`). Nothing is built; no status claims here.
