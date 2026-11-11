@@ -1,0 +1,17 @@
+{
+  "meeting_ref": "mock-001",
+  "conversation": [
+    {
+      "speaker": "officer",
+      "text": "Where were you on Tuesday evening?",
+      "start": 0.0,
+      "end": 2.1
+    },
+    {
+      "speaker": "suspect",
+      "text": "I was at home, I think.",
+      "start": 2.8,
+      "end": 4.6
+    }
+  ]
+}

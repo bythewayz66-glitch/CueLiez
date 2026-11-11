@@ -1,0 +1,54 @@
+[
+  {
+    "role": "subject",
+    "text": "statement in text"
+  },
+  {
+    "role": "subject",
+    "utterance": "statement in utterance"
+  },
+  {
+    "role": "subject",
+    "content": "statement in content"
+  },
+  {
+    "role": "subject",
+    "transcript": "statement in transcript"
+  },
+  {
+    "role": "subject",
+    "body": "statement in body"
+  },
+  {
+    "role": "subject",
+    "message": "statement in message"
+  },
+  {
+    "role": "subject",
+    "value": "statement in value"
+  },
+  {
+    "role": "subject",
+    "words": [
+      {
+        "word": "I"
+      },
+      {
+        "word": "left"
+      },
+      {
+        "word": "early"
+      }
+    ]
+  },
+  {
+    "role": "subject",
+    "tokens": [
+      "I",
+      "did",
+      "not",
+      "see",
+      "it"
+    ]
+  }
+]

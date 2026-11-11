@@ -2,6 +2,40 @@
 
 Project log. Newest entry first. Short, dated, factual. See `GAMUT.md`.
 
+## 2026-11-11 — Ingest sprint 1: fail-closed ingest, empty-turn policy, silent-drop audit (ingest/connectors engineer)
+
+Labels: [ran] executed and observed, [read] read the code. Changes are in `src/cueliez/ingest.py`, its tests, fixtures and docs only.
+
+**Done (ENG-002 library side, lead-dev tasks 1-3):**
+- `normalize_transcript({"foo":"bar"})` now raises `IngestError` (`ValueError` subclass, `.code`, `.turn_index`, `.as_dict()`). Before [ran]: returned `[]`. Also raises for non-list containers, a non-sequence root, `None`, null/number/list turns, unreadable or invalid JSON (was a raw `JSONDecodeError`/`FileNotFoundError`), two recognised containers in one wrapper (was: first silently won, second dropped), zero turns and recognised-but-empty containers.
+- Empty turns follow the PM decision (section C of the PM entry): mapped role + empty text is kept in place, flagged `ingest_flags: ["empty_text"]`, counted in `source_artifact.ingest_report` (inside the package hash; test edits the report and `verify_package_hash` goes false). Unmappable or missing role is rejected `ingest_unattributed_turn` with turn index and original label. All-empty transcript is rejected. "Be permissive" comment removed.
+- Policy switch: `ingest.EMPTY_TEXT_POLICY` (default `"flag"`, the PM decision, so not provisional). `"reject"` is also implemented and tested; a one-line change, or `empty_text_policy=` per call. Under `reject`, an empty turn that carries timing or feature keys (silence segment) is still kept and flagged; other empty turns raise `ingest_empty_turn`. Rule and key list are in the contract doc. This answers the ENG-002 open question: a silence segment keeps its timing/feature metadata and is flagged `empty_text`.
+- Removed the `except Exception` fallback in `load_transcript` that re-read input without validation.
+- Further silent drops found [ran] and fixed: `{"text":"","utterance":"hello"}` lost "hello"; a second wrapper container was dropped; any nested/list/dict key on a turn was dropped; `words` timings were dropped; conflicting role or text fields were resolved by key order. Now: every unused key is copied through, conflicts raise `ingest_ambiguous_turn`, wrapper keys that are not turns are listed in `ingest_report.ignored_wrapper_keys`. `canonicalize_turn` no longer returns a blank turn for a non-mapping.
+- Fixtures: `tests/fixtures/transcripts/vendor/` (one per wrapper key, role alias, text alias, silence segment) and `malformed/` (15 files, each mapped to a code). Tests: `tests/test_ingest_strict_sprint1.py`. A test parses `docs/TRANSCRIPT_INGEST_CONTRACT.md` and compares its key lists, empty-policy default, error codes and report fields to the code.
+- Docs: contract rewritten to match; `GATE_ERROR_CODES.md` lists the 8 new codes; `INTEGRATION_SPEC.md` section 2 updated.
+
+**Verified [ran]:** `scripts/check_no_fake_code.py` FAKE_CODE_SCAN_OK; `check_no_tracked_artifacts.py` ARTIFACT_CHECK_OK; `check_version_consistency.py` VERSION_CHECK_OK 0.2.0; `python -m cueliez --help` exit 0; `check_cli_contract.py` CLI_CONTRACT_OK; `check_contracts_phase9.py` CONTRACTS_OK; `pytest`: 432 passed, 1 skipped, 180 subtests passed. All 22 transcript JSON files under `docs/examples` and `tests/fixtures` still ingest.
+
+**Existing tests I had to edit (inputs only, assertions unchanged):** role `"i"` became `"interviewer"` in `test_finish_remaining_iceman_0904.py` and `test_ingest_connectors_phase7_iceman.py`; `{"text":"x"}` got `"role":"subject"` in `test_ingest_phase7_iceman.py`. `test_ingest_vendor_normalization_kilo.py::test_validation_rejects_invalid_root` asserted the old behaviour (`validate_transcript_turns(None) == []`, null turns skipped); it now asserts `None` raises. These inputs are invalid under the PM decision.
+
+**NOT done / open:**
+- The CLI does not use `cueliez.ingest` at all [read: `cli.py` `_load_transcript`]. Observed [ran] on the new malformed fixtures with `--no-seal`: `[]`, a null turn, an unmapped role and all-empty turns exit 0 and emit a package with `observations: []`; only the two wrapper cases exit 2. So at the CLI, ENG-002 ACs 1-4 are not met yet. See ENG REQUEST below.
+- ENG-003 (hash of raw input bytes) not started; depends on ENG-001 which is not mine.
+- Oversized-input cap for transcripts (standing goal) not implemented; connectors keep theirs. Needs a number from the lead dev or PM.
+- `connectors.py` never calls ingest (it moves sealed packages), so no connector change was needed. Connector config validation, idempotency, retry policy and audit events from the roadmap are not started this sprint.
+
+ENG REQUEST: cli.py owner. Replace `_load_transcript` (and the `--stream-turns` per-turn path) with `cueliez.ingest.load_transcript` / `normalize_transcript_with_report`. The existing top-level handler already prints `error_code` for exceptions with `.code` and exits 2, so `IngestError` needs no extra handling. Pass `ingest_report` into the package `source_artifact` so sealed CLI packages carry it (ENG-002 AC4). Priority: high, a null turn or unattributed turn can currently reach a sealed package through the CLI.
+
+ENG REQUEST: observations/runner.py owner. `_normalize_transcript` returns `[]` for an unrecognised wrapper and knows only `turns`/`transcript`/`messages`, so `ObservationRunner.run({"utterances":[...]})` silently yields zero observations. Make it raise or delegate to `cueliez.ingest`.
+
+ENG REQUEST: observers owner. Turns with `ingest_flags` containing `empty_text` must count as no data for latency, length-variance and similar observers, and no cue may cite them as source text (ENG-002 AC6). Library output already marks them.
+
+**Questions for the PM:**
+1. A bare string turn is accepted and attributed to `subject` by assumption. That conflicts with the attribution argument in section C. Keep, or reject strings as unattributed?
+2. Diarised exports that label speakers `Speaker 1`/`Speaker 2` are now rejected `ingest_unattributed_turn` (only `speaker_a/b`, `person_a/b` map). Intended per section C; confirm before a pilot partner supplies such an export.
+3. Zero turns and `[]` are rejected. Your section C said so; the lead dev asked for this to be decided deliberately, and it is documented in the contract.
+
 ## 2026-11-11 — Product manager first session: roadmap audit, ingest decision, next sprint (PM)
 
 Basis: fresh clone at HEAD `b50ea6d`. Labels: [ran] I executed it, [read] I read the code or doc, [heuristic] script output not yet hand-checked. I did not run `pytest` or the CI scripts; I rely on the lead dev's baseline entry below for those. I have not edited `TODO.md`, `src/`, `tests/`, `scripts/` or `.github/`.

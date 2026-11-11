@@ -16,7 +16,7 @@ from cueliez.gates import record_dual_acknowledge
 
 class TestRmsAttachmentReadiness(unittest.TestCase):
     def test_sealed_original_artifact_validates_for_ingest(self):
-        pkg = build_ingested_package({"turns": [{"role": "i", "text": "test"}]})
+        pkg = build_ingested_package({"turns": [{"role": "interviewer", "text": "test"}]})
         sealed = seal_observation_package(pkg, SessionGateState(mode="generic"))
         receipt = validate_sealed_package_ingest(sealed)
         self.assertTrue(receipt["ok"])

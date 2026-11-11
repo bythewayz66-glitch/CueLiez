@@ -1,0 +1,11 @@
+[
+  {
+    "role": "subject",
+    "text": "a"
+  },
+  null,
+  {
+    "role": "subject",
+    "text": "b"
+  }
+]

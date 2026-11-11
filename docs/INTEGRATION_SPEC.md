@@ -17,14 +17,15 @@
 Canonical input: an ordered list of turns. Each turn is an object with at least `role` and `text`. Accepted shapes:
 
 - JSON array of turns: `[{"role":"officer","text":"..."}, {"role":"subject","text":"..."}]`
-- Object with `transcript` or `turns` array: `{"transcript":[...]}` / `{"turns":[...]}`
+- Object with exactly one recognised turn array (`turns`, `transcript`, `messages`, `utterances`, `segments`, `items`, `entries`, `results`, `dialogue`, `conversation`): `{"transcript":[...]}` / `{"turns":[...]}`
+- Input that is not one of these, has no turns, or has a turn that cannot be attributed to `subject` or `interviewer` is rejected with a coded error (`ingest_*`); it never becomes an empty or partial transcript.
 
 Turn fields (canonical):
-- `role` (string): `officer` or `subject` (aliases like `speaker` are accepted).
-- `text` (string): utterance text.
+- `role` (string): maps to `interviewer` (for example `officer`) or `subject` (aliases like `speaker` are accepted).
+- `text` (string): utterance text. A turn with a mapped role and empty text is kept, flagged `empty_text` and counted in `source_artifact.ingest_report`.
 - Optional metadata: `response_latency_ms`, timestamps, speaker IDs, etc. (passed through; not required).
 
-Normalization is implemented in `cueliez.ingest` (`normalize_transcript`, `canonicalize_turn`, `validate_transcript_turns`). See `docs/TRANSCRIPT_INGEST_CONTRACT.md`.
+Normalization is implemented in `cueliez.ingest` (`normalize_transcript`, `canonicalize_turn`, `validate_transcript_turns`, `normalize_transcript_with_report`). See `docs/TRANSCRIPT_INGEST_CONTRACT.md`.
 
 ## 3. Sealed package (output) schema
 

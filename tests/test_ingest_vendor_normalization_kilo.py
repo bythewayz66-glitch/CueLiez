@@ -59,10 +59,8 @@ class TestIngestVendorNormalizationKilo(unittest.TestCase):
     def test_validation_rejects_invalid_root(self):
         with self.assertRaises(ValueError):
             validate_transcript_turns("not a transcript structure")
-        self.assertEqual(validate_transcript_turns(None), [])
-        # null turns skipped
-        out = validate_transcript_turns([{"text": "hi"}, None, {"speaker": "x", "body": "ok"}])
-        self.assertEqual(len(out), 2)
+        with self.assertRaises(ValueError):
+            validate_transcript_turns(None)
 
     def test_preserves_useful_metadata(self):
         turns = normalize_transcript([{"speaker": "subject", "text": "hi", "speakerId": "S1", "start_ms": 100, "asr_confidence": 0.9}])

@@ -62,7 +62,7 @@ class TestValidateSealedPackageIngest(unittest.TestCase):
         self.assertEqual(ctx.exception.code, "ingest_epistemic_invalid")
 
     def test_mock_connector_success(self):
-        pkg = build_ingested_package({"turns": [{"role": "i", "text": "hello"}]})
+        pkg = build_ingested_package({"turns": [{"role": "interviewer", "text": "hello"}]})
         sealed = seal_observation_package(pkg, SessionGateState(mode="generic"))
         c = MockConnectorIngest(auth_token="env:TOKEN")
         r = c.attach(sealed)

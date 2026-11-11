@@ -21,10 +21,18 @@ Stable `GateError.code` strings raised by `cueliez.gates` / session/seal flows. 
 | `epistemic_status_forbidden` | Package epistemic status is a forbidden finding class |
 | `export_invalid` | Export requires a sealed observed-indicator package dict |
 | `gate_state_required` | Session gate state required for a gate check |
+| `ingest_ambiguous_structure` | Transcript wrapper object has more than one recognised turn container |
+| `ingest_ambiguous_turn` | Turn has conflicting role fields or conflicting text fields |
+| `ingest_empty_transcript` | Transcript has zero turns, or every turn has empty text |
+| `ingest_empty_turn` | Turn has empty text and no timing/feature content (`reject` empty-text policy only) |
 | `ingest_epistemic_invalid` | Ingested package epistemic/disclaimer fields invalid (non-finding contract) |
 | `ingest_hash_mismatch` | Ingested package hash verification failed |
+| `ingest_invalid_input` | Transcript input unreadable or not valid JSON |
 | `ingest_invalid_package` | Ingest requires a valid package dict |
+| `ingest_invalid_turn` | Transcript turn is not an object or string, or a text field has an unusable type |
 | `ingest_not_sealed` | Ingest requires a sealed package |
+| `ingest_unattributed_turn` | Transcript turn has no role, or a role that maps to neither subject nor interviewer |
+| `ingest_unrecognised_structure` | Transcript root is not a turn list or a wrapper with a recognised turn list |
 | `invalid_confidence_score` | `confidence.score` not numeric |
 | `jurisdiction_approval_required` | Jurisdiction approval required before enabling a gated input modality |
 | `jurisdiction_required` | Jurisdiction must be recorded before enabling a gated input modality |

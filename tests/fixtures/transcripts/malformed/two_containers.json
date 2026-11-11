@@ -1,0 +1,14 @@
+{
+  "turns": [
+    {
+      "role": "subject",
+      "text": "a"
+    }
+  ],
+  "segments": [
+    {
+      "role": "subject",
+      "text": "b"
+    }
+  ]
+}

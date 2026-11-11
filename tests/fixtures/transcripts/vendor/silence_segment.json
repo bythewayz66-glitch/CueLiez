@@ -1,0 +1,17 @@
+[
+  {
+    "role": "interviewer",
+    "text": "Tell me more."
+  },
+  {
+    "role": "subject",
+    "text": "",
+    "start_ms": 1000,
+    "end_ms": 4200,
+    "pause_duration_ms": 3200
+  },
+  {
+    "role": "subject",
+    "text": "It was around nine."
+  }
+]

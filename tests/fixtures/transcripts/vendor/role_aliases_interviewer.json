@@ -1,0 +1,50 @@
+[
+  {
+    "role": "officer",
+    "text": "question via role"
+  },
+  {
+    "speaker": "Detective B",
+    "text": "question via speaker"
+  },
+  {
+    "speaker_role": "investigator",
+    "text": "question via speaker_role"
+  },
+  {
+    "speakerRole": "interviewer",
+    "text": "question via speakerRole"
+  },
+  {
+    "speaker_type": "officer",
+    "text": "question via speaker_type"
+  },
+  {
+    "speakerType": "operator",
+    "text": "question via speakerType"
+  },
+  {
+    "participant": "Interviewer",
+    "text": "question via participant"
+  },
+  {
+    "participant_role": "detective",
+    "text": "question via participant_role"
+  },
+  {
+    "participantRole": "clinician",
+    "text": "question via participantRole"
+  },
+  {
+    "channel": "officer",
+    "text": "question via channel"
+  },
+  {
+    "label": "Interviewer",
+    "text": "question via label"
+  },
+  {
+    "actor": "agent",
+    "text": "question via actor"
+  }
+]

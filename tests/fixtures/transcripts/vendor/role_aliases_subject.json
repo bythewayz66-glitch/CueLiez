@@ -1,0 +1,50 @@
+[
+  {
+    "role": "subject",
+    "text": "answer from subject"
+  },
+  {
+    "role": "suspect",
+    "text": "answer from suspect"
+  },
+  {
+    "role": "witness",
+    "text": "answer from witness"
+  },
+  {
+    "role": "respondent",
+    "text": "answer from respondent"
+  },
+  {
+    "role": "interviewee",
+    "text": "answer from interviewee"
+  },
+  {
+    "role": "defendant",
+    "text": "answer from defendant"
+  },
+  {
+    "role": "deponent",
+    "text": "answer from deponent"
+  },
+  {
+    "role": "patient",
+    "text": "answer from patient"
+  },
+  {
+    "role": "client",
+    "text": "answer from client"
+  },
+  {
+    "role": "speaker_a",
+    "text": "answer from speaker_a"
+  },
+  {
+    "role": "person_a",
+    "text": "answer from person_a"
+  },
+  {
+    "role": "caller",
+    "text": "answer from caller"
+  }
+]

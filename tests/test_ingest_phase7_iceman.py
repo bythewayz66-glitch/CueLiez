@@ -18,7 +18,7 @@ class TestTranscriptIngestContract(unittest.TestCase):
     def test_load_transcript_wrappers(self):
         t = load_transcript({"turns": [{"role": "interviewer", "text": "hi"}]})
         self.assertEqual(len(t), 1)
-        t = load_transcript({"transcript": [{"text": "x"}]})
+        t = load_transcript({"transcript": [{"role": "subject", "text": "x"}]})
         self.assertEqual(len(t), 1)
 
     def test_build_ingested_package_has_source_artifact_and_seals(self):
