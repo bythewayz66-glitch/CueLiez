@@ -2,6 +2,131 @@
 
 Project log. Newest entry first. Short, dated, factual. See `GAMUT.md`.
 
+## 2026-11-11 — Live audio and video scope (PM)
+
+Owner decision relayed by the lead dev: live AUDIO and live VIDEO cues in a live interview. Pushed `docs/design/LIVE_AV_PRODUCT_SCOPE.md`, `docs/OWNER_DECISIONS.md` section 2a (dated entry, supersedes the visual-input row of section 2 for audio/video only; never-claim paragraph untouched), `TODO.md` (Phase 7/8 items reworded, still `[ ]`; new Phase 10, all `[ ]`). Nothing is built; no status claims here.
+
+**Decided (PM, within the owner decision):**
+- Order: A0 live audio to turns (no audio-derived indicators), A1 audio-timing features, then B video as derived features. Changed from the lead dev's A/B: A is split so the first release adds the fewest new claims, and B has an entry gate (counsel answers, cited literature review by me, owner review of an over-cue report from Phase A sessions).
+- Modes: generic and interrogation. Live inputs refuse to start in therapy, clinical and government.
+- Per-modality consent keys: `audio_capture` (new), `audio_features`, `camera`. Consent is mode-independent. Live-input training version, adult-with-capacity attestation and consent-text version also required.
+- CueLiez never stores audio or video; the agency's recording stays the system of record (referenced by hash). Package holds window aggregates only, no per-frame series, no landmarks.
+- Cue wording is fixed templates with a fixed caveat line and source tag; own-baseline only; video cues capped at the lowest priority, timing cues at medium; neither can alone trigger high priority or dual-control. Voice-quality/pitch features stay out of the live path.
+- Existing `visual.py` text says "gaze aversion"; it implies motive and must become "off-camera gaze" (ENG-007).
+
+**Language check:** `language-compliance-check --external` on the scope doc: 0 violations, 3 review and 3 warn hits, all negated or rule-listing lines (the banned-term list, "not findings", "no verdict"). Same skill on OWNER_DECISIONS.md and TODO.md: 0 violations. The cue templates and the consent notice are in the doc and passed in that run. Not run on counsel-approved consent text; none exists yet.
+
+**PRODUCT QUESTION answers for the Realtime and Audio Engineer (no questions were in DIARY when I wrote this; these are the ones the design will hit):**
+1. Cues from partial speech-to-text? No. Cues come from finalised turns only. Live captions in the transcript view may show partials, labelled machine transcript.
+2. Unknown speaker? Mark `speaker_unconfirmed`, never default to subject, never cite it as cue source, show it for officer confirmation. Prefer two-channel capture.
+3. Baseline window and cue rate limits? Targets to set by measurement; start from the first two minutes for baseline and one cue per indicator per window. Report what you measure.
+4. Input down mid-interview? Strip shows `DOWN`, cues from that input stop, the interruption is recorded; officer may continue text-only.
+5. Reference latency? First cue within 5 s of the end of the triggering utterance on a 2-minute two-speaker fixture is a target, not a result. State the reference hardware.
+6. Per-turn rerun of the whole pipeline (`_run_stream_turns`)? Your call on approach. Product need: cue latency must not grow with interview length; report latency at minute 5, 20 and 45 of a fixture.
+7. Speech-to-text may drop disfluencies and hedges. Report which text observers are affected; I will take any product consequence to the owner.
+8. Anything you need that I have not decided: put `PRODUCT QUESTION:` here and I answer with a decision or take it to the owner.
+
+**Needs from the owner (recommendations in scope doc section 8):** first live context (recommend training exercises and consenting volunteers); no raw A/V retention in A or B; keep derived video indicators in the sealed package, labelled (needs counsel); consent text ownership; no cloud transcription; whether the Phase 8 default-on audio/camera items are struck (recommend strike camera); refuse therapy/clinical/government; exclude minors and persons lacking capacity; counsel for the pilot jurisdiction on consent and recording law, voluntariness in custody, biometric status of face-derived features, and disclosure of video-derived indicators. I have not given any legal conclusion.
+
+
+### ENG REQUEST: ENG-007 Live-input cue wording: templates, caveats, priority ceilings, banned terms
+
+Date: 2026-11-11
+**Why:** Gaze, blink, movement and audio-timing indicators have weak and culturally variable grounding; the cue text must carry the caveat and name no cause or state of mind (LIVE_AV_PRODUCT_SCOPE.md section 4).
+
+**Decisions this follows:** docs/OWNER_DECISIONS.md section 2a; docs/design/LIVE_AV_PRODUCT_SCOPE.md sections 4.2, 4.3
+
+**In scope:**
+- visual.py gaze/blink/motor cue text replaced with the section 4.2 templates, including the fixed caveat line and source tag; `gaze aversion` becomes `off-camera gaze`
+- timing observers (latency, speech rate, pauses) use the section 4.2 templates when fed live features
+- priority ceilings: video-derived lowest tier, audio-timing medium; neither alone raises a high-priority cue or dual-control
+- seal-time language gate rejects the section 4.3 terms in labels, cue text and keys
+
+**Out of scope:**
+- text and consistency observers and their priorities
+- prosody/voice-quality observers (stay off in the live path)
+
+**Acceptance criteria (each is observable and has a stated check):**
+
+- **AC1** [behavior] Given a fixture with a gaze, blink and movement shift after a complete baseline, when the visual observers run, then each cue text equals a section 4.2 template filled with values and is followed by its fixed caveat line.  
+  Verify: tests/test_live_cue_wording.py::test_video_cue_matches_template
+- **AC2** [behavior] Given the same fixture with the largest shift the observers can produce, when cues are built, then no video-derived cue has a priority above the lowest tier and no dual-control record is demanded by it.  
+  Verify: tests/test_live_cue_wording.py::test_priority_ceiling
+- **AC3** [failure-path] Given an observation or cue label containing any section 4.3 term (for example `nervous`, `evasive`, `micro-expression`, `gaze_aversion`), when the package is sealed, then sealing raises a gate error naming the term and writes no sealed file.  
+  Verify: tests/test_live_cue_wording.py::test_seal_rejects_banned_terms
+- **AC4** [behavior] Given the repository source, when the scan test runs over visual.py and timing observer strings, then no section 4.3 term appears in any cue string or label.  
+  Verify: tests/test_live_cue_wording.py::test_no_banned_terms_in_sources
+
+**Done also requires (GAMUT.md):**
+- Implemented for real: no stubs, placeholders, TODO/FIXME markers or hard-coded results.
+- Integrated: reachable from the CLI, session, export or delivery path it belongs to.
+- Tested, including failure paths; fail-closed behaviour is tested as fail-closed.
+- Full check set run and observed passing (listed below).
+- Docs, CLI help and schema references match the code.
+- DIARY.md entry records what changed and what was verified.
+
+Checks to run and report:
+```
+python scripts/check_no_fake_code.py
+python scripts/check_no_tracked_artifacts.py
+python scripts/check_version_consistency.py
+python -m cueliez --help
+python scripts/check_cli_contract.py
+python scripts/check_contracts_phase9.py
+python -m pytest -q
+```
+
+### ENG REQUEST: ENG-008 Gate state and sealed-package record for live modalities
+
+Date: 2026-11-11
+**Why:** Each live input needs its own consent, jurisdiction approval, training and attestation recorded in the sealed package, and a start/stop timeline, so the record shows which inputs were live (LIVE_AV_PRODUCT_SCOPE.md sections 3.2, 3.4, 3.6, 3.7).
+
+**Decisions this follows:** docs/OWNER_DECISIONS.md section 2a; docs/design/LIVE_AV_PRODUCT_SCOPE.md section 3
+
+**In scope:**
+- add `audio_capture` to the gated input modalities (microphone plus speech-to-text), separate from `audio_features` and `camera`
+- record in gate state: live-input training version, subject-adult-with-capacity attestation, consent-form text version
+- refuse live inputs in therapy, clinical and government modes
+- record refusals with their gate error code
+- sealed package carries a modality state timeline (start, stop, officer stop, interruption, reason code) inside the hashed area and the speech-to-text and extractor component ids and versions
+
+**Out of scope:**
+- choice of capture libraries, speech-to-text engines or models
+- retention of audio or video (not built)
+- the officer UI layout (officer UI engineer, per LIVE_AV_DESIGN.md)
+
+**Acceptance criteria (each is observable and has a stated check):**
+
+- **AC1** [failure-path] Given no `audio_capture` consent record, when live audio is started with a fake capture source, then the command exits 2 with `modality_consent_required`, the fake source records zero opens, and the refusal event is in the audit output.  
+  Verify: tests/test_live_gates.py::test_audio_refused_without_consent
+- **AC2** [failure-path] Given full modality consent and mode `therapy`, `clinical` or `government`, when live audio is started, then it exits 2 with a recorded gate error code and the capture source records zero opens.  
+  Verify: tests/test_live_gates.py::test_live_refused_in_excluded_modes
+- **AC3** [failure-path] Given consent present but live-input training version, adult-with-capacity attestation or consent-text version missing, when live audio is started, then it exits 2 naming the missing field and records the refusal.  
+  Verify: tests/test_live_gates.py::test_live_requires_training_attestation_text_version
+- **AC4** [behavior] Given a sealed session where audio ran, was stopped by the officer, then resumed, when the exported package is read, then the package holds one consent record per live modality, the timeline with both events and reason codes, and component ids and versions, all covered by the package hash.  
+  Verify: tests/test_live_gates.py::test_timeline_in_hashed_area
+- **AC5** [behavior] Given the exported package from AC4, when `python -m cueliez --verify-package` runs on it, then it reports hash_ok true and exits 0.  
+  Verify: python -m cueliez --verify-package <exported json>
+
+**Done also requires (GAMUT.md):**
+- Implemented for real: no stubs, placeholders, TODO/FIXME markers or hard-coded results.
+- Integrated: reachable from the CLI, session, export or delivery path it belongs to.
+- Tested, including failure paths; fail-closed behaviour is tested as fail-closed.
+- Full check set run and observed passing (listed below).
+- Docs, CLI help and schema references match the code.
+- DIARY.md entry records what changed and what was verified.
+
+Checks to run and report:
+```
+python scripts/check_no_fake_code.py
+python scripts/check_no_tracked_artifacts.py
+python scripts/check_version_consistency.py
+python -m cueliez --help
+python scripts/check_cli_contract.py
+python scripts/check_contracts_phase9.py
+python -m pytest -q
+```
+
 ## 2026-11-11 — Officer UI sprint 1: output escaping across delivery surfaces (officer UI engineer)
 
 Labels: [ran] executed and observed, [read] read the code. Scope: `src/cueliez/delivery/*`, `docs/site/review.html`, their tests and docs. Closes ENG-006 for the delivery modules.
