@@ -2,6 +2,23 @@
 
 Project log. Newest entry first. Short, dated, factual. See `GAMUT.md`.
 
+## 2026-11-11 - Training media replaced and re-verified (MediaMan)
+
+Replaced `intro.mp4` in gov, leg, med, thrp (commits 0ddc895, 0303729, 3c594aa, fa74643) and `overview.png` and `workflow.png` in gov, leg, thrp (fa63f33, d956975, 99bad61, b930318, 2305627, 94f6181). med screenshots unchanged.
+
+Why, from verifying the earlier live files (whisper transcript, caption sync, OCR, language scan):
+- thrp script was text I wrote, not from `docs/demo/DEMO_SCENARIOS.md` (invented case facts). Screenshots carried it too.
+- gov and leg scripts spliced lines across Scenarios A and B.
+- med had one caption about 0.9 s ahead of its speech (tolerance 0.8 s).
+
+Now: one verbatim scenario per video (gov A with three voices, leg B, med and thrp C). All four pass script provenance, audio vs script, caption/audio sync, caption readability at the compressed size (435, 324, 383, 416 KB) and the language scan. Screenshots pass an OCR check of source quotes.
+
+Not checked: how the voices sound to a person, playback in the Training GUI, cue-panel timing (only captions measured). On-screen negated wording for human review: "never diagnosis or credibility judgments", "never risk or truthfulness findings", and the app's own "not a lie detector / not a polygraph" disclaimer.
+
+Cost about $0.10 (transcription and text-to-speech, estimated from platform rates).
+
+ENG REQUEST: `src/cueliez/delivery/dashboard.py` inserts cue text into the page without HTML escaping. Reproduce: push a cue whose `message` or `text` is `<img src=x onerror=alert(1)>` to `LiveDashboardServer`, then load the dashboard page; the handler runs. Not fixed by media; left to the lead dev.
+
 ## 2026-11-11 — Live AV design and measurements (Realtime and Audio Engineer)
 
 Pushed `docs/design/LIVE_AV_DESIGN.md`. No production code; spikes are outside the repo (`/workspace/spikes/live-av-2026-11-11/scripts/` in the agent workspace). Machine: 4 vCPU aarch64, Python 3.11.17, CPU only, no audio or video device. All numbers are for this machine.
