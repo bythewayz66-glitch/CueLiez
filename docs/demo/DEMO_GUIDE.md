@@ -13,6 +13,8 @@ Show how CueLiez helps a professional run a clearer, better-documented interview
 
 ## Recommended flow (15–25 min)
 
+Demo video: `live-av-demo-staged-synthetic.mp4` (152 s, 720p, silent) — a staged, synthetic demo of the live AV surface, driven through the real HTTP API. The person on camera is a drawn cartoon avatar, labelled on every frame "STAGED SYNTHETIC DEMO — NOT A REAL INTERVIEW — NO REAL SUBJECT". Face numbers shown are the real backend test on public-domain portraits, labelled as such. No real interview footage is used anywhere.
+
 ### 1. Frame it (1–2 min)
 - “CueLiez is a Legal Interview Engine. It is **not a lie detector**.”
 - “It observes signals and testimony patterns and gives the professional **cues** — prompts for human review.”

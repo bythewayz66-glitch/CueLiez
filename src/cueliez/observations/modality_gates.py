@@ -7,7 +7,7 @@ canonical checks for SessionGateState where possible and fails closed.
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Mapping, Optional
 
 from ..gates import (
     GATED_INPUT_MODALITIES,
@@ -75,7 +75,10 @@ def check_modality_allowed(
             jur = str(mc.get("jurisdiction") or state.get("jurisdiction") or "").strip()
             if require_jurisdiction and not jur:
                 raise GateError("jurisdiction_required", f"Jurisdiction must be recorded before enabling gated input modality {canon!r}.")
-            if require_jurisdiction and not (mc.get("jurisdiction_approved") or state.get("jurisdiction_approved")):
+            # Per-modality approval ONLY: a state-wide jurisdiction_approved
+            # flag must never satisfy a per-modality check (owner decision,
+            # Track A fix, 2026-11-25).
+            if require_jurisdiction and not mc.get("jurisdiction_approved"):
                 raise GateError("jurisdiction_approval_required", f"Jurisdiction approval is required before enabling gated input modality {canon!r}.")
             return
         # No per-modality record: fail closed (canonical requires explicit modality consent).
@@ -86,6 +89,113 @@ def check_modality_allowed(
 def modality_observers_allowed(state: Any, modality: str) -> bool:
     try:
         check_modality_allowed(state, modality)
+        return True
+    except GateError:
+        return False
+
+
+# ---------------------------------------------------------------------------
+# Demographic inference: SEPARATE gate (owner decision, 2026-11-25 20:00 MST).
+#
+# Demographic inference is NOT covered by the general modality gate
+# (audio_features / camera / wearable) and must never be treated as
+# enabled by camera consent, jurisdiction approval, or any other
+# modality consent. It requires its OWN separate opt-in and its OWN
+# separate consent record, because it is high-risk, bias-prone and
+# admissibility-sensitive.
+#
+# Expected record shape (canonical, Track A, ``cueliez.gates``):
+#
+#   SessionGateState.demographic_inference_consent = {
+#       "consented": True, "attested_by": "<officer id>",
+#       "jurisdiction": "<jurisdiction>", "jurisdiction_approved": True,
+#       "recorded_at": <epoch seconds>,
+#   }
+#
+# written by ``record_demographic_inference_consent`` and checked by
+# ``require_demographic_inference_consent`` (which looks ONLY at that
+# record — never modality_consents, never the state-wide
+# jurisdiction_approved flag). Revocation touches only this record.
+# Camera consent, audio consent, wearable consent, or a state-wide
+# jurisdiction approval alone NEVER satisfy this check.
+# ---------------------------------------------------------------------------
+
+DEMOGRAPHIC_INFERENCE_GATE = "demographic_inference"
+
+
+def _demographic_record(state: Any) -> Optional[Mapping[str, Any]]:
+    """Return the separate demographic-inference consent record, if any."""
+    if isinstance(state, SessionGateState):
+        # Canonical record is the separate attribute (Track A).
+        rec = getattr(state, "demographic_inference_consent", None)
+        if isinstance(rec, Mapping):
+            return rec
+        recs = getattr(state, "modality_consents", None)
+        if isinstance(recs, Mapping):
+            rec = recs.get(DEMOGRAPHIC_INFERENCE_GATE)
+            if isinstance(rec, Mapping):
+                return rec
+        return None
+    if isinstance(state, Mapping):
+        rec = state.get("demographic_inference_consent")
+        if isinstance(rec, Mapping):
+            return rec
+        recs = state.get("modality_consents")
+        if isinstance(recs, Mapping):
+            rec = recs.get(DEMOGRAPHIC_INFERENCE_GATE)
+            if isinstance(rec, Mapping):
+                return rec
+    return None
+
+
+def check_demographic_inference_allowed(state: Any, *, require_jurisdiction: bool = True) -> None:
+    """Fail-closed check for the SEPARATE demographic-inference gate.
+
+    Delegates to canonical ``cueliez.gates.require_demographic_inference_consent``
+    for SessionGateState (which checks ONLY the separate record).
+    Raises GateError unless a dedicated demographic-inference consent
+    record exists with consented=True, a non-empty attester, and (when
+    required) jurisdiction + jurisdiction approval. General modality
+    consent (camera/audio/wearable) is explicitly NOT sufficient.
+    """
+    if isinstance(state, SessionGateState):
+        from ..gates import require_demographic_inference_consent
+
+        require_demographic_inference_consent(state)
+        return
+    rec = _demographic_record(state)
+    if rec is None:
+        raise GateError(
+            "demographic_inference_consent_required",
+            "Demographic inference requires its own separate opt-in and consent "
+            "record ('demographic_inference'); general modality consent is not sufficient.",
+        )
+    if not rec.get("consented"):
+        raise GateError(
+            "demographic_inference_consent_required",
+            "Demographic inference consent record exists but is not consented.",
+        )
+    if not str(rec.get("attested_by") or "").strip():
+        raise GateError(
+            "demographic_inference_consent_required",
+            "Demographic inference consent record has no attester.",
+        )
+    if require_jurisdiction:
+        if not str(rec.get("jurisdiction") or "").strip():
+            raise GateError(
+                "demographic_inference_jurisdiction_required",
+                "Jurisdiction must be recorded for demographic inference.",
+            )
+        if not rec.get("jurisdiction_approved"):
+            raise GateError(
+                "demographic_inference_jurisdiction_approval_required",
+                "Jurisdiction approval is required for demographic inference.",
+            )
+
+
+def demographic_inference_allowed(state: Any) -> bool:
+    try:
+        check_demographic_inference_allowed(state)
         return True
     except GateError:
         return False

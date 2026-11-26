@@ -90,6 +90,9 @@ See the Admissibility Requirements Checklist in `TODO.md` / project docs for the
 - Delivery layer (onscreen / audio) surfaces cues to the officer; never automated decisions.
 - Domain packs (`gov`, `leg`, `med`, `thrp`) inherit the same language and gate rules; they only change observer sets and guidance text.
 - Feature / physiological modalities remain gated and consent-dependent; do not enable by default in packs without explicit policy support.
+- **Owner reversal, 2026-11-25:** the earlier permanent exclusions are reversed — face identification/recognition, biometric templates, demographic inference, emotion/expression classification, wearables/physiological, pitch/voice-quality, and cloud transcription are now enabled as **gated, consent-required, jurisdiction-checked features, never on by default silently, never as definitive findings**. All observers (text + narrative + feature) are on by default in runners and packs; feature/gated observers fire only when feature metadata AND the relevant consent are present.
+- **Demographic inference has its OWN separate gate** (2026-11-25 20:00 MST): separate opt-in, separate consent record, separate bias/admissibility warning. General modality consent never enables it. No demographic classifier is built; the observer only reports caller-supplied attributes with a low score ceiling and a bias caveat.
+- **Face recognition is REAL** (2026-11-25 20:00 MST): real embeddings/distances/confidence (OpenFace 128-d, optional `cueliez[face]` extra), tested end-to-end on real images. Never fake a match score. Biometric templates are sensitive data: store only with explicit consent, delete on request, never transmit by default.
 - Prefer on-prem / private-cloud paths for law-enforcement deployments.
 
 ---

@@ -16,21 +16,36 @@ from ..observations import ObservationRunner
 from ..observations.behavioral import (
     AnswerLengthVarianceObserver,
     EvasionMarkerObserver,
+    FilledPauseClusterObserver,
     FilledPauseMarkerObserver,
     InterruptionOverlapObserver,
     ResponseLatencyObserver,
+    ResponseLatencyShiftObserver,
     SpeechRateShiftObserver,
+    SpeechRateTrendObserver,
 )
 from ..observations.consistency import (
     ClaimConflictObserver,
+    CrossTurnClaimRestatementObserver,
     DetailDriftObserver,
     LocationReferenceDivergenceObserver,
+    PronounShiftObserver,
     SelfReferenceShiftObserver,
     TimelineInconsistencyObserver,
 )
+from ..observations.gated import (
+    DemographicInferenceObserver,
+    ExpressionFeatureObserver,
+    FacePresenceConsistencyObserver,
+    FaceRecognitionObserver,
+    PitchVoiceQualityObserver,
+    WearableFeatureObserver,
+)
 from ..observations.linguistic import (
     CertaintySwingObserver,
+    DetailDensityShiftObserver,
     DetailVaguenessObserver,
+    HedgingClusterObserver,
     HedgingObserver,
     MemoryQualifierObserver,
     MinimizationObserver,
@@ -39,9 +54,23 @@ from ..observations.linguistic import (
     PassiveVoiceProxyObserver,
     PronounDistancingObserver,
 )
+from ..observations.multimodal import CrossModalConvergenceObserver
+from ..observations.narrative import (
+    AgencyFramingObserver,
+    SensoryDetailObserver,
+    SpecificityShiftObserver,
+    TemporalStructureObserver,
+)
 from ..observations.physiological import ElectrodermalShiftObserver, HeartRateShiftObserver, HrvShiftObserver
-from ..observations.prosody import PausePatternObserver, ProsodicVariabilityObserver, VoiceStressFeatureShiftObserver
-from ..observations.visual import BlinkRateObserver, GazePatternObserver, MotorActivityObserver
+from ..observations.prosody import PauseDensityShiftObserver, PausePatternObserver, ProsodicVariabilityObserver, VoiceStressFeatureShiftObserver
+from ..observations.visual import (
+    BlinkRateObserver,
+    BlinkRateTrendObserver,
+    GazePatternObserver,
+    MotorActivityObserver,
+    OffCameraGazeFrequencyObserver,
+    RestlessnessShiftObserver,
+)
 
 # Compliant, non-verdict guidance fragments reused across packs.
 _HUMAN_JUDGMENT = "Treat all outputs as probabilistic cues for human review; humans make all judgments."
@@ -49,42 +78,91 @@ _NO_VERDICTS = "Do not use outputs as findings of deception, intent, guilt, diag
 
 
 def _core_text_observers() -> list:
+    """All text + narrative observers (default-on, owner decision 2026-11-25).
+
+    Every pack includes this full set; packs differ in guidance and
+    domain notes, not in observer membership.
+    """
     return [
         HedgingObserver(),
+        HedgingClusterObserver(),
         PronounDistancingObserver(),
         NegationDensityObserver(),
         DetailVaguenessObserver(),
+        DetailDensityShiftObserver(),
         CertaintySwingObserver(),
         MinimizationObserver(),
         PassiveVoiceProxyObserver(),
         OverjustificationObserver(),
         MemoryQualifierObserver(),
         ClaimConflictObserver(),
+        CrossTurnClaimRestatementObserver(),
         TimelineInconsistencyObserver(),
         DetailDriftObserver(),
         LocationReferenceDivergenceObserver(),
         SelfReferenceShiftObserver(),
+        PronounShiftObserver(),
         ResponseLatencyObserver(),
+        ResponseLatencyShiftObserver(),
         AnswerLengthVarianceObserver(),
         EvasionMarkerObserver(),
         SpeechRateShiftObserver(),
+        SpeechRateTrendObserver(),
         FilledPauseMarkerObserver(),
+        FilledPauseClusterObserver(),
         InterruptionOverlapObserver(),
+        TemporalStructureObserver(),
+        SensoryDetailObserver(),
+        AgencyFramingObserver(),
+        SpecificityShiftObserver(),
+        CrossModalConvergenceObserver(),
     ]
 
 
 def _feature_observers() -> list:
+    """Prosody / visual / physiological feature observers.
+
+    Included in every pack's observer list, but they emit nothing
+    unless caller-supplied feature metadata is present (and, when a
+    gate state is supplied, modality consent allows).
+    """
     return [
         ProsodicVariabilityObserver(),
         PausePatternObserver(),
+        PauseDensityShiftObserver(),
         VoiceStressFeatureShiftObserver(),
         GazePatternObserver(),
+        OffCameraGazeFrequencyObserver(),
         BlinkRateObserver(),
+        BlinkRateTrendObserver(),
         MotorActivityObserver(),
+        RestlessnessShiftObserver(),
         HeartRateShiftObserver(),
         HrvShiftObserver(),
         ElectrodermalShiftObserver(),
     ]
+
+
+def _gated_observers() -> list:
+    """Gated reversal observers. Included in the list, DISABLED by default.
+
+    They fire only when explicitly enabled AND the relevant consent
+    check passes (general modality consent, or the SEPARATE
+    demographic-inference gate). The face observer has no recognizer
+    here, so it emits nothing until a caller supplies one.
+    """
+    return [
+        FacePresenceConsistencyObserver(),
+        FaceRecognitionObserver(),
+        DemographicInferenceObserver(),
+        ExpressionFeatureObserver(),
+        PitchVoiceQualityObserver(),
+        WearableFeatureObserver(),
+    ]
+
+
+def _all_pack_observers() -> list:
+    return _core_text_observers() + _feature_observers() + _gated_observers()
 
 
 @dataclass(frozen=True)
@@ -116,7 +194,13 @@ class CuePack:
         inc = self.include_feature_observers if include_feature_observers is None else include_feature_observers
         observers = self.observers()
         if inc:
-            observers.extend(_feature_observers())
+            # Feature/gated observers are already in the base list; extend
+            # only method ids not already present (no duplicates).
+            have = {getattr(o, "method_id", "") for o in observers}
+            for o in _feature_observers() + _gated_observers():
+                if getattr(o, "method_id", "") not in have:
+                    observers.append(o)
+                    have.add(getattr(o, "method_id", ""))
         return ObservationRunner(observers=observers)
 
     def make_gate_state(self, **kwargs: Any) -> SessionGateState:
@@ -176,7 +260,7 @@ def gov_pack() -> CuePack:
             "Cue pack for government/high-security interview contexts. Emphasizes "
             "consistency, timeline, and accountability cues with strict gate discipline."
         ),
-        observer_factories=tuple(type(o) for o in _core_text_observers()),
+        observer_factories=tuple(type(o) for o in _all_pack_observers()),
         cue_guidance=(
             "Confirm identity, authority, jurisdiction, and scope before proceeding.",
             "Use cues to identify topics needing clarification; ask direct, non-leading follow-ups.",
@@ -189,7 +273,7 @@ def gov_pack() -> CuePack:
             "Mode enforces consent, training, and dual-control gates.",
             "Feature-observer modalities require explicit lawful basis and consent where applicable.",
         ),
-        include_feature_observers=False,
+        include_feature_observers=True,
     )
 
 
@@ -202,7 +286,7 @@ def leg_pack() -> CuePack:
             "Cue pack for legal interviews in investigative or legal-process contexts. "
             "Focuses on testimony consistency, specificity, and response clarity."
         ),
-        observer_factories=tuple(type(o) for o in _core_text_observers()),
+        observer_factories=tuple(type(o) for o in _all_pack_observers()),
         cue_guidance=(
             "Establish rapport and explain process as required by policy and law.",
             "When vagueness or hedging appears, request concrete who/what/when/where details.",
@@ -215,7 +299,7 @@ def leg_pack() -> CuePack:
             "Mode enforces consent and training gates.",
             "Not for automated detention, charging, clearance, or legal findings.",
         ),
-        include_feature_observers=False,
+        include_feature_observers=True,
     )
 
 
@@ -228,13 +312,7 @@ def med_pack() -> CuePack:
             "Cue pack for clinical interview support contexts (non-diagnostic). "
             "Focuses on clarity, consistency, and communication cues."
         ),
-        observer_factories=tuple(type(o) for o in [
-            HedgingObserver(), DetailVaguenessObserver(), CertaintySwingObserver(),
-            MemoryQualifierObserver(), OverjustificationObserver(), MinimizationObserver(),
-            ClaimConflictObserver(), TimelineInconsistencyObserver(), DetailDriftObserver(),
-            ResponseLatencyObserver(), AnswerLengthVarianceObserver(), EvasionMarkerObserver(),
-            FilledPauseMarkerObserver(), SpeechRateShiftObserver(),
-        ]),
+        observer_factories=tuple(type(o) for o in _all_pack_observers()),
         cue_guidance=(
             "Use cues to support clear communication and careful history-taking.",
             "When memory qualifiers or vagueness appear, ask gentle clarifying questions and confirm understanding.",
@@ -251,7 +329,7 @@ def med_pack() -> CuePack:
             "Clinical/medical context addendum: observations support communication review only and "
             "must not be used for diagnosis, treatment decisions, or determinations of patient credibility."
         ),
-        include_feature_observers=False,
+        include_feature_observers=True,
     )
 
 
@@ -264,12 +342,7 @@ def thrp_pack() -> CuePack:
             "Cue pack for therapy/supportive interview contexts. Prioritizes supportive "
             "clarification cues and avoids adversarial framing."
         ),
-        observer_factories=tuple(type(o) for o in [
-            HedgingObserver(), DetailVaguenessObserver(), CertaintySwingObserver(),
-            MemoryQualifierObserver(), MinimizationObserver(), OverjustificationObserver(),
-            ResponseLatencyObserver(), AnswerLengthVarianceObserver(), FilledPauseMarkerObserver(),
-            SpeechRateShiftObserver(), SelfReferenceShiftObserver(),
-        ]),
+        observer_factories=tuple(type(o) for o in _all_pack_observers()),
         cue_guidance=(
             "Use cues to notice moments that may benefit from clarification, pacing, or support.",
             "Prefer open, non-confrontational questions; avoid treating any cue as evidence of intent.",
@@ -286,7 +359,7 @@ def thrp_pack() -> CuePack:
             "Therapy/support addendum: observations are communication/process cues only and "
             "must not be used to judge credibility, diagnose, or make automated care decisions."
         ),
-        include_feature_observers=False,
+        include_feature_observers=True,
     )
 
 

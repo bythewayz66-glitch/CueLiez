@@ -40,6 +40,27 @@ TRAINING_REQUIRED_MODES = frozenset({"interrogation", "therapy", "clinical", "go
 # explicit modality consent + jurisdiction validation before enabling.
 GATED_INPUT_MODALITIES = frozenset({"audio_features", "camera", "wearable"})
 
+# Demographic inference is NOT a gated input modality and is NOT covered by
+# modality consent. It lives behind its own separate opt-in gate (see
+# record_demographic_inference_consent / require_demographic_inference_consent).
+# WARNING — bias / admissibility risk: demographic inference (inferring age,
+# sex/gender, race/ethnicity, or similar attributes from voice, video, or text)
+# is error-prone, can encode and amplify bias, and its output is highly
+# vulnerable to admissibility challenge. It must never be enabled implicitly,
+# never be treated as a finding about a person, and must only be used where a
+# jurisdiction explicitly permits it and the operator has acknowledged this
+# warning. Enabling audio_features, camera, or wearable consent never enables
+# demographic inference.
+DEMOGRAPHIC_INFERENCE_WARNING = (
+    "Demographic inference is a separate, high-risk capability: inferring "
+    "demographic attributes (e.g. age, sex/gender, race/ethnicity) from "
+    "voice, video, or text is error-prone, can encode and amplify bias, and "
+    "is vulnerable to admissibility challenge. It requires its own explicit "
+    "opt-in consent record, its own attester, and its own jurisdiction "
+    "approval, distinct from general modality consent. Its output is an "
+    "observation cue for human review only — never a finding about a person."
+)
+
 PROHIBITED_USES = (
     "automated_detention",
     "automated_charge",
@@ -113,6 +134,9 @@ class SessionGateState:
     # Gated input modalities (audio_features, camera, wearable): explicit consent + jurisdiction.
     modality_consents: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     jurisdiction_approved: bool = False
+    # Demographic inference consent is a SEPARATE record, stored apart from
+    # modality_consents. General modality consent never creates or implies it.
+    demographic_inference_consent: Optional[Dict[str, Any]] = None
 
     def requires_consent(self) -> bool:
         return self.mode in CONSENT_REQUIRED_MODES
@@ -145,6 +169,8 @@ class SessionGateState:
             "training_version": self.training_version,
             "modality_consents": dict(self.modality_consents or {}),
             "jurisdiction_approved": bool(self.jurisdiction_approved),
+            # Separate opt-in record; None when demographic inference is not consented.
+            "demographic_inference_consent": dict(self.demographic_inference_consent) if self.demographic_inference_consent else None,
             "requirements": {
                 "consent_required": self.requires_consent(),
                 "training_required": self.requires_training(),
@@ -228,8 +254,18 @@ def record_modality_consent(
     attested_by: str,
     jurisdiction: Optional[str] = None,
     jurisdiction_approved: bool = True,
+    approve_state_jurisdiction: bool = False,
 ) -> None:
-    """Record explicit consent + jurisdiction approval for a gated input modality."""
+    """Record explicit consent + jurisdiction approval for a gated input modality.
+
+    This records consent for ONE modality only (audio_features, camera, or
+    wearable). It never enables demographic inference, and it does NOT set the
+    state-wide ``state.jurisdiction_approved`` flag: that flag is only set when
+    ``approve_state_jurisdiction=True`` is passed explicitly (a separate,
+    deliberate decision), never as an implicit side effect of recording a
+    per-modality consent. Per-modality approval lives on the record itself
+    (``jurisdiction_approved``) and is what ``require_gated_modality`` checks.
+    """
     key = (modality or "").strip().lower().replace("-", "_").replace(" ", "_")
     if key not in GATED_INPUT_MODALITIES:
         raise GateError(
@@ -251,8 +287,48 @@ def record_modality_consent(
         "jurisdiction_approved": bool(jurisdiction_approved),
         "recorded_at": time.time(),
     }
-    if jurisdiction_approved and (state.jurisdiction or "").strip():
+    if approve_state_jurisdiction and jurisdiction_approved and (state.jurisdiction or "").strip():
         state.jurisdiction_approved = True
+
+
+def revoke_modality_consent(
+    state: SessionGateState,
+    modality: str,
+    *,
+    attested_by: str,
+) -> Dict[str, Any]:
+    """Revoke (remove) a recorded modality consent. Returns the removed record.
+
+    Raises GateError ``modality_consent_not_found`` when no consent record
+    exists for the modality. Revocation does not touch any other modality's
+    record, the state-wide jurisdiction flag, or the demographic-inference
+    consent record.
+    """
+    if state is None:
+        raise GateError("gate_state_required", "Session gate state is required for modality revocation.")
+    who = (attested_by or "").strip()
+    if not who:
+        raise GateError(
+            "consent_attester_required",
+            "attested_by must be a non-empty identifier for modality revocation.",
+        )
+    key = (modality or "").strip().lower().replace("-", "_").replace(" ", "_")
+    if key not in GATED_INPUT_MODALITIES:
+        raise GateError(
+            "unsupported_gated_modality",
+            f"Modality {modality!r} is not a supported gated input modality: {sorted(GATED_INPUT_MODALITIES)}.",
+        )
+    record = (state.modality_consents or {}).pop(key, None)
+    if not record:
+        raise GateError(
+            "modality_consent_not_found",
+            f"No modality consent record exists for {key!r} to revoke.",
+        )
+    try:
+        audit_event("gate.modality_consent_revoked", details={"modality": key, "revoked_by": who})
+    except Exception:
+        pass
+    return record
 
 
 def require_gated_modality(state: SessionGateState, modality: str) -> None:
@@ -280,12 +356,309 @@ def require_gated_modality(state: SessionGateState, modality: str) -> None:
             "jurisdiction_required",
             f"Jurisdiction must be recorded before enabling gated input modality {key!r}.",
         )
-    approved = bool(rec.get("jurisdiction_approved")) or bool(state.jurisdiction_approved)
+    approved = bool(rec.get("jurisdiction_approved"))
+    # NOTE: the state-wide state.jurisdiction_approved flag deliberately does
+    # NOT satisfy this check. A per-modality record whose own
+    # jurisdiction_approved is False (or absent) must fail even when the
+    # state-wide flag is True — otherwise a blanket approval could silently
+    # override an explicit per-modality refusal.
     if not approved:
         raise GateError(
             "jurisdiction_approval_required",
             f"Jurisdiction approval is required before enabling gated input modality {key!r}.",
         )
+
+
+def has_modality_consent(state: SessionGateState, modality: str) -> bool:
+    """True only when require_gated_modality would pass for this modality."""
+    try:
+        require_gated_modality(state, modality)
+        return True
+    except GateError:
+        return False
+
+
+# ---------------------------------------------------------------------------
+# Demographic inference — separate gate (owner decision, Nov 25 2026).
+#
+# Demographic inference is NOT a gated input modality and is NOT covered by
+# modality consent. It has its own consent record
+# (SessionGateState.demographic_inference_consent), its own record/revoke/
+# require functions below, and its own bias/admissibility warning
+# (DEMOGRAPHIC_INFERENCE_WARNING). Recording or revoking audio_features /
+# camera / wearable consent never creates, enables, or revokes demographic
+# inference consent, and vice versa. See the warning constant above.
+# ---------------------------------------------------------------------------
+
+def record_demographic_inference_consent(
+    state: SessionGateState,
+    *,
+    attested_by: str,
+    jurisdiction: Optional[str] = None,
+    jurisdiction_approved: bool = True,
+    bias_warning_acknowledged: bool = False,
+) -> None:
+    """Record the separate opt-in consent for demographic inference.
+
+    Requires ``bias_warning_acknowledged=True`` — the operator must explicitly
+    acknowledge DEMOGRAPHIC_INFERENCE_WARNING (bias / admissibility risk).
+    This writes ONLY the demographic-inference record; it never touches
+    modality_consents and never sets state.jurisdiction_approved.
+    """
+    if state is None:
+        raise GateError("gate_state_required", "Session gate state is required for demographic-inference consent.")
+    if not bias_warning_acknowledged:
+        raise GateError(
+            "demographic_inference_warning_not_acknowledged",
+            "Demographic inference requires explicit acknowledgement of the bias/admissibility warning "
+            "(DEMOGRAPHIC_INFERENCE_WARNING) before consent can be recorded.",
+        )
+    who = (attested_by or "").strip()
+    if not who:
+        raise GateError(
+            "consent_attester_required",
+            "attested_by must be a non-empty identifier for demographic-inference consent.",
+        )
+    if jurisdiction is not None:
+        state.jurisdiction = (jurisdiction or "").strip() or state.jurisdiction
+    state.demographic_inference_consent = {
+        "consented": True,
+        "attested_by": who,
+        "jurisdiction": state.jurisdiction,
+        "jurisdiction_approved": bool(jurisdiction_approved),
+        "bias_admissibility_warning_acknowledged": True,
+        "recorded_at": time.time(),
+    }
+
+
+def revoke_demographic_inference_consent(
+    state: SessionGateState,
+    *,
+    attested_by: str,
+) -> Dict[str, Any]:
+    """Revoke (clear) the demographic-inference consent record. Returns it.
+
+    Raises GateError ``demographic_inference_consent_not_found`` when no such
+    record exists. Revocation touches only this record — never modality consents.
+    """
+    if state is None:
+        raise GateError("gate_state_required", "Session gate state is required for demographic-inference revocation.")
+    who = (attested_by or "").strip()
+    if not who:
+        raise GateError(
+            "consent_attester_required",
+            "attested_by must be a non-empty identifier for demographic-inference revocation.",
+        )
+    record = state.demographic_inference_consent
+    if not record:
+        raise GateError(
+            "demographic_inference_consent_not_found",
+            "No demographic-inference consent record exists to revoke.",
+        )
+    state.demographic_inference_consent = None
+    try:
+        audit_event("gate.demographic_inference_consent_revoked", details={"revoked_by": who})
+    except Exception:
+        pass
+    return record
+
+
+def require_demographic_inference_consent(state: SessionGateState) -> None:
+    """Fail closed: the separate demographic-inference opt-in is required.
+
+    Checks ONLY the demographic-inference record — never modality_consents
+    and never the state-wide jurisdiction_approved flag. General modality
+    consent (audio_features / camera / wearable) cannot satisfy this check.
+    """
+    if state is None:
+        raise GateError("gate_state_required", "Session gate state is required for demographic-inference checks.")
+    rec = state.demographic_inference_consent
+    if not rec or not rec.get("consented"):
+        raise GateError(
+            "demographic_inference_consent_required",
+            "Explicit demographic-inference consent (its own opt-in record) is required before demographic inference. "
+            "General modality consent does not enable it.",
+        )
+    att = (rec.get("attested_by") or "").strip()
+    if not att:
+        raise GateError(
+            "consent_attester_required",
+            "Non-empty attester is required for demographic-inference consent.",
+        )
+    jur = (rec.get("jurisdiction") or state.jurisdiction or "").strip()
+    if not jur:
+        raise GateError(
+            "jurisdiction_required",
+            "Jurisdiction must be recorded before demographic inference.",
+        )
+    if not bool(rec.get("jurisdiction_approved")):
+        raise GateError(
+            "jurisdiction_approval_required",
+            "Jurisdiction approval is required before demographic inference.",
+        )
+
+
+def has_demographic_inference_consent(state: SessionGateState) -> bool:
+    """True only when require_demographic_inference_consent would pass."""
+    try:
+        require_demographic_inference_consent(state)
+        return True
+    except GateError:
+        return False
+
+
+# ---------------------------------------------------------------------------
+# Which consent does an observation require?
+# ---------------------------------------------------------------------------
+
+# Observation category -> canonical gated input modality (from
+# observations/modality_gates.py aliases: prosody/audio -> audio_features,
+# visual/video -> camera, physiological -> wearable).
+_CATEGORY_TO_MODALITY = {
+    "prosody": "audio_features",
+    "audio": "audio_features",
+    "audio_features": "audio_features",
+    "visual": "camera",
+    "visual_features": "camera",
+    "video": "camera",
+    "camera": "camera",
+    "physiological": "wearable",
+    "physiological_features": "wearable",
+    "wearable": "wearable",
+}
+
+# Substrings in an observation's method id that indicate a feature-derived
+# (audio/video/physiological) observation.
+_METHOD_TO_MODALITY = (
+    ("prosody", "audio_features"),
+    ("audio", "audio_features"),
+    ("acoustic", "audio_features"),
+    ("voice", "audio_features"),
+    ("visual", "camera"),
+    ("camera", "camera"),
+    ("video", "camera"),
+    ("gaze", "camera"),
+    ("blink", "camera"),
+    ("physiological", "wearable"),
+    ("physio", "wearable"),
+    ("heart_rate", "wearable"),
+    ("hrv", "wearable"),
+    ("electrodermal", "wearable"),
+    ("eda", "wearable"),
+)
+
+
+def observation_requires_demographic_inference(obs: Any) -> bool:
+    """True when an observation is demographic-inference-derived.
+
+    No demographic observer exists in the codebase yet; this matches on
+    category/method/label text so the separate gate applies the moment one
+    is added (or a package carrying such an observation is sealed).
+    """
+    if not isinstance(obs, dict):
+        return False
+    for key in ("category", "method", "label"):
+        if "demographic" in str(obs.get(key) or "").lower():
+            return True
+    ev = obs.get("evidence")
+    if isinstance(ev, dict):
+        for cat in (ev.get("categories") or []):
+            if "demographic" in str(cat).lower():
+                return True
+    return False
+
+
+def required_modalities_for_observation(obs: Any) -> frozenset:
+    """Canonical gated modalities an observation was derived from (may be empty).
+
+    Text/consistency/behavioral/linguistic/narrative observations require no
+    modality consent. Prosody/audio -> audio_features, visual/video -> camera,
+    physiological -> wearable. A multimodal convergence observation inherits
+    the modalities of the categories listed in its evidence.
+    """
+    if not isinstance(obs, dict):
+        return frozenset()
+    found = set()
+    cat = str(obs.get("category") or "").strip().lower()
+    if cat in _CATEGORY_TO_MODALITY:
+        found.add(_CATEGORY_TO_MODALITY[cat])
+    method = str(obs.get("method") or "").lower()
+    for needle, modality in _METHOD_TO_MODALITY:
+        if needle in method:
+            found.add(modality)
+    ev = obs.get("evidence")
+    if isinstance(ev, dict):
+        for c in (ev.get("categories") or []):
+            key = str(c).strip().lower()
+            if key in _CATEGORY_TO_MODALITY:
+                found.add(_CATEGORY_TO_MODALITY[key])
+    return frozenset(found)
+
+
+def has_required_consents_for_observation(state: SessionGateState, obs: Any) -> bool:
+    """True when every consent an observation requires is present."""
+    if state is None:
+        return False
+    if observation_requires_demographic_inference(obs):
+        return has_demographic_inference_consent(state)
+    return all(has_modality_consent(state, m) for m in required_modalities_for_observation(obs))
+
+
+def filter_observations_by_consent(
+    observations: Any,
+    state: SessionGateState,
+) -> List[Dict[str, Any]]:
+    """Drop feature-derived observations whose required consent is absent.
+
+    Text-derived observations pass through unchanged. Prosody/visual/
+    physiological observations are dropped when the corresponding modality
+    consent is absent, and demographic-derived observations are dropped
+    when the separate demographic-inference consent is absent. Never raises
+    for missing consent — callers that must fail closed use
+    require_modality_consent_for_observations instead.
+    """
+    if not isinstance(observations, list):
+        return []
+    if state is None:
+        return [o for o in observations if isinstance(o, dict)]
+    return [o for o in observations if isinstance(o, dict) and has_required_consents_for_observation(state, o)]
+
+
+def require_modality_consent_for_observations(
+    state: SessionGateState,
+    observations: Any,
+) -> None:
+    """Fail closed at seal: every feature-derived observation needs its consent.
+
+    Raises GateError ``modality_consent_required`` (or
+    ``demographic_inference_consent_required`` for demographic-derived
+    observations) naming the missing consent and the observation label.
+    """
+    if state is None or not isinstance(observations, list):
+        return
+    for obs in observations:
+        if not isinstance(obs, dict):
+            continue
+        label = str(obs.get("label") or obs.get("cue_id") or "?")
+        if observation_requires_demographic_inference(obs):
+            try:
+                require_demographic_inference_consent(state)
+            except GateError as e:
+                raise GateError(
+                    "demographic_inference_consent_required",
+                    f"Observation {label!r} is demographic-inference-derived and requires the separate "
+                    f"demographic-inference consent record. {e.message}",
+                ) from e
+            continue
+        for modality in sorted(required_modalities_for_observation(obs)):
+            try:
+                require_gated_modality(state, modality)
+            except GateError as e:
+                raise GateError(
+                    "modality_consent_required",
+                    f"Observation {label!r} is derived from gated modality {modality!r} and requires "
+                    f"explicit modality consent before seal. {e.message}",
+                ) from e
 
 
 def require_dual_control_for_seal(
@@ -367,7 +740,12 @@ def _validate_observation_entry(d: dict, index: int) -> None:
 
 def _canonical_json_for_hash(package: Dict[str, Any]) -> str:
     """Stable canonical form for hashing. Excludes volatile/hash/signature fields."""
-    excluded = {"package_hash", "content_hash", "sealed_at", "package_signature"}
+    # exported_at / export_notice are added by export.export_package_json AFTER
+    # sealing (they describe the export event, not the sealed content), so they
+    # must be excluded here or every exported package would fail verification
+    # — the same reason sealed_at / package_hash / package_signature are
+    # already excluded. Export metadata is not sealed content.
+    excluded = {"package_hash", "content_hash", "sealed_at", "package_signature", "exported_at", "export_notice"}
     canonical = {k: v for k, v in package.items() if k not in excluded}
     return json.dumps(canonical, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str)
 
@@ -631,6 +1009,15 @@ def seal_observation_package(
         if not isinstance(obs, dict):
             raise GateError("observation_invalid", f"Observation[{i}] must be a dict.")
         _validate_observation_entry(obs, i)
+
+    # Seal-time modality check (only when a session state is supplied — the
+    # stateless seal path is the observation-only path, consistent with
+    # consent/training, which are likewise only enforced when state is given;
+    # the CLI always supplies a state). Feature-derived observations may not
+    # be sealed without their modality consent, and demographic-derived
+    # observations may not be sealed without the separate demographic consent.
+    if state is not None:
+        require_modality_consent_for_observations(state, observations)
 
     # Prefer canonical key going forward
     package["observations"] = observations

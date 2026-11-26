@@ -261,13 +261,38 @@ Status key: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ---
 
-## Phase 10 — Live Audio and Video Cues (owner decision 2026-11-11)
+## Phase 10 — Live Audio and Video Cues (owner decision 2026-11-11; BUILT 2026-11-25)
 
 **Owner decision, 2026-11-11** (relayed by the lead dev): "CueLiez will give cues during a LIVE interview from live AUDIO and live VIDEO inputs, not only text transcripts." Supersedes the `docs/OWNER_DECISIONS.md` section 2 row that kept visual input out of the first pilot, for audio and video only. Never-claim paragraph and all gates unchanged. Scope, hard rules, wording and acceptance criteria: `docs/design/LIVE_AV_PRODUCT_SCOPE.md`. Engineering design: `docs/design/LIVE_AV_DESIGN.md`. All items below are not started as of 2026-11-11; mark done only after the lead dev verifies the acceptance criteria in the scope document.
 
-- [ ] Phase A0: live microphone to local speech-to-text to finalised turns into the stream path; per-modality consent (`audio_capture`); officer live-inputs strip and kill switch; modality record and state timeline in the sealed package.
-- [ ] Phase A1: derived audio-timing cues (latency, speech rate, pauses), separately consented and switchable, baseline-relative wording with fixed caveats.
-- [ ] Phase B entry gate: counsel answers, cited literature review, Phase A over-cue report reviewed by the owner.
-- [ ] Phase B: live video as derived features only (off-camera gaze, blink rate, movement); frames in memory only; lowest-priority cues; separate `camera` consent.
-- [ ] Live-input cue wording gate at seal and in the observers (no inner-state words; `gaze aversion` renamed).
+**Update 2026-11-25 (owner reversal build):** Phase A0/A1/B are now built in `src/cueliez/live_av.py` (browser getUserMedia + SpeechRecognition, typed-turn fallback, kill switch, per-modality consent, modality/state timeline sealed inside the hash, derived audio-timing cues separately consented, video as derived features only with real movement via frame differencing; gaze/blink honestly reported as not computed — no face model bundled in the browser). True local STT model, true video gaze/blink computation, and a cloud transcription provider are NOT built (adapters fail closed). A real browser check of mic/camera prompts and SpeechRecognition is still needed. Demo video: `docs/demo/live-av-demo-staged-synthetic.mp4` (staged synthetic, cartoon avatar, labelled on every frame).
+
+- [x] Phase A0: live microphone to local speech-to-text to finalised turns into the stream path; per-modality consent (`audio_capture`); officer live-inputs strip and kill switch; modality record and state timeline in the sealed package.
+- [x] Phase A1: derived audio-timing cues (latency, speech rate, pauses), separately consented and switchable, baseline-relative wording with fixed caveats.
+- [ ] Phase B entry gate: counsel answers, cited literature review, Phase A over-cue report reviewed by the owner. (Still open — documented in code; video is derived-features only, lowest priority.)
+- [x] Phase B: live video as derived features only (off-camera gaze, blink rate, movement); frames in memory only; lowest-priority cues; separate `camera` consent. (Movement is real via frame differencing; gaze/blink computation is honestly not built — no face model bundled in the browser.)
+- [x] Live-input cue wording gate at seal and in the observers (no inner-state words; `gaze aversion` renamed to `off-camera gaze`).
 - [ ] Live AV training addendum and counsel-approved consent form text (PM drafts; counsel approves).
+
+## Phase 11 — Owner reversal build (2026-11-25; owner decision in `docs/OWNER_DECISIONS.md` §2b)
+
+- [x] Fix sealed-package hash verify: `exported_at` / `export_notice` excluded from the canonical hash; exported packages now verify (`hash_ok: true`).
+- [x] Reverse the permanent exclusions as gated, consent-required features: face identification/recognition, biometric templates, demographic inference, emotion/expression classification, wearables/physiological, pitch/voice-quality, cloud transcription (gated opt-in, no provider bundled).
+- [x] Demographic inference behind its OWN separate gate (separate opt-in, separate consent record, bias/admissibility warning); no classifier built by design.
+- [x] Face recognition REAL: enrollment + matching with real OpenFace 128-d embeddings/distances, tested end-to-end on real images; optional `cueliez[face]` extra; templates consent-gated, in-memory by default, deletable, never transmitted by default.
+- [x] More dishonesty-sign observers: text (claim restatement, detail-density shift, pronoun shift, hedging cluster), audio (latency/speech-rate/pause shifts, filled-pause clusters), visual (off-camera gaze, blink rate, movement), context (multi-signal convergence).
+- [x] The 9 feature observers work properly: real feature-metadata path through ingest/runner/CLI/stream.
+- [x] Narrative observers added to runners; ALL observers on by default in `default_runner` (45), `full_runner` (51), and all packs (51 each).
+- [x] ML/assisted observers wired in behind explicit opt-in (`--enable-assisted`, incl. `--stream-turns`); deterministic multi-signal baseline; no external ML calls; verdict-shaped output filtered fail-closed.
+- [x] Dashboard XSS fixed/verified: DOM-node rendering confirmed, regression test with malicious cue.
+- [x] Modality-consent gaps filled: no state-wide override (canonical + dict fallback), no side effect on `record_modality_consent`, revocation API, CLI `--modality-consent` flag, stream filtering, seal-time modality check.
+- [x] Malformed NDJSON in `--stream-turns` fixed: per-line error event, skip, continue, seal/export accumulated turns.
+- [x] Live AV surface built (Phase 10, above).
+- [x] Real web frontend built: `src/cueliez/web_frontend.py`, CLI `--web` / `--frontend`, actually calls the pipeline (run, stream, notes, seal, export, verify, training).
+- [x] Demo video: `docs/demo/live-av-demo-staged-synthetic.mp4` (152 s, 720p, 877 KB, staged synthetic, labelled). A real screen-recorded frontend walkthrough still needs a browser session.
+- [ ] Real local STT model bundled/installed (Vosk/faster-whisper are optional extras, fail-closed).
+- [ ] True video gaze/blink computation in the browser (needs a face-model extra).
+- [ ] Cloud transcription provider (gated opt-in interface only, no provider bundled).
+- [ ] SSE endpoint automated test.
+- [ ] Web frontend persistence (state is in-memory only).
+- [ ] Stateless seal (`state=None`) modality/demographic enforcement — owner call (would need `test_observations_modalities.py` updates).

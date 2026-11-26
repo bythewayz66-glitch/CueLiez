@@ -355,6 +355,141 @@ class LocationReferenceDivergenceObserver:
         return result
 
 
+class CrossTurnClaimRestatementObserver:
+    """Same claim restated with different wording across turns.
+
+    Complements ClaimConflictObserver (which needs opposite polarity):
+    here the polarity is the SAME but the wording/detail changes — the
+    same topic key reappears with different words or numbers. A cue to
+    ask which version is complete, not a conflict finding.
+    """
+
+    method_id = "cueliez.observations.consistency.claim_restatement/v1"
+
+    def observe(self, transcript: Sequence[Mapping[str, Any]]) -> ObservationResult:
+        result = ObservationResult(method=self.method_id)
+        items: list[tuple[int, str, int, str, Any]] = []
+        for i, t in enumerate(transcript):
+            if not is_subject_turn(t):
+                continue
+            text = text_of(t).strip()
+            if len(text) < 12:
+                continue
+            key = _normalize_claim_key(text)
+            if len(key.split()) < 2:
+                continue
+            items.append((i, text, _polarity(text), key, t))
+        candidates = []
+        for idx, (i, text_i, pol_i, key_i, turn_i) in enumerate(items):
+            for jdx in range(idx + 1, len(items)):
+                j, text_j, pol_j, key_j, turn_j = items[jdx]
+                if pol_i != pol_j:
+                    continue
+                overlap = _key_overlap(key_i, key_j)
+                shared = len(set(key_i.split()) & set(key_j.split()))
+                if shared < CLAIM_MIN_SHARED_WORDS or overlap < CLAIM_MIN_OVERLAP:
+                    continue
+                # Must actually be restated, not repeated verbatim.
+                norm_i = re.sub(r"\s+", " ", text_i.lower().strip())
+                norm_j = re.sub(r"\s+", " ", text_j.lower().strip())
+                if norm_i == norm_j:
+                    continue
+                raw_i = set(re.findall(r"[a-z']+", text_i.lower()))
+                raw_j = set(re.findall(r"[a-z']+", text_j.lower()))
+                jaccard = len(raw_i & raw_j) / max(1, len(raw_i | raw_j))
+                if jaccard >= 0.85:
+                    continue
+                topic = key_i if len(key_i.split()) >= len(key_j.split()) else key_j
+                score = clamp01(0.40 + overlap * 0.20 + (1.0 - jaccard) * 0.15)
+                candidates.append((score, (min(i, j), max(i, j)), i, j, turn_i, turn_j, shared, overlap, topic, jaccard))
+        candidates.sort(key=lambda x: (-x[0], x[1][0], x[1][1]))
+        emitted_pairs: set[tuple[int, int]] = set()
+        emitted_topics: list[str] = []
+        for score, pair, i, j, turn_i, turn_j, shared, overlap, topic, jaccard in candidates:
+            if pair in emitted_pairs:
+                continue
+            if any(_key_overlap(topic, et) >= CLAIM_TOPIC_DEDUP_OVERLAP for et in emitted_topics):
+                continue
+            emitted_pairs.add(pair)
+            emitted_topics.append(topic)
+            result.observations.append(make_observation(
+                label="claim_restated_with_variation",
+                score=score,
+                method_id=self.method_id,
+                category="consistency",
+                evidence={
+                    "topic_key": topic,
+                    "topic_key_overlap": round(overlap, 3),
+                    "shared_key_words": shared,
+                    "wording_jaccard": round(jaccard, 3),
+                    "turn_indices": [i, j],
+                    "source_texts": [source_span(turn_i, i), source_span(turn_j, j)],
+                },
+                cue="The same topic was described again with different wording/details; ask which version is complete and reconcile them.",
+                turn_index=max(i, j),
+            ))
+        return result
+
+
+class PronounShiftObserver:
+    """First-person reference drop with third-person rise across turns.
+
+    Per-turn first-person rate is compared with the session median; a
+    turn counts when its first-person rate is under half the median AND
+    its third-person rate is above the third-person median. Cue only —
+    pronoun patterns vary with topic and question form.
+    """
+
+    method_id = "cueliez.observations.consistency.pronoun_shift/v1"
+
+    _FIRST_RE = re.compile(r"\b(i|me|my|mine|myself|we|us|our|ours)\b", re.I)
+    _THIRD_RE = re.compile(r"\b(he|she|they|him|her|them|his|hers|their|theirs|it|its)\b", re.I)
+
+    def observe(self, transcript: Sequence[Mapping[str, Any]]) -> ObservationResult:
+        result = ObservationResult(method=self.method_id)
+        import statistics
+
+        rates: list[tuple[int, float, float, Any]] = []
+        for i, t in enumerate(transcript):
+            if not is_subject_turn(t):
+                continue
+            text = text_of(t)
+            words = re.findall(r"[A-Za-z']+", text)
+            if len(words) < 8:
+                continue
+            first = len(self._FIRST_RE.findall(text)) / len(words)
+            third = len(self._THIRD_RE.findall(text)) / len(words)
+            rates.append((i, first, third, t))
+        if len(rates) < 4:
+            result.notes.append("insufficient_pronoun_shift_data")
+            return result
+        first_med = statistics.median([r[1] for r in rates])
+        third_med = statistics.median([r[2] for r in rates])
+        if first_med <= 0.02:
+            return result
+        for i, first, third, turn in rates:
+            if first < first_med * 0.5 and third > third_med + 0.01:
+                score = clamp01(0.38 + (first_med - first) * 3.0 + min(third - third_med, 0.1) * 2.0)
+                ev = {
+                    "first_person_rate": round(first, 4),
+                    "third_person_rate": round(third, 4),
+                    "baseline_median_first_person_rate": round(first_med, 4),
+                    "baseline_median_third_person_rate": round(third_med, 4),
+                    "sample_count": len(rates),
+                }
+                ev.update(source_span(turn, i))
+                result.observations.append(make_observation(
+                    label="pronoun_pattern_shift_across_turns",
+                    score=score,
+                    method_id=self.method_id,
+                    category="consistency",
+                    evidence=ev,
+                    cue="First-person references dropped while third-person references rose relative to this session; clarify personal actions versus others' actions.",
+                    turn_index=i,
+                ))
+        return result
+
+
 class SelfReferenceShiftObserver:
     method_id = "cueliez.observations.consistency.self_reference_shift/v1"
 

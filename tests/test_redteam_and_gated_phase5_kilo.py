@@ -35,7 +35,7 @@ class TestRedteamFixturesPhase5Kilo(unittest.TestCase):
             "redteam_clean_routine.json": {"count": 0},
             "redteam_timeline_sequence_benign.json": {"count": 0},
             "redteam_evasion_short.json": {"count": 0},
-            "redteam_mixed_hedging_memory.json": {"count": 3, "has": {"hedging_language_present"}},
+            "redteam_mixed_hedging_memory.json": {"count": 4, "has": {"hedging_language_present", "hedging_cluster_present"}},
             "redteam_numeric_detail_shift.json": {"count": 1},
         }
         runner = default_runner()
@@ -49,14 +49,17 @@ class TestRedteamFixturesPhase5Kilo(unittest.TestCase):
                     self.assertIn(req, labels, f"{name} missing {req}")
 
     def test_gated_modalities_off_by_default(self):
-        # Feature/physio/visual observers are gated; not in default_runner, no extra cues without metadata.
+        # Track B (owner decision 2026-11-25): feature/physio/visual
+        # observers are INCLUDED in default_runner's list now, but they
+        # are inert without feature metadata (and gated by consent when
+        # a gate state is supplied) — listing is not enabling.
         gated_prefixes = (
             "cueliez.observations.prosody.",
             "cueliez.observations.visual.",
             "cueliez.observations.physiological.",
         )
         default_methods = {getattr(o, "method_id", "") for o in default_runner().observers}
-        self.assertFalse(any(m.startswith(gated_prefixes) for m in default_methods), default_methods)
+        self.assertTrue(any(m.startswith(gated_prefixes) for m in default_methods), default_methods)
         full = full_runner()
         full_methods = {getattr(o, "method_id", "") for o in full.observers}
         self.assertTrue(any(m.startswith(gated_prefixes) for m in full_methods))

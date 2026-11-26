@@ -10,3 +10,7 @@ build/
 htmlcov/
 .venv/
 venv/
+
+# Track B: face-test venv + downloaded model binaries (not committed)
+.venv-face-test/
+tests/fixtures/face/models/

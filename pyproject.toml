@@ -28,6 +28,21 @@ cueliez = "cueliez.cli:main"
 
 [project.optional-dependencies]
 test = ["pytest>=7"]
+# Live AV extras (Phase 10). Core stays dependency-free; each extra is
+# installed separately and only used behind its consent gate.
+live-audio = ["vosk>=0.3.45,<0.4"]
+live-audio-whisper = ["faster-whisper>=1.2,<2"]
+# Real face matching (Track D, delegates to Track B's observer):
+# OpenFace nn4.small2.v1.t7 embeddings via OpenCV DNN. OpenCV 5.x
+# removed the Torch model importer (cv2.dnn.readNetFromTorch), so 4.10
+# is pinned for this extra. The face_recognition/dlib path was
+# evaluated and set aside (no wheel for this Python/platform; source
+# build needs cmake + C++ toolchain + gigabytes of build space), and
+# Track B's OpenCV/OpenFace path already works here with measured
+# separation on real portraits. Model files are resolved from
+# CUELIEZ_FACE_MODEL_PATH / CUELIEZ_FACE_LANDMARK_MODEL_PATH, falling
+# back to the copies vendored at tests/fixtures/face/models/.
+face = ["opencv-contrib-python-headless==4.10.0.84"]
 
 [tool.setuptools]
 package-dir = {"" = "src"}

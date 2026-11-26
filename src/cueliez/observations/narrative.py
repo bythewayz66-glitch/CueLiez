@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from typing import Any, List, Mapping, Sequence
 
-from .base import ObservationResult, clamp01, is_subject_turn, make_observation, source_span, text_of
+from .base import ObservationResult, clamp01, is_subject_turn, make_observation, source_span, text_of, truncate_source
 
 _WORD_RE = re.compile(r"[A-Za-z']+")
 _TIME_MARKERS = re.compile(
@@ -57,14 +57,15 @@ def _subject_turns(turns: Sequence[Mapping[str, Any]]) -> List[tuple[int, str]]:
 class TemporalStructureObserver:
     """Sparse temporal scaffolding in extended free-recall accounts."""
 
-    method = "narrative.temporal_structure"
+    method_id = "cueliez.observations.narrative.temporal_structure/v1"
+    method = method_id  # back-compat alias
     category = "narrative"
-    model_id = "narrative-temporal-v1"
+    model_id = method_id
 
     def observe(self, turns: Sequence[Mapping[str, Any]]) -> ObservationResult:
         subjects = _subject_turns(turns)
         if len(subjects) < 2:
-            return ObservationResult(method=self.method, observations=[])
+            return ObservationResult(method=self.method_id, observations=[])
         total_words = 0
         total_markers = 0
         spans = []
@@ -74,76 +75,80 @@ class TemporalStructureObserver:
             markers = _TIME_MARKERS.findall(txt)
             total_markers += len(markers)
             if markers:
-                spans.append(source_span(idx, txt[:120]))
-        if total_words < 40:
-            return ObservationResult(method=self.method, observations=[])
+                spans.append(source_span({"role": "subject", "text": txt}, idx))
+        if total_words < 100:
+            return ObservationResult(method=self.method_id, observations=[])
         density = total_markers / max(total_words / 20.0, 1.0)
         if density >= 0.8 or total_markers >= 4:
-            return ObservationResult(method=self.method, observations=[])
+            return ObservationResult(method=self.method_id, observations=[])
         score = clamp01(0.35 + (0.45 * (1.0 - min(density, 1.0))) + min(total_words / 200.0, 0.15))
         if score < 0.40:
-            return ObservationResult(method=self.method, observations=[])
+            return ObservationResult(method=self.method_id, observations=[])
         obs = make_observation(
             label="sparse_temporal_structure",
             score=score,
-            method_id=self.method,
+            method_id=self.method_id,
             category=self.category,
             evidence={
                 "subject_words": total_words,
                 "temporal_markers": total_markers,
                 "density_per_20w": round(density, 3),
                 "spans": spans[:3],
+                "source_text": truncate_source(subjects[-1][1]),
             },
             cue="Subject account has relatively few temporal sequence markers for its length. Consider a neutral prompt about order of events.",
             turn_index=subjects[-1][0],
         )
-        return ObservationResult(method=self.method, observations=[obs] if obs else [])
+        return ObservationResult(method=self.method_id, observations=[obs] if obs else [])
 
 
 class SensoryDetailObserver:
     """Low sensory-detail density in extended accounts."""
 
-    method = "narrative.sensory_detail"
+    method_id = "cueliez.observations.narrative.sensory_detail/v1"
+    method = method_id  # back-compat alias
     category = "narrative"
-    model_id = "narrative-sensory-v1"
+    model_id = method_id
 
     def observe(self, turns: Sequence[Mapping[str, Any]]) -> ObservationResult:
         subjects = _subject_turns(turns)
         if len(subjects) < 2:
-            return ObservationResult(method=self.method, observations=[])
+            return ObservationResult(method=self.method_id, observations=[])
         total_words = sum(len(_WORD_RE.findall(t)) for _, t in subjects)
-        if total_words < 50:
-            return ObservationResult(method=self.method, observations=[])
+        if total_words < 100:
+            return ObservationResult(method=self.method_id, observations=[])
         hits = sum(len(_SENSORY.findall(t)) for _, t in subjects)
         ratio = hits / max(total_words / 30.0, 1.0)
         if ratio >= 0.6 or hits >= 3:
-            return ObservationResult(method=self.method, observations=[])
+            return ObservationResult(method=self.method_id, observations=[])
         score = clamp01(0.34 + 0.4 * (1.0 - min(ratio, 1.0)) + min(total_words / 250.0, 0.12))
         if score < 0.40:
-            return ObservationResult(method=self.method, observations=[])
+            return ObservationResult(method=self.method_id, observations=[])
         obs = make_observation(
             label="low_sensory_detail_density",
             score=score,
-            method_id=self.method,
+            method_id=self.method_id,
             category=self.category,
-            evidence={"subject_words": total_words, "sensory_hits": hits, "ratio": round(ratio, 3)},
+            evidence={"subject_words": total_words, "sensory_hits": hits, "ratio": round(ratio, 3),
+                      "source_text": truncate_source(subjects[-1][1])},
             cue="Extended account contains few sensory-detail markers. A cognitive-interview style prompt about what was seen or heard may help.",
             turn_index=subjects[-1][0],
         )
-        return ObservationResult(method=self.method, observations=[obs] if obs else [])
+        return ObservationResult(method=self.method_id, observations=[obs] if obs else [])
 
 
 class AgencyFramingObserver:
     """Elevated externalized framing relative to self-agency markers."""
 
-    method = "narrative.agency_framing"
+    method_id = "cueliez.observations.narrative.agency_framing/v1"
+    method = method_id  # back-compat alias
     category = "narrative"
-    model_id = "narrative-agency-v1"
+    model_id = method_id
 
     def observe(self, turns: Sequence[Mapping[str, Any]]) -> ObservationResult:
         subjects = _subject_turns(turns)
         if not subjects:
-            return ObservationResult(method=self.method, observations=[])
+            return ObservationResult(method=self.method_id, observations=[])
         self_hits = 0
         ext_hits = 0
         last_idx = subjects[-1][0]
@@ -154,38 +159,40 @@ class AgencyFramingObserver:
             self_hits += len(s)
             ext_hits += len(e)
             if e:
-                examples.append(source_span(idx, e[0] if e else txt[:80]))
+                examples.append(source_span({"role": "subject", "text": txt}, idx))
         total = self_hits + ext_hits
         if total < 2 or ext_hits == 0:
-            return ObservationResult(method=self.method, observations=[])
+            return ObservationResult(method=self.method_id, observations=[])
         ext_ratio = ext_hits / total
         if ext_ratio < 0.45:
-            return ObservationResult(method=self.method, observations=[])
+            return ObservationResult(method=self.method_id, observations=[])
         score = clamp01(0.38 + 0.35 * ext_ratio + min(ext_hits / 8.0, 0.15))
         obs = make_observation(
             label="elevated_externalized_framing",
             score=score,
-            method_id=self.method,
+            method_id=self.method_id,
             category=self.category,
             evidence={
                 "self_agency_hits": self_hits,
                 "externalized_hits": ext_hits,
                 "externalized_ratio": round(ext_ratio, 3),
                 "examples": examples[:3],
+                "source_text": truncate_source(subjects[-1][1]),
             },
             cue="Account shows relatively elevated externalized framing vs. self-agency markers. Consider neutral clarification of the subject's described role.",
             turn_index=last_idx,
             priority="normal",
         )
-        return ObservationResult(method=self.method, observations=[obs] if obs else [])
+        return ObservationResult(method=self.method_id, observations=[obs] if obs else [])
 
 
 class SpecificityShiftObserver:
     """Specificity drop between freer recall and prompted answers."""
 
-    method = "narrative.specificity_shift"
+    method_id = "cueliez.observations.narrative.specificity_shift/v1"
+    method = method_id  # back-compat alias
     category = "narrative"
-    model_id = "narrative-specificity-v1"
+    model_id = method_id
 
     def observe(self, turns: Sequence[Mapping[str, Any]]) -> ObservationResult:
         free_words, free_specs = 0, 0
@@ -209,19 +216,19 @@ class SpecificityShiftObserver:
             role = str(t.get("role") or t.get("speaker") or "").strip().lower()
             prev_role = role
         if free_words < 25 or prompt_words < 15:
-            return ObservationResult(method=self.method, observations=[])
+            return ObservationResult(method=self.method_id, observations=[])
         free_rate = free_specs / max(free_words / 20.0, 1.0)
         prompt_rate = prompt_specs / max(prompt_words / 20.0, 1.0)
         if free_rate <= 0 or prompt_rate >= free_rate * 0.7:
-            return ObservationResult(method=self.method, observations=[])
+            return ObservationResult(method=self.method_id, observations=[])
         drop = (free_rate - prompt_rate) / free_rate
         score = clamp01(0.40 + 0.4 * drop)
         if score < 0.45:
-            return ObservationResult(method=self.method, observations=[])
+            return ObservationResult(method=self.method_id, observations=[])
         obs = make_observation(
             label="specificity_drop_under_prompting",
             score=score,
-            method_id=self.method,
+            method_id=self.method_id,
             category=self.category,
             evidence={
                 "free_recall_words": free_words,
@@ -229,8 +236,9 @@ class SpecificityShiftObserver:
                 "free_specificity_rate": round(free_rate, 3),
                 "prompted_specificity_rate": round(prompt_rate, 3),
                 "relative_drop": round(drop, 3),
+                "source_text": truncate_source(text_of(turns[last_prompt_idx]) if last_prompt_idx is not None else ""),
             },
             cue="Specific detail density appears lower in prompted answers than in freer recall. Consider inviting another free-recall pass or concrete examples.",
             turn_index=last_prompt_idx,
         )
-        return ObservationResult(method=self.method, observations=[obs] if obs else [])
+        return ObservationResult(method=self.method_id, observations=[obs] if obs else [])

@@ -26,7 +26,7 @@ from .delivery.notes import attach_officer_cue_notes
 from .export import export_sealed_package
 from .connectors import ConnectorError, push_endpoint, pull_endpoint, push_package, pull_package
 from .audit import set_audit_correlation_id
-from .gates import GateError, SessionGateState, record_consent, verify_package_hash
+from .gates import GateError, SessionGateState, filter_observations_by_consent, record_consent, record_modality_consent, verify_package_hash
 from .session import assert_can_observe, seal
 from .observations import default_runner, full_runner
 from .observations.assisted import make_multi_signal_assisted_adapter, register_assisted_observer, merge_assisted_observations, clear_assisted_registry
@@ -98,6 +98,10 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--consent-attester", "--attested-by", dest="attested_by", help="Consent attester ID (officer/clinician identifier).")
     p.add_argument("--subject-id", help="Optional subject/session identifier.")
     p.add_argument("--jurisdiction", help="Optional jurisdiction/context label.")
+    p.add_argument("--modality-consent", action="append", default=[], dest="modality_consents",
+                   choices=["audio_features", "camera", "wearable"],
+                   help="Record explicit consent for a gated input modality (audio_features, camera, wearable). May be repeated. Requires --modality-attester. Does NOT enable demographic inference (separate gate).")
+    p.add_argument("--modality-attester", help="Attester ID recording modality consent (required with --modality-consent).")
     p.add_argument("--training-ack", action="store_true", help="Acknowledge operator training.")
     p.add_argument("--training-version", help="Training version identifier (required by gated modes when training is acknowledged/required).")
     p.add_argument("--intended-use", action="append", default=[], dest="intended_uses", help="Intended use label. May be repeated.")
@@ -125,22 +129,43 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--training-gui", action="store_true", help="Launch the web-based Training GUI (modules, media, interactive quizzes, sandbox, records). Not a CLI training workflow.")
     p.add_argument("--training-gui-host", default="127.0.0.1", help="Training GUI host.")
     p.add_argument("--training-gui-port", type=int, default=911, help="Training GUI port.")
+    p.add_argument("--web", "--frontend", dest="web", action="store_true", help="Launch the real web frontend to operate the pipeline (transcript -> cues -> seal/export/verify). Officer-only, localhost by default.")
+    p.add_argument("--web-host", default="127.0.0.1", help="Web frontend host.")
+    p.add_argument("--web-port", type=int, default=912, help="Web frontend port.")
+    p.add_argument("--web-token", default=None, help="Optional web frontend token (or CUELIEZ_WEB_TOKEN).")
     return p
 
 
-def _iter_ndjson_turns(path: Optional[str]):
+def _iter_ndjson_turns(path: Optional[str], *, on_error=None):
+    """Yield transcript turns from NDJSON (one JSON object per line).
+
+    A malformed line is never fatal: when ``on_error`` is given it is called
+    as ``on_error(line_number, error_message)`` and the line is skipped, so
+    streaming continues and accumulated turns are preserved. Without a
+    callback the bad line is still skipped. ``line_number`` is the physical
+    1-based line number in the input (blank lines counted).
+    """
     fh = open(path, "r", encoding="utf-8") if path and path != "-" else sys.stdin
     try:
-        for line in fh:
-            line = line.strip()
+        for line_no, raw in enumerate(fh, start=1):
+            line = raw.strip()
             if not line:
                 continue
-            obj = json.loads(line)
+            try:
+                obj = json.loads(line)
+            except Exception as e:
+                if on_error is not None:
+                    on_error(line_no, f"invalid_json: {e}")
+                continue
             if isinstance(obj, dict):
                 yield _normalize_transcript_turn(obj)
             elif isinstance(obj, list):
                 for t in obj:
                     yield _normalize_transcript_turn(t)
+            else:
+                if on_error is not None:
+                    on_error(line_no, "invalid_json: line is not a JSON object or array of turns")
+                continue
     finally:
         if fh is not sys.stdin:
             fh.close()
@@ -150,16 +175,36 @@ def _run_stream_turns(args, state, pack, annotations):
     transcript: List[Dict[str, Any]] = []
     seen_cue_ids = set()
     renderer = OnscreenCueRenderer()
+    stream_errors: List[Dict[str, Any]] = []
+
+    def _on_line_error(line_no: int, error: str) -> None:
+        # Per-line error event: the bad line is skipped, streaming continues,
+        # and accumulated turns are still sealed/exported at the end.
+        stream_errors.append({"line": line_no, "error": error})
+        print(json.dumps({"event": "stream_line_error", "line": line_no, "error": error}, ensure_ascii=False), flush=True)
+
     print(json.dumps({"event": "stream_start", "notice": HONEST_NOTICE, "streaming": True, "subject_visible": False}, ensure_ascii=False), flush=True)
-    runner = None if pack is not None else (full_runner() if args.runner == "full" else default_runner())
-    for turn in _iter_ndjson_turns(args.transcript):
+    # Coordinator integration fix (2026-11-25): --stream-turns previously
+    # ignored --enable-assisted (Track C gap). Opt-in assisted observers now
+    # flow through the stream path exactly as in the non-stream path.
+    assisted = bool(getattr(args, "enable_assisted", False))
+    if assisted:
+        clear_assisted_registry()
+        register_assisted_observer("multi_signal", make_multi_signal_assisted_adapter())
+    runner = None if pack is not None else (full_runner(enable_assisted=assisted) if args.runner == "full" else default_runner(enable_assisted=assisted))
+    for turn in _iter_ndjson_turns(args.transcript, on_error=_on_line_error):
         transcript.append(turn)
         if pack is not None:
             raw_package = pack.build_package(transcript, annotations=annotations)
             observations = raw_package.get("observations") or []
+            if assisted:
+                observations = merge_assisted_observations(observations, transcript, enabled=True)
         else:
             observations = runner.run(transcript)
             raw_package = {"observations": observations, "annotations": annotations}
+        # Feature-derived (prosody/visual/physiological/demographic) cues must
+        # not fire without the corresponding consent — drop them, keep text cues.
+        observations = filter_observations_by_consent(observations, state)
         cues = cues_from_observations(observations, min_score=args.min_score, max_cues=args.max_cues, transcript=transcript)
         new_cues = [c for c in cues if c.cue_id not in seen_cue_ids]
         for c in new_cues:
@@ -173,10 +218,14 @@ def _run_stream_turns(args, state, pack, annotations):
     if pack is not None:
         raw_package = pack.build_package(transcript, annotations=annotations)
         observations = raw_package.get("observations") or []
+        if assisted:
+            observations = merge_assisted_observations(observations, transcript, enabled=True)
     else:
-        runner = full_runner() if args.runner == "full" else default_runner()
+        runner = full_runner(enable_assisted=assisted) if args.runner == "full" else default_runner(enable_assisted=assisted)
         raw_package = runner.build_package(transcript, annotations=annotations)
         observations = raw_package.get("observations") or []
+    observations = filter_observations_by_consent(observations, state)
+    raw_package["observations"] = observations
     cues = cues_from_observations(observations, min_score=args.min_score, max_cues=args.max_cues, transcript=transcript)
     hi_ids = _high_priority_cue_ids(cues)
     if args.show_cues:
@@ -201,7 +250,7 @@ def _run_stream_turns(args, state, pack, annotations):
     if args.out_dir:
         exported = export_sealed_package(package, args.out_dir, basename=args.basename, formats=formats, cues=cues, observations=observations, transcript=transcript)
     if exported or push_result or args.out_dir:
-        ev = {"ok": True, "event": "stream_end", "notice": HONEST_NOTICE, "cue_count": len(cues), "observation_count": len(observations), "high_priority_cue_ids": hi_ids, "sealed": not args.no_seal}
+        ev = {"ok": True, "event": "stream_end", "notice": HONEST_NOTICE, "cue_count": len(cues), "observation_count": len(observations), "high_priority_cue_ids": hi_ids, "sealed": not args.no_seal, "stream_line_errors": len(stream_errors)}
         if push_result:
             ev["push"] = {"status": push_result.get("status"), "endpoint": push_result.get("endpoint")}
         if exported:
@@ -272,6 +321,20 @@ def run_cli(argv: Optional[List[str]] = None) -> int:
                 srv.stop()
             return 0
 
+        if getattr(args, "web", False):
+            from .web_frontend import WebFrontendServer
+            srv = WebFrontendServer(host=args.web_host, port=args.web_port, token=args.web_token)
+            srv.start()
+            print(json.dumps({"ok": True, "action": "web_frontend", "url": srv.url, "notice": HONEST_NOTICE + " Web frontend is observation/cue-only."}, ensure_ascii=False))
+            try:
+                while True:
+                    __import__("time").sleep(1)
+            except KeyboardInterrupt:
+                pass
+            finally:
+                srv.stop()
+            return 0
+
         # Connector pull path: fetch an existing sealed package, then export/render (no observation).
         if args.pull_id:
             pend = pull_endpoint(args.pull_endpoint)
@@ -318,6 +381,14 @@ def run_cli(argv: Optional[List[str]] = None) -> int:
             if not args.attested_by:
                 raise GateError("consent_attester_required", "--consent requires --consent-attester/--attested-by.")
             record_consent(state, attested_by=args.attested_by, subject_id=args.subject_id, jurisdiction=args.jurisdiction)
+        if getattr(args, "modality_consents", None):
+            if not args.modality_attester:
+                raise GateError("consent_attester_required", "--modality-consent requires --modality-attester.")
+            for modality in args.modality_consents:
+                # Per-modality opt-in only. This never enables demographic
+                # inference (separate gate) and never sets the state-wide
+                # jurisdiction_approved flag.
+                record_modality_consent(state, modality, attested_by=args.modality_attester, jurisdiction=args.jurisdiction)
         if args.training_ack or args.training_version:
             state.training_acknowledged = True
             if args.training_version:
@@ -345,6 +416,13 @@ def run_cli(argv: Optional[List[str]] = None) -> int:
             observations = merge_assisted_observations(observations, transcript, enabled=True)
             if isinstance(raw_package, dict):
                 raw_package["observations"] = observations
+
+        # Feature-derived observations must not surface without the
+        # corresponding modality/demographic consent (same rule as the
+        # stream path); drop them before cues, seal, and export.
+        observations = filter_observations_by_consent(observations, state)
+        if isinstance(raw_package, dict):
+            raw_package["observations"] = observations
 
         cues = cues_from_observations(observations, min_score=args.min_score, max_cues=args.max_cues, transcript=transcript)
         hi_ids = _high_priority_cue_ids(cues)

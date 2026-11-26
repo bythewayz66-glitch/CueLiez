@@ -72,4 +72,11 @@ class CrossModalConvergenceObserver:
 
 def add_convergence_observations(observations: List[Dict[str, Any]], *, min_categories: int = 2) -> List[Dict[str, Any]]:
     conv = CrossModalConvergenceObserver().observe_observations(observations, min_categories=min_categories)
-    return observations + conv.to_dicts()
+    existing = {o.get("cue_id") for o in observations}
+    out = list(observations)
+    for c in conv.to_dicts():
+        # Dedupe: run() may already have added convergence; never emit it twice.
+        if c.get("cue_id") not in existing:
+            out.append(c)
+            existing.add(c.get("cue_id"))
+    return out

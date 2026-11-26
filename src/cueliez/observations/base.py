@@ -175,6 +175,67 @@ def make_observation(
     )
 
 
+def feature_value(turn: Any, *keys: str) -> float | None:
+    """Read a numeric derived-feature value from a turn.
+
+    Feature metadata may arrive flat on the turn, inside a ``features`` dict,
+    or nested one level deeper (``turn["features"]["audio_features"]``,
+    ``turn["features"]["camera"]``, ``turn["features"]["wearable"]``), or in
+    a top-level ``audio_features`` / ``camera`` / ``wearable`` dict on the
+    turn. Only caller-supplied derived numeric features are read here; no
+    raw audio/video is processed and no feature is invented when absent
+    (returns ``None``).
+    """
+    if not isinstance(turn, Mapping):
+        return None
+    for k in keys:
+        v = turn.get(k)
+        if isinstance(v, (int, float)) and not isinstance(v, bool):
+            return float(v)
+    containers: list[Any] = []
+    for name in ("features", "audio_features", "camera", "wearable", "prosody",
+                 "acoustic", "visual", "video_features", "vision", "physio",
+                 "physiological", "biometric_features", "meta", "metadata"):
+        c = turn.get(name)
+        if isinstance(c, Mapping):
+            containers.append(c)
+            # One level of nesting: features.audio_features / .camera / .wearable
+            for sub in ("audio_features", "camera", "wearable", "prosody", "visual", "physiological"):
+                s = c.get(sub)
+                if isinstance(s, Mapping):
+                    containers.append(s)
+    for c in containers:
+        for k in keys:
+            v = c.get(k)
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                return float(v)
+    return None
+
+
+def feature_dict(turn: Any, *names: str) -> dict[str, Any]:
+    """Return a merged dict of caller-supplied derived features for a turn.
+
+    Merges ``turn["features"]`` (including its ``audio_features`` / ``camera`` /
+    ``wearable`` sub-dicts) and any top-level container named in ``names``.
+    Returns ``{}`` when no derived features were supplied. Values are passed
+    through unchanged; callers must treat them as supplied data only.
+    """
+    out: dict[str, Any] = {}
+    if not isinstance(turn, Mapping):
+        return out
+    for name in ("features", *names):
+        c = turn.get(name)
+        if isinstance(c, Mapping):
+            for k, v in c.items():
+                if isinstance(v, Mapping):
+                    out.setdefault(k, {})
+                    if isinstance(out[k], dict):
+                        out[k].update(v)
+                else:
+                    out[k] = v
+    return out
+
+
 def text_of(turn: Any) -> str:
     if not isinstance(turn, Mapping):
         return ""

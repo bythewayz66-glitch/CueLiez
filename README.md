@@ -36,6 +36,10 @@ Mandatory vocabulary and bans (including **lie detector**): see [docs/LANGUAGE_R
 
 See [MISSION.md](MISSION.md).
 
+## Demo video
+
+`docs/demo/live-av-demo-staged-synthetic.mp4` (152 s, 720p, silent) — a staged, synthetic demo of the live AV surface: a real `LiveSession` driven through its real HTTP API (consent → start → turns → timing cue → video windows → face-match numbers → kill switch → seal with the real package hash). The "person on camera" is a drawn cartoon avatar, labelled on every frame "STAGED SYNTHETIC DEMO — NOT A REAL INTERVIEW — NO REAL SUBJECT". Face numbers are the real backend test on public-domain portraits, labelled as such. See `docs/demo/DEMO_GUIDE.md`.
+
 ## What officers get
 
 - Real-time **cues** when stress-related signals, linguistic patterns, or testimony conflicts appear

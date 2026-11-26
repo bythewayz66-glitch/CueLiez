@@ -112,10 +112,18 @@ class TestPackRunnersAndPackages(unittest.TestCase):
         self.assertLessEqual(len(thrp_pack().runner().observers), len(leg_pack().runner().observers))
 
     def test_feature_observers_opt_in(self):
+        # Track B (owner decision 2026-11-25): feature observers are
+        # INCLUDED in the base pack runner list now (inert without
+        # feature metadata + consent), so the opt-in flag no longer
+        # changes the count — it is kept for back-compat.
         p = leg_pack()
         base = len(p.runner().observers)
         with_features = len(p.runner(include_feature_observers=True).observers)
-        self.assertGreater(with_features, base)
+        self.assertEqual(with_features, base)
+        methods = {o.method_id for o in p.runner().observers}
+        self.assertIn("cueliez.observations.prosody.pause_pattern/v1", methods)
+        self.assertIn("cueliez.observations.visual.gaze_pattern/v1", methods)
+        self.assertIn("cueliez.observations.physiological.heart_rate_shift/v1", methods)
 
     def test_med_thrp_have_domain_addendum(self):
         self.assertTrue(med_pack().build_package(SAMPLE_TRANSCRIPT).get("domain_disclaimer_addendum"))

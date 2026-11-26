@@ -19,6 +19,48 @@ AUDIO_FEATURE_OBSERVERS = (
     VoiceStressFeatureShiftObserver(),
 )
 
+# Live-AV timing-only observers (Phase 10, Track D). The live path uses
+# latency, speech rate and pause patterns only: prosody / voice-quality
+# observers (pitch variance, voice-feature shift) stay out of live use
+# until a validation plan and literature review exist.
+LIVE_AUDIO_TIMING_OBSERVERS = (
+    ResponseLatencyObserver(),
+    SpeechRateShiftObserver(),
+    PausePatternObserver(),
+)
+
+# Labels emitted by the timing-only live path.
+LIVE_TIMING_LABELS = frozenset({
+    "response_latency_anomaly_observed",
+    "speech_rate_shift_observed",
+    "pause_duration_elevated_observed",
+})
+
+
+def observe_live_audio_timing(
+    turns: Sequence[Mapping[str, Any]],
+    *,
+    state: Any = None,
+    require_consent_check: bool = True,
+) -> List[Dict[str, Any]]:
+    """Run only the live timing observers (latency / speech rate / pause).
+
+    Consent-governed like :func:`observe_audio_features`: when
+    ``require_consent_check`` is True (default), enforces modality
+    consent + jurisdiction via ``check_modality_allowed(state,
+    'audio_features')`` and raises GateError if not allowed. No
+    prosody or voice-quality observer runs on this path.
+    """
+    if require_consent_check:
+        if state is None:
+            from ..gates import GateError
+            raise GateError("gate_state_required", "Session gate state is required before enabling live audio timing observation hooks.")
+        check_modality_allowed(state, "audio_features")
+    observations: List[Dict[str, Any]] = []
+    for obs in LIVE_AUDIO_TIMING_OBSERVERS:
+        observations.extend(obs.observe(turns).to_dicts())
+    return observations
+
 
 def observe_audio_features(
     turns: Sequence[Mapping[str, Any]],

@@ -175,6 +175,142 @@ class HedgingObserver:
         return result
 
 
+class HedgingClusterObserver:
+    """Two or more distinct hedge *types* in a single turn (a cluster, not one hedge).
+
+    Hedge types: modal (maybe/perhaps/...), belief (I think/guess/...),
+    approximation (sort of/about/around/...), memory (don't recall/not sure/...).
+    A single hedge is common; a cluster of different types in one response is
+    a stronger cue to ask for specifics. Cue only, never a finding.
+    """
+
+    method_id = "cueliez.observations.linguistic.hedging_cluster/v1"
+
+    _TYPES: tuple[tuple[str, tuple[str, ...]], ...] = (
+        ("modal", (r"\bmaybe\b", r"\bperhaps\b", r"\bpossibly\b", r"\bprobably\b",
+                   r"\bmight\b", r"\bcould\b", r"\bmay\b")),
+        ("belief", (r"\bi think\b", r"\bi guess\b", r"\bi believe\b", r"\bi suppose\b")),
+        ("approximation", (r"\bsort of\b", r"\bkind of\b", r"\bkinda\b", r"\bsorta\b",
+                          r"\babout\b", r"\baround\b", r"\broughly\b", r"\bapproximately\b")),
+        ("memory", (r"\bi don't recall\b", r"\bi don't remember\b", r"\bi can't recall\b",
+                    r"\bnot sure\b", r"\bif i recall\b", r"\bas far as i know\b",
+                    r"\bto the best of my\b", r"\bi might be wrong\b")),
+    )
+
+    def observe(self, transcript: Sequence[Mapping[str, Any]]) -> ObservationResult:
+        result = ObservationResult(method=self.method_id)
+        for i, turn in enumerate(transcript):
+            if not is_subject_turn(turn):
+                continue
+            text = text_of(turn)
+            words = _words(text)
+            if len(words) < 6:
+                continue
+            types_hit: dict[str, list[str]] = {}
+            total = 0
+            for name, patterns in self._TYPES:
+                count, found = _count_patterns(text, patterns)
+                if count:
+                    types_hit[name] = found
+                    total += count
+            if len(types_hit) < 2 or total < 2:
+                continue
+            score = clamp01(0.40 + 0.12 * (len(types_hit) - 1) + 0.03 * min(total, 6))
+            if score < 0.40:
+                continue
+            ev = {
+                "hedge_types_present": sorted(types_hit),
+                "hedge_type_count": len(types_hit),
+                "hedge_count": total,
+                "word_count": len(words),
+                "patterns_matched": [p for v in types_hit.values() for p in v][:8],
+            }
+            ev.update(source_span(turn, i))
+            result.observations.append(make_observation(
+                label="hedging_cluster_present",
+                score=score,
+                method_id=self.method_id,
+                category="linguistic",
+                evidence=ev,
+                cue="Response combines several different kinds of hedging/qualification; ask for specific details.",
+                turn_index=i,
+            ))
+        return result
+
+
+class DetailDensityShiftObserver:
+    """Specific-detail density per turn shifting against the session baseline.
+
+    Detail density = (numbers + specific-detail tokens such as colours,
+    directions, times, named items + capitalised proper names) per word.
+    A turn whose density is a robust outlier (robust z >= 2) against the
+    subject's own turns is a cue to check whether detail is thinning or
+    thickening on that topic. Cue only, never a finding.
+    """
+
+    method_id = "cueliez.observations.linguistic.detail_density_shift/v1"
+
+    _DETAIL_RE = re.compile(
+        r"\b(?:\d{1,2}:\d{2}|\d+\s*(?:minutes?|hours?|blocks?|miles?)|"
+        r"red|blue|black|white|green|left|right|north|south|east|west|"
+        r"license|plate|badge|shirt|jacket|street|avenue|road|building|room)\b",
+        re.I,
+    )
+    _CAP_RE = re.compile(r"\b[A-Z][a-z]{2,}\b")
+
+    def observe(self, transcript: Sequence[Mapping[str, Any]]) -> ObservationResult:
+        result = ObservationResult(method=self.method_id)
+        import statistics
+
+        densities: list[tuple[int, float, Any]] = []
+        for i, turn in enumerate(transcript):
+            if not is_subject_turn(turn):
+                continue
+            text = text_of(turn)
+            words = _words(text)
+            if len(words) < 8:
+                continue
+            numbers = len(re.findall(r"\b\d+(?:[:/.-]\d+)?\b", text))
+            details = len(self._DETAIL_RE.findall(text))
+            caps = max(0, len(self._CAP_RE.findall(text)) - 1)
+            densities.append((i, (numbers + details + caps) / max(1, len(words)), turn))
+        if len(densities) < 5:
+            result.notes.append("insufficient_detail_density_data")
+            return result
+        vals = [d for _, d, _ in densities]
+        med = statistics.median(vals)
+        mad = statistics.median([abs(v - med) for v in vals])
+        if mad <= 0:
+            # No real spread in the session: a single deviant turn on a
+            # near-constant baseline is noise, not a shift.
+            result.notes.append("no_detail_density_spread")
+            return result
+        for i, d, turn in densities:
+            z = (d - med) / (1.4826 * mad)
+            if abs(z) < 2.0 or abs(d - med) < 0.08:
+                continue
+            score = clamp01(0.36 + min(abs(z), 6.0) * 0.08)
+            direction = "higher" if d > med else "lower"
+            ev = {
+                "detail_density": round(d, 4),
+                "baseline_median_density": round(med, 4),
+                "robust_z": round(z, 3),
+                "direction": direction,
+                "sample_count": len(densities),
+            }
+            ev.update(source_span(turn, i))
+            result.observations.append(make_observation(
+                label="detail_density_shift_observed",
+                score=score,
+                method_id=self.method_id,
+                category="linguistic",
+                evidence=ev,
+                cue=f"Specific-detail density was {direction} than this session's baseline; ask for who/what/when/where specifics.",
+                turn_index=i,
+            ))
+        return result
+
+
 class PronounDistancingObserver:
     method_id = "cueliez.observations.linguistic.pronoun_distancing/v1"
 

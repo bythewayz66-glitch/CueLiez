@@ -14,15 +14,48 @@ This inventory reflects the current implementation in `src/cueliez/observations/
 - `confidence.model_id` = observer `method_id` (versioned), e.g. `cueliez.observations.linguistic.hedging/v1`.
 - `confidence.version` may be included (default `v1` from `make_observation`).
 
-## Default runners
-- **`default_runner()`**: all core text + consistency + behavioral transcript observers below (20 observers). No prosody/visual/physiological feature observers.
-- **`full_runner()`**: `default_runner()` + prosody/visual/physiological feature observers (9 additional). Feature observers emit nothing when required metadata is absent.
-- **Convergence**: `add_convergence_observations` / `CrossModalConvergenceObserver` (`cueliez.observations.multimodal.convergence/v1`, category `multimodal`) can add turn-level convergence cues from existing observations (post-run helper).
+## Default runners (2026-11-25: all observers on by default)
+- **`default_runner()`**: **45 observers** — all core text + consistency + behavioral transcript observers, the 4 narrative observers, the new dishonesty-sign observers (hedging cluster, detail-density shift, cross-turn claim restatement, pronoun shift, response-latency shift, speech-rate trend, filled-pause cluster) and the 13 feature observers (prosody/visual/physiological, which emit nothing when required metadata is absent). Cross-modal convergence is a real runner member.
+- **`full_runner()`**: **51 observers** — `default_runner()` + 6 gated observers (disabled until explicit opt-in + consent).
+- **Convergence**: `CrossModalConvergenceObserver` (`cueliez.observations.multimodal.convergence/v1`, category `multimodal`) is a runner member: it emits `multi_indicator_convergence_observed` when ≥2 independent categories fire on the same turn.
+
+## New dishonesty-sign observers (2026-11-25)
+| Method ID | Category | Detects | Gated? |
+|---|---|---|---|
+| `cueliez.observations.linguistic.hedging_cluster/v1` | linguistic | ≥2 distinct hedge types in one turn | No |
+| `cueliez.observations.linguistic.detail_density_shift/v1` | linguistic | Per-turn detail density vs session median | No |
+| `cueliez.observations.consistency.claim_restatement/v1` | consistency | Same claim restated with different wording across turns | No |
+| `cueliez.observations.consistency.pronoun_shift/v1` | consistency | First-person rate drops while third-person rises | No |
+| `cueliez.observations.behavioral.response_latency_shift/v1` | behavioral | Early vs late median latency shift | No (turn metadata) |
+| `cueliez.observations.behavioral.speech_rate_trend/v1` | behavioral | Early vs late speech-rate shift | No (turn metadata) |
+| `cueliez.observations.behavioral.filled_pause_cluster/v1` | behavioral | ≥3 filled pauses in one turn, or ≥2 in consecutive turns | No |
+| `cueliez.observations.prosody.pause_density_shift/v1` | prosody | Early vs late pause-density shift | Yes — `audio_features` |
+| `cueliez.observations.visual.off_camera_gaze_frequency/v1` | visual | Share of turns with elevated off-camera gaze ("off-camera gaze", never "gaze aversion") | Yes — `camera` |
+| `cueliez.observations.visual.blink_rate_trend/v1` | visual | Early vs late blink-rate shift | Yes — `camera` |
+| `cueliez.observations.visual.restlessness_shift/v1` | visual | Early vs late motor-activity shift | Yes — `camera` |
+| `cueliez.observations.multimodal.convergence/v1` | multimodal | ≥2 independent signal families on the same turn | No |
+
+## Gated reversal observers (2026-11-25, owner decision — see `docs/OWNER_DECISIONS.md` §2b)
+All in the runner/pack lists but **disabled by default**; they fire only on explicit opt-in AND consent. Scores are capped and caveated; none is a verdict.
+
+| Method ID | Gate | Does NOT do |
+|---|---|---|
+| `cueliez.observations.gated.face_presence_consistency/v1` | `camera` | No identification, no match score, no biometric template, no cloud call |
+| `cueliez.observations.gated.face_recognition/v1` | `camera` + explicit opt-in | Real OpenFace 128-d embedding-distance match (see below); never invents a subject/score; emits nothing without recognizer, enrollment, image, or consent |
+| `cueliez.observations.gated.demographic_inference/v1` | **Its OWN separate gate** | No classifier of its own; reports only caller-supplied attributes, cap 0.45, bias caveat — high-risk, bias-prone, admissibility-sensitive |
+| `cueliez.observations.gated.expression_features/v1` | `camera` | No expression/emotion classification, no inner-state inference |
+| `cueliez.observations.gated.pitch_voice_quality/v1` | `audio_features` | No raw audio, no voice identification, no cloud call |
+| `cueliez.observations.gated.wearable_features/v1` | `wearable` | No sensor access, no medical inference |
+
+**Face recognition (real):** `src/cueliez/observations/face_recognition.py` — Haar-cascade detection, FacemarkLBF 68-point alignment, OpenFace `nn4.small2.v1.t7` 128-d embeddings (L2-normalised), Euclidean distance vs enrolled mean embedding, match iff distance ≤ 0.9, score = `1 − distance/2` (linear similarity, not a probability). Measured on real public-domain portraits (Obama ×3, Biden ×2): same-person 0.49–0.75, different-person 1.15–1.25. The 0.9 threshold is a 5-photo measurement, **not** a validated operating point — deployments must calibrate it. Optional extra `cueliez[face]` (`opencv-contrib-python-headless==4.10.0.84`); core stays dependency-free. `FaceTemplateStore` persists templates only with an explicit consent record, with `delete_subject` / `delete_all`; templates are in-memory by default, never transmitted by default.
+
+## Feature observers — now working (2026-11-25)
+Feature observers accept per-turn `"features"` dicts, `run(..., features=…)` / `build_package(..., features=…)` (list aligned with turns or `{index: {...}}`), `features_path="features.json"`, or wrapper transcripts `{"turns": [...], "features": ...}`. Nested `features.audio_features` / `.camera` / `.wearable` are supported. When a gate state is supplied, feature observers are additionally filtered by modality consent.
 
 ## Off by default (consent/policy controlled)
-Prosody, visual, and physiological feature observers are **not** in `default_runner()` and are **off by default** in domain packs (`include_feature_observers=False`). Enable only via explicit, consent-controlled paths/policy support.
+Prosody, visual, and physiological feature observers are in `default_runner()`/`full_runner()` and in domain packs, but **fire only** when feature metadata and the corresponding modality consent are present. Gated reversal observers (above) are additionally disabled until explicit opt-in.
 
-ML/LLM-assisted observers (Phase 1 design/prototype, e.g. `observations.assisted`) are **disabled by default** (`ASSISTED_OBSERVERS_ENABLED=False`), not in any runner/pack, and make **no external ML calls** in the production path. See `docs/design/ml_llm_assisted_observers_phase1.md`.
+ML/LLM-assisted observers are **disabled by default** (`--enable-assisted` opt-in or `CUELIEZ_ASSISTED_OBSERVERS=1`), wired into the runner and CLI (including `--stream-turns`), and make **no external ML calls** in the production path. The deterministic multi-signal adapter (`cueliez.observations.assisted.multi_signal/v1`) is the real baseline; a future local model plugs in via the `AssistedObserver` protocol. See `docs/design/ml_llm_assisted_observers_phase1.md`.
 
 | Method ID | Category | Type | Notes |
 |---|---|---|---|
@@ -78,10 +111,10 @@ ML/LLM-assisted observers (Phase 1 design/prototype, e.g. `observations.assisted
 - Audio-feature real-time path uses real observers (gated by default): prosody `pause_pattern`/`variability`/voice-feature shifts (full runner + metadata) and behavioral `response_latency`/`speech_rate_shift` (metadata). No raw audio processing in observers.
 - `observations.assisted` framework: `CUELIEZ_ASSISTED_OBSERVERS=1` + explicit registry required; default off, no external calls, fail-closed. Opt-in merge via `merge_assisted_observations` (additive).
 
-## Pack summary
-- **gov** (government, 20 core observers): text-only by default; dual-control is a process expectation for high-priority cues before sealing in government mode (enforced by iceman/gates, not by observers).
-- **leg** (interrogation, 20): text-only by default.
-- **med** (clinical, 14): curated text subset; text-only by default.
-- **thrp** (therapy, 11): curated supportive subset; text-only by default.
+## Pack summary (2026-11-25: all packs include all observers)
+- **gov** (government, 51 observers): all text + narrative + feature observers, plus 6 gated (disabled); dual-control is a process expectation for high-priority cues before sealing in government mode (enforced by iceman/gates, not by observers).
+- **leg** (interrogation, 51): same observer set; guidance is legal/investigative.
+- **med** (clinical, 51): same observer set (no longer a curated subset); non-diagnostic guidance.
+- **thrp** (therapy, 51): same observer set (no longer a curated subset); supportive guidance.
 
 See `cueliez.packs.list_packs()` / `get_pack()` and `tests/test_packs.py` for authoritative membership and language/gate expectations.

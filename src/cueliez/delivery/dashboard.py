@@ -41,6 +41,13 @@ h1 { font-size:1.1rem; }
 <div id="status" class="meta">Connecting…</div>
 <div id="cues"></div>
 <script>
+// ESCAPING CONTRACT (Track A audit): cue text is NEVER inserted as HTML.
+// Every cue-derived value reaches the page only through textContent (via
+// node()) or through JSON parsed by fetch(). This script uses no raw-HTML
+// sinks at all, and class names only ever use the allowlisted priority
+// tokens. vis() additionally neutralises control / bidi characters as
+// [U+XXXX]. If a future change needs to render markup, it must HTML-escape
+// via delivery/safe.py helpers first — never assign cue text to an HTML sink.
 const CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u200e\u200f\u061c\u2028\u2029\u202a-\u202e\u2066-\u2069]/g;
 const PRIORITIES = ['low', 'medium', 'high', 'critical'];
 const ICONS = {low: '·', medium: '▲', high: '◆', critical: '●'};

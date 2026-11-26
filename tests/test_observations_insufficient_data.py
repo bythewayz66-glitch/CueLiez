@@ -2,26 +2,37 @@ import unittest
 
 from cueliez.observations import default_runner, full_runner
 from cueliez.observations.behavioral import (
-    AnswerLengthVarianceObserver, EvasionMarkerObserver, FilledPauseMarkerObserver,
-    InterruptionOverlapObserver, ResponseLatencyObserver, SpeechRateShiftObserver,
+    AnswerLengthVarianceObserver, EvasionMarkerObserver, FilledPauseClusterObserver,
+    FilledPauseMarkerObserver, InterruptionOverlapObserver, ResponseLatencyObserver,
+    ResponseLatencyShiftObserver, SpeechRateShiftObserver, SpeechRateTrendObserver,
 )
 from cueliez.observations.consistency import (
-    ClaimConflictObserver, DetailDriftObserver, LocationReferenceDivergenceObserver,
+    ClaimConflictObserver, CrossTurnClaimRestatementObserver, DetailDriftObserver,
+    LocationReferenceDivergenceObserver, PronounShiftObserver,
     SelfReferenceShiftObserver, TimelineInconsistencyObserver,
 )
 from cueliez.observations.linguistic import (
-    CertaintySwingObserver, DetailVaguenessObserver, HedgingObserver, MemoryQualifierObserver,
+    CertaintySwingObserver, DetailDensityShiftObserver, DetailVaguenessObserver,
+    HedgingClusterObserver, HedgingObserver, MemoryQualifierObserver,
     MinimizationObserver, NegationDensityObserver, OverjustificationObserver,
     PassiveVoiceProxyObserver, PronounDistancingObserver,
 )
+from cueliez.observations.narrative import (
+    AgencyFramingObserver, SensoryDetailObserver, SpecificityShiftObserver,
+    TemporalStructureObserver,
+)
 
 ALL_TEXT_BEHAVIORAL = [
-    HedgingObserver, PronounDistancingObserver, NegationDensityObserver, DetailVaguenessObserver,
+    HedgingObserver, HedgingClusterObserver, PronounDistancingObserver, NegationDensityObserver,
+    DetailVaguenessObserver, DetailDensityShiftObserver,
     CertaintySwingObserver, MinimizationObserver, PassiveVoiceProxyObserver, OverjustificationObserver,
-    MemoryQualifierObserver, ClaimConflictObserver, TimelineInconsistencyObserver, DetailDriftObserver,
-    LocationReferenceDivergenceObserver, SelfReferenceShiftObserver, ResponseLatencyObserver,
-    AnswerLengthVarianceObserver, EvasionMarkerObserver, SpeechRateShiftObserver,
-    FilledPauseMarkerObserver, InterruptionOverlapObserver,
+    MemoryQualifierObserver, ClaimConflictObserver, CrossTurnClaimRestatementObserver,
+    TimelineInconsistencyObserver, DetailDriftObserver,
+    LocationReferenceDivergenceObserver, SelfReferenceShiftObserver, PronounShiftObserver,
+    ResponseLatencyObserver, ResponseLatencyShiftObserver,
+    AnswerLengthVarianceObserver, EvasionMarkerObserver, SpeechRateShiftObserver, SpeechRateTrendObserver,
+    FilledPauseMarkerObserver, FilledPauseClusterObserver, InterruptionOverlapObserver,
+    TemporalStructureObserver, SensoryDetailObserver, AgencyFramingObserver, SpecificityShiftObserver,
 ]
 
 

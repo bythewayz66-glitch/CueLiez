@@ -14,12 +14,19 @@ from cueliez.observations.prosody import PausePatternObserver, ProsodicVariabili
 class TestAudioRealtimePathPhase2Kilo(unittest.TestCase):
     def test_gated_by_default(self):
         ids = {getattr(o, "method_id", "") for o in default_runner().observers}
-        # Acoustic feature/prosody observers gated (full_runner + metadata/consent flow).
-        self.assertNotIn("cueliez.observations.prosody.pause_pattern/v1", ids)
-        self.assertNotIn("cueliez.observations.prosody.variability_shift/v1", ids)
+        # Track B (owner decision 2026-11-25): acoustic feature/prosody
+        # observers are INCLUDED in default_runner's list now, but inert
+        # without feature metadata (gated by modality consent when a
+        # gate state is supplied). Listing is not enabling.
+        self.assertIn("cueliez.observations.prosody.pause_pattern/v1", ids)
+        self.assertIn("cueliez.observations.prosody.variability_shift/v1", ids)
         # Latency/speech-rate are behavioral metadata observers in the default text path.
         self.assertIn("cueliez.observations.behavioral.response_latency/v1", ids)
         self.assertIn("cueliez.observations.behavioral.speech_rate_shift/v1", ids)
+        # ...and they still emit nothing without feature metadata.
+        t = [{"role": "subject", "text": "plain answer"}] * 4
+        obs = default_runner().build_package(t)["observations"]
+        self.assertFalse(any(o["method"].startswith("cueliez.observations.prosody.") for o in obs), obs)
 
     def test_modality_gate_required_before_enabling_audio_features(self):
         s = SessionGateState(mode="interrogation")

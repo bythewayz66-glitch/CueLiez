@@ -11,28 +11,17 @@ from __future__ import annotations
 import statistics
 from typing import Any, Mapping, Sequence
 
-from .base import ObservationResult, clamp01, is_subject_turn, make_observation, source_span
+from .base import ObservationResult, clamp01, feature_value, is_subject_turn, make_observation, source_span
 
 
 def _feat(turn: Any, *keys: str) -> float | None:
-    if not isinstance(turn, Mapping):
-        return None
-    for k in keys:
-        v = turn.get(k)
-        if isinstance(v, (int, float)):
-            return float(v)
-    for container in ("physio", "physiological", "biometric_features", "features", "meta", "metadata"):
-        c = turn.get(container)
-        if isinstance(c, Mapping):
-            for k in keys:
-                v = c.get(k)
-                if isinstance(v, (int, float)):
-                    return float(v)
-    return None
+    """Read a numeric derived physiological feature (flat, ``features`` dict, or nested ``features.wearable``)."""
+    return feature_value(turn, *keys)
 
 
 class HeartRateShiftObserver:
     method_id = "cueliez.observations.physiological.heart_rate_shift/v1"
+    gated_modality = "wearable"
 
     def observe(self, transcript: Sequence[Mapping[str, Any]]) -> ObservationResult:
         result = ObservationResult(method=self.method_id)
@@ -68,6 +57,7 @@ class HeartRateShiftObserver:
 
 class HrvShiftObserver:
     method_id = "cueliez.observations.physiological.hrv_shift/v1"
+    gated_modality = "wearable"
 
     def observe(self, transcript: Sequence[Mapping[str, Any]]) -> ObservationResult:
         result = ObservationResult(method=self.method_id)
@@ -103,6 +93,7 @@ class HrvShiftObserver:
 
 class ElectrodermalShiftObserver:
     method_id = "cueliez.observations.physiological.electrodermal_shift/v1"
+    gated_modality = "wearable"
 
     def observe(self, transcript: Sequence[Mapping[str, Any]]) -> ObservationResult:
         result = ObservationResult(method=self.method_id)

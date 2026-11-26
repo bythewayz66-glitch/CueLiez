@@ -10,28 +10,17 @@ from __future__ import annotations
 import statistics
 from typing import Any, Mapping, Sequence
 
-from .base import ObservationResult, clamp01, is_subject_turn, make_observation, source_span, source_span, text_of
+from .base import ObservationResult, clamp01, feature_value, is_subject_turn, make_observation, source_span, text_of
 
 
 def _feat(turn: Any, *keys: str) -> float | None:
-    if not isinstance(turn, Mapping):
-        return None
-    for k in keys:
-        v = turn.get(k)
-        if isinstance(v, (int, float)):
-            return float(v)
-    for container in ("prosody", "acoustic", "audio_features", "features", "meta", "metadata"):
-        c = turn.get(container)
-        if isinstance(c, Mapping):
-            for k in keys:
-                v = c.get(k)
-                if isinstance(v, (int, float)):
-                    return float(v)
-    return None
+    """Read a numeric derived audio feature (flat, ``features`` dict, or nested ``features.audio_features``)."""
+    return feature_value(turn, *keys)
 
 
 class ProsodicVariabilityObserver:
     method_id = "cueliez.observations.prosody.variability_shift/v1"
+    gated_modality = "audio_features"
 
     def observe(self, transcript: Sequence[Mapping[str, Any]]) -> ObservationResult:
         result = ObservationResult(method=self.method_id)
@@ -68,6 +57,7 @@ class ProsodicVariabilityObserver:
 
 class PausePatternObserver:
     method_id = "cueliez.observations.prosody.pause_pattern/v1"
+    gated_modality = "audio_features"
 
     def observe(self, transcript: Sequence[Mapping[str, Any]]) -> ObservationResult:
         result = ObservationResult(method=self.method_id)
@@ -104,8 +94,70 @@ class PausePatternObserver:
         return result
 
 
+class PauseDensityShiftObserver:
+    """Pause-density shift: early vs late session halves.
+
+    Pause density = pause/silence time per turn (or pause count per word
+    when only counts are supplied). Distinct from PausePatternObserver
+    (per-turn robust-z elevation): this is a sustained trend across the
+    session. Cue only; pauses have many ordinary causes.
+    """
+
+    method_id = "cueliez.observations.prosody.pause_density_shift/v1"
+    gated_modality = "audio_features"
+
+    def observe(self, transcript: Sequence[Mapping[str, Any]]) -> ObservationResult:
+        result = ObservationResult(method=self.method_id)
+        vals: list[tuple[int, float, Any]] = []
+        for i, turn in enumerate(transcript):
+            if not is_subject_turn(turn):
+                continue
+            p = _feat(turn, "pause_total_ms", "pause_duration_ms", "silence_ms")
+            if p is None:
+                pc = _feat(turn, "pause_count")
+                words = len(text_of(turn).split())
+                if pc is not None and words:
+                    p = (pc / words) * 1000.0  # density proxy, per-word scaled
+            if p is not None and p >= 0:
+                vals.append((i, p, turn))
+        if len(vals) < 4:
+            result.notes.append("insufficient_pause_density_data")
+            return result
+        half = len(vals) // 2
+        early = [v for _, v, _ in vals[:half]]
+        late = [v for _, v, _ in vals[half:]]
+        em, lm = statistics.median(early), statistics.median(late)
+        if em == 0:
+            return result
+        rel = (lm - em) / abs(em)
+        if abs(rel) < 0.50:
+            return result
+        direction = "higher" if lm > em else "lower"
+        score = clamp01(0.38 + min(abs(rel), 1.5) * 0.22)
+        anchor_i, _anchor_v, anchor_turn = vals[-1]
+        ev = {
+            "early_median": round(em, 2),
+            "late_median": round(lm, 2),
+            "relative_change": round(rel, 3),
+            "direction": direction,
+            "sample_count": len(vals),
+        }
+        ev.update(source_span(anchor_turn, anchor_i))
+        result.observations.append(make_observation(
+            label="pause_density_shift_observed",
+            score=score,
+            method_id=self.method_id,
+            category="prosody",
+            evidence=ev,
+            cue=f"Pause density was {direction} in the later part of the session than at the start; consider question difficulty and allow processing time.",
+            turn_index=vals[-1][0],
+        ))
+        return result
+
+
 class VoiceStressFeatureShiftObserver:
     method_id = "cueliez.observations.prosody.voice_feature_shift/v1"
+    gated_modality = "audio_features"
 
     def observe(self, transcript: Sequence[Mapping[str, Any]]) -> ObservationResult:
         result = ObservationResult(method=self.method_id)

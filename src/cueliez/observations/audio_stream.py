@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
 
-from .audio_path import AUDIO_FEATURE_OBSERVERS, observe_audio_features
+from .audio_path import AUDIO_FEATURE_OBSERVERS, observe_audio_features, observe_live_audio_timing
 from .modality_gates import check_modality_allowed
 
 
@@ -51,6 +51,57 @@ def stream_audio_features(
     require_consent_check=True,
 ):
     hook = AudioStreamHook(state=state, require_consent_check=require_consent_check)
+    out = []
+    for c in chunks:
+        out.extend(hook.push_turn(c))
+    return out
+
+
+class LiveAudioTimingHook:
+    """Live-AV timing-only stream hook (Phase 10, Track D).
+
+    Like :class:`AudioStreamHook` but runs only the latency / speech-rate
+    / pause observers, gated on ``audio_features`` consent. Prosody and
+    voice-quality observers never run on this path.
+    """
+
+    def __init__(self, *, state: Any = None, require_consent_check: bool = True):
+        self.state = state
+        self.require_consent_check = require_consent_check
+        self._turns: List[Dict[str, Any]] = []
+        self._seen_cue_ids: set = set()
+
+    def push_turn(self, turn: Mapping[str, Any]) -> List[Dict[str, Any]]:
+        """Append a derived-feature turn and return newly surfaced timing cue dicts."""
+        if self.require_consent_check:
+            check_modality_allowed(self.state, "audio_features")
+        self._turns.append(dict(turn))
+        all_obs = observe_live_audio_timing(self._turns, state=self.state, require_consent_check=False)
+        new = []
+        for o in all_obs:
+            cid = o.get("cue_id")
+            if cid and cid in self._seen_cue_ids:
+                continue
+            if cid:
+                self._seen_cue_ids.add(cid)
+            new.append(o)
+        return new
+
+    def all_turns(self) -> List[Dict[str, Any]]:
+        return list(self._turns)
+
+    def reset(self) -> None:
+        self._turns.clear()
+        self._seen_cue_ids.clear()
+
+
+def stream_live_audio_timing(
+    chunks,
+    *,
+    state=None,
+    require_consent_check=True,
+):
+    hook = LiveAudioTimingHook(state=state, require_consent_check=require_consent_check)
     out = []
     for c in chunks:
         out.extend(hook.push_turn(c))
